@@ -78,6 +78,7 @@ import com.huanchengfly.tieba.post.arch.emitGlobalEventSuspend
 import com.huanchengfly.tieba.post.arch.isOverlapping
 import com.huanchengfly.tieba.post.arch.isScrolling
 import com.huanchengfly.tieba.post.arch.onGlobalEvent
+import com.huanchengfly.tieba.post.arch.pageViewModel
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.FloatProducer
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
@@ -94,6 +95,7 @@ import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.Destination.ForumDetail
 import com.huanchengfly.tieba.post.ui.page.Destination.ForumSearchPost
 import com.huanchengfly.tieba.post.ui.page.ProvideNavigator
+import com.huanchengfly.tieba.post.ui.page.forum.generaltablist.GeneralTabListPage
 import com.huanchengfly.tieba.post.ui.page.forum.threadlist.ForumThreadList
 import com.huanchengfly.tieba.post.ui.page.forum.threadlist.ForumThreadListUiEvent
 import com.huanchengfly.tieba.post.ui.page.forum.threadlist.ForumType
@@ -179,7 +181,13 @@ fun ForumPage(
         }
     }
 
-    val pagerState = rememberPagerState { ForumType.entries.size }
+    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+    val forumData = uiState.forum
+    val generalTabs = remember(forumData?.navTabInfo) {
+        forumData?.navTabInfo?.tab?.filter { it.isGeneralTab == 1 }?.filter { it.tabType == 15 } ?: emptyList()
+    }
+
+    val pagerState = rememberPagerState { ForumType.entries.size + generalTabs.size }
     val listStates = rememberPagerListStates(pagerState.pageCount)
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val scrollOrientationConnection = rememberScrollOrientationConnection()
@@ -235,9 +243,6 @@ fun ForumPage(
     onGlobalEvent<ThreadLikeUiEvent> {
         onShowSnackbarShort(it.toMessage(context))
     }
-
-    val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-    val forumData = uiState.forum
 
     val unlikeDialogState = rememberDialogState()
     if (unlikeDialogState.show) {
@@ -375,7 +380,8 @@ fun ForumPage(
                     modifier = Modifier.fillMaxWidth(),
                     pagerState = pagerState,
                     sortType = sortType,
-                    onSortTypeChanged = viewModel::onSortTypeChanged
+                    onSortTypeChanged = viewModel::onSortTypeChanged,
+                    generalTabs = generalTabs,
                 )
 
                 val classifyVisible by remember { derivedStateOf { pagerState.currentPage == TAB_FORUM_GOOD } }
@@ -402,7 +408,8 @@ fun ForumPage(
             }
 
             ForumFAB(expanded = fabMenuExpanded, onExpandChanged = onFabExpandChanged, visible = fabVisible) { fab ->
-                viewModel.onFabClicked(fab, isGood = pagerState.currentPage == TAB_FORUM_GOOD)
+                val currentPage = pagerState.currentPage
+                viewModel.onFabClicked(fab, isGood = currentPage == TAB_FORUM_GOOD, currentPage)
             }
         }
     ) { contentPadding ->
@@ -428,7 +435,22 @@ fun ForumPage(
                 verticalAlignment = Alignment.Top,
             ) { page ->
                 ProvideNavigator(navigator = navigator) {
-                    forumThreadPages[page](Modifier, contentPadding, forumData)
+                    when (page) {
+                        0, 1 -> {
+                            forumThreadPages[page](Modifier, contentPadding, forumData)
+                        }
+                        else -> {
+                            val tabIndex = page - 2
+                            if (tabIndex < generalTabs.size) {
+                                GeneralTabListPage(
+                                    forumId = forumData.id,
+                                    forumName = forumName,
+                                    navTabInfo = generalTabs[tabIndex],
+                                    viewModel = pageViewModel(key = "general_tab_$tabIndex"),
+                                )
+                            }
+                        }
+                    }
                 }
             }
         }

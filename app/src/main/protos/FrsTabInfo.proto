@@ -4,6 +4,9 @@ package tieba;
 
 option java_package = "com.huanchengfly.tieba.post.api.models.protos";
 
+import "SortButton.proto";
+import "TabMenu.proto";
+
 message FrsTabInfo {
   int32 tabId = 1;
   int32 tabType = 2;
@@ -15,4 +18,6 @@ message FrsTabInfo {
   string tabCode = 8;
   uint32 tabVersion = 9;
   int32 isDefault = 10;
+  repeated SortButton sort_menu = 19;
+  repeated TabMenu sub_tab_list = 20;
 }

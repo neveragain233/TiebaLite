@@ -1,6 +1,7 @@
 package com.huanchengfly.tieba.post.ui.models.forum
 
 import androidx.compose.runtime.Immutable
+import com.huanchengfly.tieba.post.api.models.protos.frsPage.NavTabInfo
 
 // Classify name, Classify ID
 typealias GoodClassify = Pair<String, Int>
@@ -25,6 +26,7 @@ typealias GoodClassify = Pair<String, Int>
     val threads: Int,
     val posts: Int,
     val goodClassifies: List<GoodClassify>?,
+    val navTabInfo: NavTabInfo? = null,
 ) {
 
     val levelProgress: Float
@@ -46,7 +48,8 @@ typealias GoodClassify = Pair<String, Int>
         members: Int = this.members,
         threads: Int = this.threads,
         posts: Int = this.posts,
-        goodClassifies: List<GoodClassify>? = this.goodClassifies
+        goodClassifies: List<GoodClassify>? = this.goodClassifies,
+        navTabInfo: NavTabInfo? = this.navTabInfo,
     ) = ForumData(
         id = this.id,
         avatar = avatar,
@@ -65,6 +68,7 @@ typealias GoodClassify = Pair<String, Int>
         members = members,
         threads = threads,
         posts = posts,
-        goodClassifies = goodClassifies
+        goodClassifies = goodClassifies,
+        navTabInfo = navTabInfo,
     )
 }

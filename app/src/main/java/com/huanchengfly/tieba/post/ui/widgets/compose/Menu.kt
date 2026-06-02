@@ -37,6 +37,7 @@ import androidx.compose.ui.unit.round
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.Options
+import com.huanchengfly.tieba.post.ui.widgets.compose.preference.StringLabelOptions
 import kotlinx.coroutines.flow.filterIsInstance
 
 class MenuScope(
@@ -96,7 +97,7 @@ class MenuScope(
 
     @Composable
     fun ListPickerMenuItem(
-        @StringRes text: Int,
+        text: String,
         modifier: Modifier = Modifier,
         picked: Boolean,
         pickedIndicator: @Composable (() -> Unit)? = null,
@@ -104,7 +105,7 @@ class MenuScope(
     ) =
         DropdownMenuItem(
             text = {
-                Text(text = stringResource(text))
+                Text(text = text)
             },
             onClick = {
                 if (!picked) {
@@ -123,8 +124,48 @@ class MenuScope(
         )
 
     @Composable
+    @NonRestartableComposable
+    fun ListPickerMenuItem(
+        @StringRes textRes: Int,
+        modifier: Modifier = Modifier,
+        picked: Boolean,
+        pickedIndicator: @Composable (() -> Unit)? = null,
+        onClick: () -> Unit
+    ) = ListPickerMenuItem(
+        text = stringResource(textRes),
+        modifier = modifier,
+        picked = picked,
+        pickedIndicator = pickedIndicator,
+        onClick = onClick,
+    )
+
+    @Composable
     fun <Option> ListPickerMenuItems(
         items: Options<Option>,
+        picked: Option,
+        onItemPicked: (item: Option) -> Unit,
+        pickedIndicator: @Composable () -> Unit = {
+            Icon(
+                imageVector = Icons.Rounded.Check,
+                contentDescription = stringResource(id = R.string.desc_checked),
+            )
+        }
+    ) {
+        items.forEach { (option, title) ->
+            ListPickerMenuItem(
+                textRes = title,
+                picked = option == picked,
+                onClick = {
+                    onItemPicked(option)
+                },
+                pickedIndicator = pickedIndicator.takeIf { option == picked }
+            )
+        }
+    }
+
+    @Composable
+    fun <Option> ListPickerMenuStringLabelItems(
+        items: StringLabelOptions<Option>,
         picked: Option,
         onItemPicked: (item: Option) -> Unit,
         pickedIndicator: @Composable () -> Unit = {

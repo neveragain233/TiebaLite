@@ -6,6 +6,7 @@ import com.huanchengfly.tieba.post.api.models.protos.forumGuide.ForumGuideRespon
 import com.huanchengfly.tieba.post.api.models.protos.forumRecommend.ForumRecommendResponse
 import com.huanchengfly.tieba.post.api.models.protos.forumRuleDetail.ForumRuleDetailResponse
 import com.huanchengfly.tieba.post.api.models.protos.frsPage.FrsPageResponse
+import com.huanchengfly.tieba.post.api.models.protos.GeneralTabList.GeneralTabListResponse
 import com.huanchengfly.tieba.post.api.models.protos.getBawuInfo.GetBawuInfoResponse
 import com.huanchengfly.tieba.post.api.models.protos.getForumDetail.GetForumDetailResponse
 import com.huanchengfly.tieba.post.api.models.protos.getHistoryForum.GetHistoryForumResponse
@@ -139,4 +140,9 @@ interface OfficialProtobufTiebaApi {
     fun addPollPostProtobuf(
         @Body body: MyMultipartBody,
     ): Flow<AddPollPostReponse>
+
+    @POST("/c/f/frs/generalTabList?cmd=309622&format=protobuf")
+    fun generalTabListFlow(
+        @Body body: MyMultipartBody,
+    ): Flow<GeneralTabListResponse>
 }

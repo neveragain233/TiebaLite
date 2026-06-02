@@ -1,6 +1,7 @@
 package com.huanchengfly.tieba.post.api.interfaces
 
 import com.huanchengfly.tieba.post.api.models.*
+import com.huanchengfly.tieba.post.api.models.protos.GeneralTabList.GeneralTabListResponse
 import com.huanchengfly.tieba.post.api.models.protos.addPost.AddPostResponse
 import com.huanchengfly.tieba.post.api.models.protos.addPollPost.AddPollPostReponse
 import com.huanchengfly.tieba.post.api.models.protos.forumGuide.ForumGuideResponse
@@ -1312,6 +1313,22 @@ interface ITiebaApi {
         sortType: Int,
         threadIds: String = "",
     ): Flow<ThreadListResponse>
+
+    /**
+     * 吧页面 - 通用标签列表
+     */
+    fun generalTabList(
+        forumId: Long,
+        forumName: String,
+        tabId: Int,
+        tabType: Int,
+        tabName: String,
+        isGeneralTab: Int,
+        pn: Int = 1,
+        sortType: Int = -1,
+        lastThreadId: Long = 0,
+        isDefaultNavTab: Int = 0,
+    ): Flow<GeneralTabListResponse>
 
     fun syncFlow(clientId: String? = null): Flow<Sync>
 

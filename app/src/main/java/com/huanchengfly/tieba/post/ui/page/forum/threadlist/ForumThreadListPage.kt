@@ -50,7 +50,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import java.util.Objects
 
 @Composable
-private fun TopThreadItem(
+fun TopThreadItem(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,

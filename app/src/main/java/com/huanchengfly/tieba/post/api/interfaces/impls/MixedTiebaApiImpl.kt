@@ -66,6 +66,9 @@ import com.huanchengfly.tieba.post.api.models.protos.forumRuleDetail.ForumRuleDe
 import com.huanchengfly.tieba.post.api.models.protos.forumRuleDetail.ForumRuleDetailResponse
 import com.huanchengfly.tieba.post.api.models.protos.frsPage.FrsPageRequest
 import com.huanchengfly.tieba.post.api.models.protos.frsPage.FrsPageRequestData
+import com.huanchengfly.tieba.post.api.models.protos.GeneralTabList.GeneralTabListRequest
+import com.huanchengfly.tieba.post.api.models.protos.GeneralTabList.GeneralTabListRequestData
+import com.huanchengfly.tieba.post.api.models.protos.GeneralTabList.GeneralTabListResponse
 import com.huanchengfly.tieba.post.api.models.protos.frsPage.FrsPageResponse
 import com.huanchengfly.tieba.post.api.models.protos.getBawuInfo.GetBawuInfoRequest
 import com.huanchengfly.tieba.post.api.models.protos.getBawuInfo.GetBawuInfoRequestData
@@ -1106,6 +1109,52 @@ object MixedTiebaApiImpl : ITiebaApi {
                         need_abstract = 0,
                         st_type = 0,
                         last_click_tid = 0
+                    )
+                ),
+                clientVersion = ClientVersion.TIEBA_V12
+            )
+        )
+    }
+
+    override fun generalTabList(
+        forumId: Long,
+        forumName: String,
+        tabId: Int,
+        tabType: Int,
+        tabName: String,
+        isGeneralTab: Int,
+        pn: Int,
+        sortType: Int,
+        lastThreadId: Long,
+        isDefaultNavTab: Int,
+    ): Flow<GeneralTabListResponse> {
+        return RetrofitTiebaApi.OFFICIAL_PROTOBUF_TIEBA_POST_API.generalTabListFlow(
+            buildProtobufRequestBody(
+                GeneralTabListRequest(
+                    GeneralTabListRequestData(
+                        common = buildCommonRequest(clientVersion = ClientVersion.TIEBA_V12),
+                        tab_id = tabId,
+                        forum_id = forumId,
+                        pn = pn,
+                        rn = 30,
+                        scr_w = getScreenWidth(),
+                        scr_h = getScreenHeight(),
+                        scr_dip = App.ScreenInfo.DENSITY.toInt(),
+                        last_thread_id = lastThreadId,
+                        is_default_navtab = isDefaultNavTab,
+                        tab_name = tabName,
+                        is_general_tab = isGeneralTab,
+                        sort_type = sortType,
+                        tab_type = tabType,
+                        ad_ext_params = "",
+                        ad_bear_context = "",
+                        has_ad_bear = 0,
+                        ad_bear_sid = "",
+                        ad_bear_sid_price = 0.0,
+                        request_times = 0,
+                        frs_common_info = "",
+                        is_newfrs = 1,
+                        is_video_doublerow = 0,
                     )
                 ),
                 clientVersion = ClientVersion.TIEBA_V12

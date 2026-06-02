@@ -5,12 +5,14 @@ import android.content.Intent
 import androidx.compose.runtime.Stable
 import androidx.core.net.toUri
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.huanchengfly.tieba.post.api.models.SignResultBean
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.arch.BaseStateViewModel
 import com.huanchengfly.tieba.post.arch.TbLiteExceptionHandler
 import com.huanchengfly.tieba.post.arch.UiEvent
+import com.huanchengfly.tieba.post.arch.emitGlobalEvent
 import com.huanchengfly.tieba.post.arch.emitGlobalEventSuspend
 import com.huanchengfly.tieba.post.arch.stateInViewModel
 import com.huanchengfly.tieba.post.models.database.ForumHistory
@@ -21,6 +23,7 @@ import com.huanchengfly.tieba.post.ui.models.settings.ForumFAB
 import com.huanchengfly.tieba.post.ui.models.settings.ForumSortType
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.TB_LITE_DOMAIN
+import com.huanchengfly.tieba.post.ui.page.forum.generaltablist.GeneralTabListUiEvent
 import com.huanchengfly.tieba.post.ui.page.forum.threadlist.ForumThreadListUiEvent
 import com.huanchengfly.tieba.post.ui.page.forum.threadlist.ForumType
 import com.huanchengfly.tieba.post.utils.extension.set
@@ -99,13 +102,29 @@ class ForumViewModel @Inject constructor(
         }
     }
 
-    fun onFabClicked(@ForumFAB fab: Int, isGood: Boolean) {
+    fun onRefreshGeneralTabList() {
+        launchInVM {
+            emitGlobalEventSuspend(GeneralTabListUiEvent.BackToTop)
+            delay(200) // wait ScrollToTop animation
+            emitGlobalEventSuspend(GeneralTabListUiEvent.Refresh())
+        }
+    }
+
+    fun onFabClicked(@ForumFAB fab: Int, isGood: Boolean, currentPage: Int) {
         when (fab) {
             ForumFAB.POST -> sendUiEvent(ForumUiEvent.AddThread(forumId = currentState.forum?.id))
 
-            ForumFAB.REFRESH -> onRefreshClicked(isGood)
+            ForumFAB.REFRESH -> if (currentPage >= 2) {
+                onRefreshGeneralTabList()
+            } else {
+                onRefreshClicked(isGood)
+            }
 
-            ForumFAB.BACK_TO_TOP -> sendUiEvent(ForumUiEvent.ScrollToTop(isGood))
+            ForumFAB.BACK_TO_TOP -> if (currentPage >= 2) {
+                viewModelScope.emitGlobalEvent(GeneralTabListUiEvent.BackToTop)
+            } else {
+                sendUiEvent(ForumUiEvent.ScrollToTop(isGood))
+            }
 
             ForumFAB.HIDE -> throw IllegalStateException("Incorrect Compose state")
         }

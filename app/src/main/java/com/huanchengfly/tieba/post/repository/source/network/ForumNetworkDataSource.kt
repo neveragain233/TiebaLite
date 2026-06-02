@@ -3,6 +3,7 @@ package com.huanchengfly.tieba.post.repository.source.network
 import com.huanchengfly.tieba.post.api.TiebaApi
 import com.huanchengfly.tieba.post.api.models.LikeForumResultBean
 import com.huanchengfly.tieba.post.api.models.SignResultBean
+import com.huanchengfly.tieba.post.api.models.protos.GeneralTabList.GeneralTabListResponseData
 import com.huanchengfly.tieba.post.api.models.protos.RecommendForumInfo
 import com.huanchengfly.tieba.post.api.models.protos.ThreadInfo
 import com.huanchengfly.tieba.post.api.models.protos.User
@@ -82,6 +83,46 @@ object ForumNetworkDataSource {
                 .addUsers(response.data_.user_list)
                 .let { new ->
                     response.data_.copy(thread_list = new)
+                }
+        }
+    }
+
+    suspend fun loadGeneralTabList(
+        forumId: Long,
+        forumName: String,
+        tabId: Int,
+        tabType: Int,
+        tabName: String,
+        isGeneralTab: Int,
+        pn: Int = 1,
+        sortType: Int = -1,
+        lastThreadId: Long = 0,
+        isDefaultNavTab: Int = 0,
+    ): GeneralTabListResponseData {
+        val response = TiebaApi.getInstance()
+            .generalTabList(
+                forumId = forumId,
+                forumName = forumName,
+                tabId = tabId,
+                tabType = tabType,
+                tabName = tabName,
+                isGeneralTab = isGeneralTab,
+                pn = pn,
+                sortType = sortType,
+                lastThreadId = lastThreadId,
+                isDefaultNavTab = isDefaultNavTab
+            )
+            .firstOrThrow()
+        if (response.data_?.general_list.isNullOrEmpty()) {
+            throw TiebaApiException(commonResponse = response.error.commonResponse)
+        }
+
+        return withContext(Dispatchers.Default) {
+            response.data_.general_list
+                .filter(threadFilter)
+                .addUsers(response.data_.user_list)
+                .let { new ->
+                    response.data_.copy(general_list = new)
                 }
         }
     }

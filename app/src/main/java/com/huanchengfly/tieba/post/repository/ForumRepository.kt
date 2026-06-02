@@ -31,6 +31,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.flow.flow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -170,6 +171,28 @@ class ForumRepository @Inject constructor(
         forceNew = false
     ).second
 
+    fun generalTabList(
+        forumId: Long,
+        forumName: String,
+        tabId: Int,
+        tabType: Int,
+        tabName: String,
+        isGeneralTab: Int,
+        pn: Int = 1,
+        sortType: Int = -1,
+        lastThreadId: Long = 0,
+        isDefaultNavTab: Int = 0,
+    ): Flow<ThreadItemList> = flow {
+        val data = networkDataSource.loadGeneralTabList(
+            forumId, forumName, tabId, tabType, tabName, isGeneralTab,
+            pn, sortType, lastThreadId, isDefaultNavTab
+        )
+        val blockedSettings = blockedSettings.first()
+        val showBothName = habitSettings.first().showBothName
+        val threadList = data.general_list.mapUiModel(blockedSettings, showBothName, blockRepo::isBlocked)
+        emit(ThreadItemList(threadList, threadIds = emptyList(), hasMore = data.has_more == 1))
+    }
+
     suspend fun threadList(forumId: Long, forumName: String, page: Int, sortType: Int, threadIds: List<Long>): List<ThreadItem> {
         return networkDataSource
             .loadThread(forumId, forumName, page, sortType, threadIds)
@@ -301,7 +324,8 @@ private fun FrsPageResponseData.toData(): ForumData = forum!!.let {
         posts = it.post_num,
         goodClassifies = it.good_classify
             .takeUnless { c -> c.size <= 1 }
-            ?.map { c -> GoodClassify(c.class_name, c.class_id) }
+            ?.map { c -> GoodClassify(c.class_name, c.class_id) },
+        navTabInfo = nav_tab_info,
     )
 }
 

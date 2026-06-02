@@ -4,11 +4,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.pager.PagerState
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SecondaryTabRow
+import androidx.compose.material3.SecondaryScrollableTabRow
 import androidx.compose.material3.Tab
 import androidx.compose.material3.Text
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.mutableStateMapOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -17,8 +19,11 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.api.models.protos.FrsTabInfo
+import com.huanchengfly.tieba.post.arch.emitGlobalEventSuspend
 import com.huanchengfly.tieba.post.arch.unsafeLazy
 import com.huanchengfly.tieba.post.ui.models.settings.ForumSortType
+import com.huanchengfly.tieba.post.ui.page.forum.generaltablist.GeneralTabListUiEvent
 import com.huanchengfly.tieba.post.ui.widgets.compose.FancyAnimatedIndicatorWithModifier
 import com.huanchengfly.tieba.post.ui.widgets.compose.TabClickMenu
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.Options
@@ -40,7 +45,8 @@ fun ForumTab(
     modifier: Modifier = Modifier,
     pagerState: PagerState,
     sortType: Int,
-    onSortTypeChanged: (sortType: Int) -> Unit
+    onSortTypeChanged: (sortType: Int) -> Unit,
+    generalTabs: List<FrsTabInfo>,
 ) {
     val currentPage = pagerState.currentPage
     val coroutineScope = rememberCoroutineScope()
@@ -50,10 +56,10 @@ fun ForumTab(
         letterSpacing = 2.sp
     )
 
-    SecondaryTabRow(
+    SecondaryScrollableTabRow(
         selectedTabIndex = currentPage,
         indicator = {
-            FancyAnimatedIndicatorWithModifier(index = currentPage)
+            FancyAnimatedIndicatorWithModifier(index = currentPage, scrollable = true)
         },
         divider = {},
         containerColor = Color.Transparent,
@@ -96,6 +102,65 @@ fun ForumTab(
                 contentAlignment = Alignment.Center
             ) {
                 Text(text = stringResource(id = R.string.tab_forum_good), style = tabTextStyle)
+            }
+        }
+
+        // TabName, source_id
+        val sortIdMap = remember(generalTabs) {
+            mutableStateMapOf<String, Int>()
+        }
+        generalTabs.forEach { tab ->
+            val tabIndex = 2 + generalTabs.indexOf(tab)
+            if (tab.sort_menu.isNotEmpty()) {
+                TabClickMenu(
+                    selected = currentPage == tabIndex,
+                    onClick = {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(tabIndex)
+                        }
+                    },
+                    text = {
+                        Text(
+                            text = tab.tabName,
+                            style = tabTextStyle
+                        )
+                    },
+                    menuContent = {
+                        ListPickerMenuStringLabelItems(
+                            items = tab.sort_menu.associate { it.source_id to it.text },
+                            picked = sortIdMap[tab.tabName] ?: 0,
+                            onItemPicked = { value: Int ->
+                                sortIdMap[tab.tabName] = value
+                                coroutineScope.launch {
+                                    emitGlobalEventSuspend(GeneralTabListUiEvent.Refresh(sortType = value))
+                                }
+                            }
+                        )
+                    },
+                    unselectedContentColor = unselectedContentColor
+                )
+            } else {
+                Tab(
+                    selected = currentPage == tabIndex,
+                    onClick = {
+                        coroutineScope.launch {
+                            pagerState.animateScrollToPage(tabIndex)
+                        }
+                    },
+                    unselectedContentColor = unselectedContentColor
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .minimumInteractiveComponentSize()
+                            .padding(horizontal = 16.dp),
+                        contentAlignment = Alignment.Center
+                    ) {
+                        Text(
+                            text = tab.tabName,
+                            style = tabTextStyle
+                        )
+                    }
+                }
             }
         }
     }
