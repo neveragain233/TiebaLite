@@ -53,7 +53,6 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.integration.compose.GlideImage
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.activities.TranslucentThemeActivity.Companion.currentThemeNoTrans
 import com.huanchengfly.tieba.post.activities.UCropActivity
@@ -70,10 +69,9 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.CenterAlignedTopAppBar
 import com.huanchengfly.tieba.post.ui.widgets.compose.Container
 import com.huanchengfly.tieba.post.ui.widgets.compose.LazyLoad
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
+import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
 import com.huanchengfly.tieba.post.ui.widgets.compose.OutlineCounterTextField
-import com.huanchengfly.tieba.post.ui.widgets.compose.placeholder
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
-import com.huanchengfly.tieba.post.utils.GlideUtil
 import com.huanchengfly.tieba.post.utils.ThemeUtil
 import com.yalantis.ucrop.UCrop
 import dagger.hilt.android.AndroidEntryPoint
@@ -313,14 +311,12 @@ private fun UserAvatarPicker(modifier: Modifier = Modifier, avatar: String, onPi
     Box(
         modifier = modifier.clickableNoIndication(onClick = onPick)
     ) {
-        GlideImage(
-            model = avatar,
+        NetworkImage(
+            imageUrl = avatar,
             contentDescription = stringResource(id = R.string.upload_portrait),
             modifier = Modifier
                 .matchParentSize()
                 .clip(CircleShape)
-                .placeholder(avatar.isEmpty()),
-            failure = GlideUtil.DefaultErrorPlaceholder,
         )
         // Picker icon with border
         Surface(

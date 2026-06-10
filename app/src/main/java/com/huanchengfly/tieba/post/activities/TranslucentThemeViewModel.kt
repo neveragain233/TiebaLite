@@ -6,6 +6,8 @@ import android.graphics.Bitmap.CompressFormat
 import android.graphics.BitmapFactory
 import android.graphics.Canvas
 import android.graphics.Paint
+import android.graphics.PorterDuff
+import android.graphics.PorterDuffColorFilter
 import android.net.Uri
 import android.os.Build
 import android.util.Log
@@ -19,9 +21,11 @@ import androidx.core.graphics.createBitmap
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.palette.graphics.Palette
+import coil3.Image
+import coil3.toBitmap
 import com.huanchengfly.tieba.post.App.Companion.AppBackgroundScope
 import com.huanchengfly.tieba.post.arch.stateInViewModel
-import com.huanchengfly.tieba.post.components.glide.BlurTransformation
+import com.huanchengfly.tieba.post.components.coil.BlurTransformation
 import com.huanchengfly.tieba.post.components.imageProcessor.ImageProcessor
 import com.huanchengfly.tieba.post.components.imageProcessor.RenderEffectImageProcessor
 import com.huanchengfly.tieba.post.components.imageProcessor.RenderScriptImageProcessor
@@ -54,7 +58,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
 import javax.inject.Inject
-import kotlin.math.roundToInt
 
 /**
  * Ui State for Translucent Activity
@@ -92,7 +95,7 @@ import kotlin.math.roundToInt
 
 @HiltViewModel
 class TranslucentThemeViewModel @Inject constructor(
-    @ApplicationContext val application: Context,
+    @param:ApplicationContext val application: Context,
     private val settingsRepository: SettingsRepository
 ) : ViewModel() {
 
@@ -148,12 +151,12 @@ class TranslucentThemeViewModel @Inject constructor(
         }
     }
 
-    fun onWallpaperDecoded(bitmap: Bitmap) {
+    fun onWallpaperDecoded(image: Image) {
         val colorPalette = _uiState.value.colorPalette
         // Do not generate for blurring bitmap
         if (colorPalette.isEmpty()) {
             viewModelScope.launch {
-                val newPalette = genPalette(bitmap)
+                val newPalette = genPalette(image.toBitmap())
                 _uiState.update { it.copy(colorPalette = newPalette) }
             }
         }
@@ -306,7 +309,6 @@ class TranslucentThemeViewModel @Inject constructor(
             alpha: Float,
             blurRadius: Float
         ) {
-            val canvasAlpha = (alpha * 255).roundToInt()
             var bitmap = source.inputStream().use { ins ->
                 BitmapFactory.decodeStream(ins, null, BitmapFactory.Options().apply {
                     inPreferredConfig = Bitmap.Config.ARGB_8888
@@ -315,11 +317,12 @@ class TranslucentThemeViewModel @Inject constructor(
             } ?: throw IOException("Decode $source failed!")
 
             // Apply alpha filter
-            if (canvasAlpha < 255) {
+            if (alpha < 1) {
                 val alphaBitmap = createBitmap(bitmap.width, bitmap.height, bitmap.config!!)
+                val colorFilter = PorterDuffColorFilter(Color.Black.copy(1 - alpha).toArgb(), PorterDuff.Mode.SRC_ATOP)
                 Canvas(alphaBitmap).apply {
                     drawColor(Color.Black.toArgb())
-                    drawBitmap(bitmap, 0f, 0f, Paint().also {it.alpha = canvasAlpha })
+                    drawBitmap(bitmap, 0f, 0f, Paint().also { it.colorFilter = colorFilter })
                 }
                 bitmap.recycle()
                 bitmap = alphaBitmap

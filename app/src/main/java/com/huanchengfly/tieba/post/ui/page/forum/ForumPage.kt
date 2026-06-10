@@ -78,7 +78,6 @@ import com.huanchengfly.tieba.post.arch.emitGlobalEventSuspend
 import com.huanchengfly.tieba.post.arch.isOverlapping
 import com.huanchengfly.tieba.post.arch.isScrolling
 import com.huanchengfly.tieba.post.arch.onGlobalEvent
-import com.huanchengfly.tieba.post.components.glide.TbGlideUrl
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.FloatProducer
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
@@ -151,7 +150,7 @@ private fun ForumAvatar(
     } else {
         val context = LocalContext.current
         Avatar(
-            data = TbGlideUrl(avatar),
+            data = avatar,
             modifier = modifier
                 .clickable {
                     PhotoViewActivity.launchSinglePhoto(context, url = avatar)

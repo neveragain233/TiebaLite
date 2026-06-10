@@ -14,18 +14,20 @@ import androidx.compose.material.icons.rounded.SlowMotionVideo
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.Placeholder
 import androidx.compose.ui.text.PlaceholderVerticalAlign
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
-import com.bumptech.glide.Glide
-import com.bumptech.glide.integration.compose.GlideImage
-import com.bumptech.glide.integration.compose.placeholder
-import com.bumptech.glide.load.engine.DiskCacheStrategy
+import coil3.BitmapImage
+import coil3.compose.AsyncImage
+import coil3.imageLoader
+import coil3.request.ImageRequest
 import com.huanchengfly.tieba.post.App
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.arch.ControlledRunner
@@ -47,7 +49,6 @@ import kotlinx.coroutines.withContext
 import java.io.File
 import java.lang.ref.WeakReference
 import java.util.concurrent.ConcurrentHashMap
-import java.util.concurrent.Future
 
 data class Emoticon(
     val id: String,
@@ -142,17 +143,14 @@ object EmoticonManager {
     }
 
     @Composable
+    @NonRestartableComposable
     fun EmoticonInlineImage(modifier: Modifier = Modifier, id: String, description: String = id) {
-        val uri = remember { getEmoticonUri(id) }
-        GlideImage(
-            model = uri,
+        AsyncImage(
+            model = remember { getEmoticonUri(id) },
             contentDescription = description,
             modifier = modifier,
-            failure = placeholder(R.drawable.ic_error)
-        ) {
-            // Disable disk cache for asset emoticon
-            if (uri.startsWith("file")) it.diskCacheStrategy(DiskCacheStrategy.NONE) else it
-        }
+            error = painterResource(R.drawable.ic_error)
+        )
     }
 
     fun init(context: Application) = scope.launch {
@@ -224,18 +222,13 @@ object EmoticonManager {
         }
     }
 
-    fun getEmoticonBitmap(id: String, size: Int): Future<Bitmap> {
-        val uri = getEmoticonUri(id)
-
-        return Glide.with(getContext())
-            .asBitmap()
-            .diskCacheStrategy(
-                // Disable disk cache for asset emoticon
-                if (uri.startsWith("file")) DiskCacheStrategy.NONE else DiskCacheStrategy.AUTOMATIC
-            )
-            .load(uri)
-            .fallback(R.drawable.ic_chrome) // Null ID
-            .submit(size, size)
+    suspend fun getEmoticonBitmap(id: String, size: Int): Bitmap {
+        val request = ImageRequest.Builder(getContext())
+            .data(getEmoticonUri(id))
+            .size(size)
+            .build()
+        val result = getContext().imageLoader.execute(request)
+        return (result.image as BitmapImage).bitmap
     }
 
     fun registerEmoticon(id: String, name: String) {

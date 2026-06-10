@@ -14,7 +14,7 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsCompat
 import androidx.core.view.WindowInsetsControllerCompat
-import com.bumptech.glide.Glide
+import coil3.imageLoader
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.models.protos.VideoInfo
 import com.huanchengfly.tieba.post.arch.collectIn
@@ -126,7 +126,7 @@ class VideoViewActivity: ComponentActivity(), OnFullScreenModeChangedListener {
             }
 
             // Free more memory now
-            Glide.get(context).clearMemory()
+            context.imageLoader.memoryCache?.clear()
 
             context.goToActivity<VideoViewActivity> {
                 this.data = data

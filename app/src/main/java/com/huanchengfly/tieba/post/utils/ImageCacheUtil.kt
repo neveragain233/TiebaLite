@@ -2,8 +2,7 @@ package com.huanchengfly.tieba.post.utils
 
 import android.content.Context
 import androidx.annotation.WorkerThread
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.engine.cache.DiskCache.Factory.DEFAULT_DISK_CACHE_DIR
+import coil3.imageLoader
 import com.huanchengfly.tieba.post.utils.ImageUtil.FILE_PROVIDER_SHARE_DIR
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -14,16 +13,16 @@ import java.io.File
  * Created by Trojx on 2016/10/10 0010.
  */
 object ImageCacheUtil {
+
+    private const val GLIDE_DISK_CACHE_DIR = "image_manager_disk_cache"
+
     /**
      * 清除图片所有缓存
      */
     suspend fun clearImageAllCache(context: Context) = withContext(Dispatchers.IO) {
-        val glide: Glide = Glide.get(context)
-        // 清除图片内存缓存, 只能在主线程执行
-        withContext(Dispatchers.Main) { glide.clearMemory() }
-
-        // 清除图片磁盘缓存
-        glide.clearDiskCache()
+        val coil = context.imageLoader
+        coil.diskCache?.clear()
+        withContext(Dispatchers.Main) { coil.memoryCache?.clear() }
 
         // 清除分享图片缓存
         try {
@@ -37,9 +36,22 @@ object ImageCacheUtil {
      * 获取图片缓存大小
      */
     suspend fun getCacheSize(context: Context): Long = withContext(Dispatchers.IO) {
-        val glideCacheSize = getFolderSize(File(context.cacheDir, DEFAULT_DISK_CACHE_DIR))
+        val coilCacheSize = context.imageLoader.diskCache?.size ?: 0
         val shareCacheSize = getFolderSize(File(context.cacheDir, FILE_PROVIDER_SHARE_DIR))
-        glideCacheSize + shareCacheSize
+        coilCacheSize + shareCacheSize
+    }
+
+    // TODO: Remove
+    @WorkerThread
+    fun clearGlideDiskCache(context: Context) {
+        val cacheDir = File(context.cacheDir, GLIDE_DISK_CACHE_DIR)
+        if (cacheDir.exists()) {
+            try {
+                cacheDir.deleteRecursively()
+            } catch (e: Exception) {
+                e.printStackTrace()
+            }
+        }
     }
 
     /**

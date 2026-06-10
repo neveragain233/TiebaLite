@@ -1,10 +1,12 @@
 package com.huanchengfly.tieba.post.ui.widgets.compose
 
+import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.asPaddingValues
@@ -20,13 +22,11 @@ import androidx.compose.material3.CircularProgressIndicator
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
-import androidx.compose.material3.adaptive.currentWindowSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.NonRestartableComposable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
-import androidx.compose.runtime.key
-import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
@@ -40,28 +40,30 @@ import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
-import androidx.lifecycle.compose.collectAsStateWithLifecycle
-import com.bumptech.glide.Glide
-import com.bumptech.glide.integration.compose.GlideImage
-import com.bumptech.glide.integration.compose.Placeholder
-import com.bumptech.glide.integration.compose.placeholder
-import com.bumptech.glide.load.model.GlideUrl
-import com.huanchengfly.tieba.post.LocalHabitSettings
+import coil3.compose.AsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
+import coil3.compose.rememberConstraintsSizeResolver
+import coil3.memory.MemoryCache
+import coil3.request.CachePolicy
+import coil3.request.ImageRequest
 import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.aspectRatio
-import com.huanchengfly.tieba.post.components.NetworkObserver
-import com.huanchengfly.tieba.post.components.glide.TbGlideUrl
 import com.huanchengfly.tieba.post.models.PhotoViewData
 import com.huanchengfly.tieba.post.theme.LocalExtendedColorScheme
 import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.common.theme.compose.block
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
+import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.page.photoview.PhotoViewActivity
-import com.huanchengfly.tieba.post.utils.GlideUtil
-import com.huanchengfly.tieba.post.utils.ImageUtil
+import com.huanchengfly.tieba.post.utils.CoilUtil
 
-val CircularLoadingPlaceholder: Placeholder = placeholder {
+@DrawableRes
+val DefaultErrorResource: Int = R.drawable.ic_error
+
+@Composable
+fun CircularLoadingPlaceholder() {
     Box(
         modifier = Modifier.fillMaxSize(),
         contentAlignment = Alignment.Center,
@@ -70,7 +72,8 @@ val CircularLoadingPlaceholder: Placeholder = placeholder {
     }
 }
 
-fun placeholderRetry(onRetry: () -> Unit): Placeholder = placeholder {
+@Composable
+fun PlaceholderRetry(onRetry: () -> Unit) {
     Column (
         modifier = Modifier
             .fillMaxSize()
@@ -94,19 +97,6 @@ fun placeholderRetry(onRetry: () -> Unit): Placeholder = placeholder {
                 )
             }
         )
-    }
-}
-
-@Composable
-private fun shouldLoadImage(): Boolean {
-    return when (val loadType = LocalHabitSettings.current.imageLoadType) {
-        ImageUtil.SETTINGS_SMART_LOAD -> {
-            NetworkObserver.isNetworkUnmetered.collectAsStateWithLifecycle().value
-        }
-
-        ImageUtil.SETTINGS_SMART_ORIGIN, ImageUtil.SETTINGS_ALL_ORIGIN -> true
-
-        else -> throw IllegalArgumentException("Unknow image load type: $loadType")
     }
 }
 
@@ -136,40 +126,55 @@ fun ErrorImage(modifier: Modifier = Modifier, tip: String) {
 @Composable
 private fun PreviewImage(
     modifier: Modifier = Modifier,
-    model: GlideUrl,
-    originModelProvider: () -> GlideUrl?,
+    model: String,
+    placeholder: MemoryCache.Key?,
     dimensions: IntSize,
 ) {
-    val context = LocalContext.current
-    val windowSize = currentWindowSize()
-    val originModel = remember {
-        originModelProvider()?.takeIf { it != model } ?: model
-    }
-
+    val sizeResolver = rememberConstraintsSizeResolver()
     FullScreen {
-        Box(
+        BoxWithConstraints(
             modifier = modifier
                 .fillMaxSize()
                 .padding(WindowInsets.systemBars.asPaddingValues())
                 .padding(horizontal = 16.dp),
             contentAlignment = Alignment.Center
         ) {
-            GlideImage(
-                model = originModel,
-                contentDescription = null,
-                modifier = Modifier
-                    .block {
-                        // Fill width/height based on current orientation
-                        if (windowSize.height > windowSize.width) fillMaxWidth() else fillMaxHeight()
+            val painter = rememberAsyncImagePainter(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(model)
+                    .size(sizeResolver)
+                    .placeholderMemoryCacheKey(placeholder)
+                    .memoryCachePolicy(CachePolicy.DISABLED)
+                    .build(),
+            )
+
+            val state by painter.state.collectAsState()
+            when (state) {
+                is AsyncImagePainter.State.Empty,
+                is AsyncImagePainter.State.Loading, // Show memory cache as placeholder
+                is AsyncImagePainter.State.Success -> {
+                    Image(
+                        painter = painter,
+                        contentDescription = null,
+                        modifier = Modifier
+                            .block {
+                                // Fill width/height based on current orientation
+                                if (maxHeight > maxWidth) fillMaxWidth() else fillMaxHeight()
+                            }
+                            .aspectRatio(ratio = dimensions.aspectRatio ?: 1f)
+                            .then(sizeResolver),
+                        contentScale = if (maxHeight > maxWidth) ContentScale.FillWidth else ContentScale.FillHeight,
+                    )
+
+                    if (state !is AsyncImagePainter.State.Success) {
+                        CircularLoadingPlaceholder()
                     }
-                    .aspectRatio(ratio = dimensions.aspectRatio ?: 1f),
-                contentScale = ContentScale.Crop,
-                failure = GlideUtil.DefaultErrorPlaceholder
-            ) {
-                if (originModel === model) {
-                    it
-                } else {
-                    it.thumbnail(Glide.with(context).load(model))
+                }
+
+                is AsyncImagePainter.State.Error -> {
+                    ErrorImage(
+                        tip = (state as AsyncImagePainter.State.Error).result.throwable.getErrorMessage()
+                    )
                 }
             }
         }
@@ -185,83 +190,91 @@ fun NetworkImage(
     contentScale: ContentScale = ContentScale.Crop,
     photoViewDataProvider: (() -> PhotoViewData?)? = null,
 ) {
-    val context = LocalContext.current
-    val shouldLoadImage = true // shouldLoadImage()
-    val darkenImage = LocalUISettings.current.darkenImage && LocalExtendedColorScheme.current.darkTheme
-    var isLongPressing by remember { mutableStateOf(false) }
-
-    val model = remember {
-        if (imageUrl.isNotEmpty() && imageUrl.isNotBlank()) TbGlideUrl(imageUrl) else null
-    }
-
-    if (model == null) {
+    if (imageUrl.isEmpty()) {
         ErrorImage(modifier, tip = stringResource(R.string.desc_image_empty_url))
         return
     }
 
+    val context = LocalContext.current
+    val darkenImage = LocalUISettings.current.darkenImage && LocalExtendedColorScheme.current.darkTheme
+    var isLongPressing by remember { mutableStateOf(false) }
+
+    val sizeResolver = rememberConstraintsSizeResolver()
+    val painter = rememberAsyncImagePainter(
+        model = ImageRequest.Builder(context)
+            .data(imageUrl)
+            .size(sizeResolver)
+            .build(),
+        contentScale = contentScale,
+    )
+
     Box(
         modifier = modifier
-            .pointerInput(Unit) {
-                detectTapGestures(
-                    onLongPress = {
-                        if ((dimensions?.aspectRatio ?: 1f) <= 0.1f) {
-                            context.toastShort(R.string.toast_preview_image_too_large)
-                        } else {
-                            isLongPressing = true
+            .then(sizeResolver)
+            .onNotNull(photoViewDataProvider) { dataProvider ->
+                pointerInput(Unit) {
+                    detectTapGestures(
+                        onLongPress = {
+                            if ((dimensions?.aspectRatio ?: 1f) <= 0.1f) {
+                                context.toastShort(R.string.toast_preview_image_too_large)
+                            } else {
+                                isLongPressing = true
+                            }
+                        },
+                        onPress = {
+                            tryAwaitRelease()
+                            isLongPressing = false
+                        },
+                        onTap = {
+                            val photos = dataProvider() ?: return@detectTapGestures
+                            // bug from caller
+                            if (photos.data != null && photos.data.forumName.isEmpty()) {
+                                context.toastShort(R.string.title_unknown_error)
+                            } else {
+                                PhotoViewActivity.launch(context, photos)
+                            }
                         }
-                    },
-                    onPress = {
-                        tryAwaitRelease()
-                        isLongPressing = false
-                    },
-                    onTap = {
-                        // Launch PhotoViewActivity now, ignore image load settings
-                        val photos = photoViewDataProvider?.invoke() ?: return@detectTapGestures
-                        // bug from caller
-                        if (photos.data != null && photos.data.forumName.isEmpty()) {
-                            context.toastShort(R.string.title_unknown_error)
-                        } else {
-                            PhotoViewActivity.launch(context, photos)
-                        }
-                    }
-                )
-            }
+                    )
+                }
+            },
+        contentAlignment = Alignment.Center,
     ) {
-        // Note: 用户报告 'Glide 网络恢复时自动重试' 会在一加系统中失效.
-        // 添加 placeholderRetry 让用户手动重试加载图片
-        var retryCount by remember { mutableIntStateOf(0) }
-        key(model, retryCount) {
-            GlideImage(
-                model = model,
-                contentDescription = contentDescription,
-                modifier = Modifier.matchParentSize(),
-                contentScale = contentScale,
-                colorFilter = if (darkenImage) GlideUtil.DarkFilter else null,
-                loading = CircularLoadingPlaceholder,
-                failure = placeholderRetry { retryCount++ },
-                // transition = CrossFade
-            ) {
-                if (shouldLoadImage || retryCount > 0) it else it.onlyRetrieveFromCache(true)
+        val state by painter.state.collectAsState()
+        when (state) {
+            is AsyncImagePainter.State.Empty,
+            is AsyncImagePainter.State.Loading -> {
+                CircularLoadingPlaceholder()
             }
-        }
-    }
 
-    if (dimensions != null) {
-        val previewAlpha by animateFloatAsState(targetValue = if (isLongPressing) 1.0f else 0f)
-        val previewVisible by remember { derivedStateOf { isLongPressing || previewAlpha > 0.01f } }
+            is AsyncImagePainter.State.Success -> {
+                Image(
+                    painter = painter,
+                    contentDescription = contentDescription,
+                    modifier = Modifier.matchParentSize(),
+                    contentScale = contentScale,
+                    colorFilter = if (darkenImage) CoilUtil.DarkFilter else null,
+                )
 
-        if (previewVisible) {
-            PreviewImage(
-                modifier = Modifier.graphicsLayer {
-                    alpha = previewAlpha
-                },
-                model = model,
-                originModelProvider = {
-                    val url = photoViewDataProvider?.invoke()?.data?.originUrl
-                    if (url.isNullOrEmpty()) null else TbGlideUrl(url = url)
-                },
-                dimensions = dimensions,
-            )
+                if (dimensions != null) {
+                    val previewAlpha by animateFloatAsState(targetValue = if (isLongPressing) 1.0f else 0f)
+                    val previewVisible by remember { derivedStateOf { previewAlpha > 0.01f } }
+
+                    if (previewVisible) {
+                        PreviewImage(
+                            modifier = Modifier.graphicsLayer {
+                                alpha = previewAlpha
+                            },
+                            model = photoViewDataProvider?.invoke()?.data?.originUrl ?: imageUrl,
+                            placeholder = (state as AsyncImagePainter.State.Success).result.memoryCacheKey,
+                            dimensions = dimensions,
+                        )
+                    }
+                }
+            }
+
+            is AsyncImagePainter.State.Error -> {
+                PlaceholderRetry(onRetry = painter::restart)
+            }
         }
     }
 }

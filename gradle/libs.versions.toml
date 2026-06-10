@@ -25,8 +25,7 @@ androidx-perfetto = "1.0.1"
 androidx-room = "2.8.4"
 androidx-work = "2.11.2"
 androidx-media3 = "1.10.1"
-glide = "5.0.7"
-glide-compose = "1.0.0-beta09"
+coil = "3.4.0"
 junit = "4.13.2"
 mockk = "1.14.11"
 lottie = "6.7.1"
@@ -120,10 +119,10 @@ lottie = { module = "com.airbnb.android:lottie", version.ref = "lottie" }
 lottie-compose = { module = "com.airbnb.android:lottie-compose", version.ref = "lottie" }
 haze-blur = { module = "dev.chrisbanes.haze:haze-android", version = "1.7.1" }
 
-glide = { module = "com.github.bumptech.glide:glide", version.ref = "glide" }
-glide-compose = { module = "com.github.bumptech.glide:compose", version.ref = "glide-compose" }
-glide-okhttp3-integration = { module = "com.github.bumptech.glide:okhttp3-integration", version.ref = "glide" }
-glide-ksp = { module = "com.github.bumptech.glide:ksp", version.ref = "glide" }
+coil-compose = { module = "io.coil-kt.coil3:coil-compose", version.ref = "coil" }
+coil-gif = { module = "io.coil-kt.coil3:coil-gif", version.ref = "coil" }
+coil-network-okhttp = { module = "io.coil-kt.coil3:coil-network-okhttp", version.ref = "coil" }
+
 google-gson = { module = "com.google.code.gson:gson", version = "2.13.2" }
 godaddy-colorpicker = { module = "com.godaddy.android.colorpicker:compose-color-picker", version = "0.7.0" }
 squareup-okhttp3 = { module = "com.squareup.okhttp3:okhttp", version = "5.3.2" }
@@ -141,6 +140,7 @@ mockk = { module = "io.mockk:mockk", version.ref = "mockk" }
 
 [bundles]
 compose-md3 = ["androidx-compose-material3", "androidx-compose-material3-navsuite"]
+coil3 = ["coil-compose", "coil-gif", "coil-network-okhttp"]
 paging3 = ["androidx-paging-runtime", "androidx-paging-common", "androidx-paging-compose"]
 
 [plugins]

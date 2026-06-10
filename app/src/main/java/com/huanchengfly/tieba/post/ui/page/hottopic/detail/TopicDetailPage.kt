@@ -34,7 +34,7 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.bumptech.glide.integration.compose.GlideImage
+import coil3.compose.AsyncImage
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.models.TopicInfoBean
 import com.huanchengfly.tieba.post.arch.CommonUiEvent
@@ -206,7 +206,7 @@ private fun TopicToolbar(
                 topAppBarColors.containerColor,
             )
 
-            GlideImage(
+            AsyncImage(
                 model = topicInfo.topicImage,
                 contentDescription = null,
                 modifier = Modifier

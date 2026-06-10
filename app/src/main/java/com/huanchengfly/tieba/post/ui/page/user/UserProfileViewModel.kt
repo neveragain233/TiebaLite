@@ -6,7 +6,6 @@ import androidx.compose.runtime.Immutable
 import androidx.lifecycle.SavedStateHandle
 import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
-import com.bumptech.glide.Glide
 import com.huanchengfly.tieba.post.api.models.FollowBean
 import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaNotLoggedInException
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
@@ -25,15 +24,18 @@ import com.huanchengfly.tieba.post.repository.BlockRepository
 import com.huanchengfly.tieba.post.repository.UserProfileRepository
 import com.huanchengfly.tieba.post.ui.models.user.PermissionList
 import com.huanchengfly.tieba.post.ui.page.Destination
+import com.huanchengfly.tieba.post.utils.CoilUtil
 import com.huanchengfly.tieba.post.utils.StringUtil
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 
 sealed interface UserBlockState {
@@ -92,9 +94,9 @@ class UserProfileViewModel @Inject constructor(
     ) { state, profile ->
         // Wait transition animation
         if (profile != null && state.userProfile == null && !params.avatar.isNullOrEmpty()) {
-            Glide.with(context)
-                .load(StringUtil.getBigAvatarUrl(profile.portrait))
-                .preload()
+            withContext(Dispatchers.IO) {
+                CoilUtil.downloadCancelable(context, StringUtil.getBigAvatarUrl(profile.portrait))
+            }
             delay(300)
         }
         state.copy(userProfile = profile)

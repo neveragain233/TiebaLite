@@ -110,7 +110,6 @@ import com.huanchengfly.tieba.post.arch.collectUiEventWithLifecycle
 import com.huanchengfly.tieba.post.arch.isFullyCollapsed
 import com.huanchengfly.tieba.post.arch.isOverlapping
 import com.huanchengfly.tieba.post.arch.onGlobalEvent
-import com.huanchengfly.tieba.post.components.glide.TbGlideUrl
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.theme.isTranslucent
@@ -603,8 +602,7 @@ private fun ForumTitleChip(forum: SimpleForum, onForumClick: () -> Unit) {
             verticalAlignment = Alignment.CenterVertically
         ) {
             Avatar(
-                data = forum.third?.let { TbGlideUrl(url = it) },
-                contentDescription = null,
+                data = forum.third,
                 modifier = Modifier
                     .fillMaxHeight()
                     .aspectRatio(1f)

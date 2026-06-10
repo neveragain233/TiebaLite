@@ -16,10 +16,9 @@ import android.webkit.URLUtil
 import androidx.annotation.RequiresApi
 import androidx.core.content.FileProvider
 import androidx.media3.common.MimeTypes
-import com.bumptech.glide.load.engine.GlideException
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.components.NetworkObserver
-import com.huanchengfly.tieba.post.components.glide.ProgressListener
 import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
 import com.huanchengfly.tieba.post.utils.FileUtil.deleteQuietly
@@ -134,7 +133,7 @@ object ImageUtil {
      *
      * @return Content URI of this image file
      * */
-    suspend fun downloadForShare(context: Context, url: String?, onProgress: ProgressListener?): Result<Uri> {
+    suspend fun downloadForShare(context: Context, url: String?): Result<Uri> {
         if (url == null) return Result.failure(NullPointerException())
 
         val pictureFolder = File(context.cacheDir, FILE_PROVIDER_SHARE_DIR)
@@ -142,12 +141,10 @@ object ImageUtil {
 
         try {
             // Check downloaded
-            if (destFile.exists() && destFile.length() > 0) {
-                onProgress?.onProgress(100)
-            } else {
-                val glideCache: File = GlideUtil.downloadCancelable(context, url, onProgress)
+            if (!destFile.exists() || destFile.length() < 1) {
                 withContext(Dispatchers.IO) {
-                    glideCache.copyTo(destFile, overwrite = true)
+                    val coilCache = CoilUtil.downloadCancelable(context, url)
+                    coilCache.copyTo(destFile, overwrite = true)
                 }
             }
 
@@ -157,9 +154,7 @@ object ImageUtil {
             )
             return Result.success(uri)
         } catch (e: Exception) {
-            if (e !is GlideException) {
-                Log.w(TAG, "downloadForShare: ", e)
-            }
+            Log.w(TAG, "onDownloadForShare", e)
             destFile.deleteQuietly()
             return Result.failure(e)
         }
@@ -168,19 +163,19 @@ object ImageUtil {
     /**
      * Download image to external storage
      * */
-    fun download(context: Context, url: String?, onProgress: ProgressListener? = null) {
+    fun download(context: Context, url: String?) {
         if (url == null) return
 
         MainScope().launch {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                downloadCancelable(context.applicationContext, url, onProgress)
+                downloadCancelable(context.applicationContext, url)
             } else {
                 context.askPermission(
                     R.string.tip_permission_storage_download,
                     Manifest.permission.READ_EXTERNAL_STORAGE,
                     Manifest.permission.WRITE_EXTERNAL_STORAGE
                 )
-                .onGranted { downloadBelowQ(context.applicationContext, url, onProgress) }
+                .onGranted { downloadBelowQ(context.applicationContext, url) }
                 .onDenied { context.toastShort(R.string.toast_no_permission_save_photo) }
             }
         }
@@ -190,15 +185,15 @@ object ImageUtil {
      * Download image to external storage, cancelable
      * */
     @RequiresApi(Build.VERSION_CODES.Q)
-    private suspend fun downloadCancelable(context: Context, url: String, onProgress: ProgressListener?) {
+    private suspend fun downloadCancelable(context: Context, url: String) {
         val cr = context.contentResolver
         var uri: Uri? = null
         withContext(Dispatchers.IO) {
             try {
-                val glideCache = GlideUtil.downloadCancelable(context, url, onProgress)
+                val coilCache = CoilUtil.downloadCancelable(context, url)
                 var mimeType = MimeTypes.IMAGE_JPEG
                 var fileName = URLUtil.guessFileName(url, null, mimeType)
-                if (isGifFile(glideCache)) {
+                if (isGifFile(coilCache)) {
                     mimeType = MIME_TYPE_GIF
                     fileName = FileUtil.changeFileExtension(fileName, ".gif")
                 }
@@ -214,31 +209,34 @@ object ImageUtil {
 
                 uri = cr.insert(MediaStore.Images.Media.EXTERNAL_CONTENT_URI, values)!!
                 cr.openOutputStream(uri).use { out ->
-                    Files.copy(glideCache.toPath(), out)
+                    Files.copy(coilCache.toPath(), out)
                 }
                 withContext(Dispatchers.Main) {
                     context.toastShort(R.string.toast_photo_saved, relativePath)
                 }
                 return@withContext uri
             } catch (e: Exception) {
+                Log.w(TAG, "onDownloadCancelable: ", e)
                 uri?.let { cr.delete(it, null, null) }
-                throw e
+                withContext(Dispatchers.Main) {
+                    context.toastShort(R.string.toast_exception, e.getErrorMessage())
+                }
             }
         }
     }
 
     @Suppress("DEPRECATION")
-    private suspend fun downloadBelowQ(context: Context, url: String, onProgress: ProgressListener?) {
+    private suspend fun downloadBelowQ(context: Context, url: String) {
         withContext(Dispatchers.IO) {
             var destFile: File? = null
             try {
-                val glideCache = GlideUtil.downloadCancelable(context, url, onProgress)
+                val coilCache = CoilUtil.downloadCancelable(context, url)
                 val mimeType = MimeTypes.IMAGE_JPEG
                 val fileName = URLUtil.guessFileName(url, null, mimeType)
                 val pictureFolder =
                     Environment.getExternalStoragePublicDirectory(Environment.DIRECTORY_PICTURES)
                 val appDir = File(pictureFolder, FileUtil.FILE_FOLDER)
-                destFile = if (isGifFile(glideCache)) {
+                destFile = if (isGifFile(coilCache)) {
                     File(appDir, FileUtil.changeFileExtension(fileName, ".gif"))
                 } else {
                     File(appDir, fileName)
@@ -246,7 +244,7 @@ object ImageUtil {
 
                 destFile.ensureParents()
                 destFile.sink().buffer().use { bufferedSink ->
-                    bufferedSink.writeAll(glideCache.source())
+                    bufferedSink.writeAll(coilCache.source())
                 }
                 withContext(Dispatchers.Main) {
                     context.sendBroadcast(
@@ -256,7 +254,10 @@ object ImageUtil {
                 }
             } catch (e: Exception) {
                 destFile?.deleteQuietly() // Delete file if error occurred
-                throw e
+                Log.w(TAG, "onDownloadBelowQ", e)
+                withContext(Dispatchers.Main) {
+                    context.toastShort(R.string.toast_exception, e.getErrorMessage())
+                }
             }
         }
     }

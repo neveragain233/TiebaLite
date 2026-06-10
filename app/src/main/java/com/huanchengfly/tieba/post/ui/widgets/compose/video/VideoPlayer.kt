@@ -56,11 +56,11 @@ import androidx.media3.ui.compose.state.ProgressStateWithTickInterval
 import androidx.media3.ui.compose.state.rememberPresentationState
 import androidx.media3.ui.compose.state.rememberProgressStateWithTickCount
 import androidx.media3.ui.compose.state.rememberProgressStateWithTickInterval
-import com.bumptech.glide.integration.compose.GlideImage
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.theme.Grey100
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
+import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.util.getDurationString
 import com.huanchengfly.tieba.post.utils.DisplayUtil
 
@@ -287,8 +287,8 @@ fun VideoThumbnail(
         contentAlignment = Alignment.Center
     ) {
         if (thumbnailUrl != null) {
-            GlideImage(
-                model = thumbnailUrl,
+            NetworkImage(
+                imageUrl = thumbnailUrl,
                 contentDescription = null,
                 modifier = Modifier.matchParentSize(),
                 contentScale = contentScale

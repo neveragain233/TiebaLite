@@ -15,10 +15,8 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import com.bumptech.glide.integration.compose.GlideImage
+import coil3.compose.AsyncImage
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
-import com.huanchengfly.tieba.post.R
-import com.huanchengfly.tieba.post.utils.GlideUtil
 
 object Sizes {
     val Tiny = 24.dp
@@ -38,46 +36,47 @@ fun AvatarPlaceholder(size: Dp, modifier: Modifier = Modifier)  {
 }
 
 @Composable
+@NonRestartableComposable
 fun Avatar(
     data: String?,
     size: Dp,
-    contentDescription: String? = null,
     modifier: Modifier = Modifier,
+    contentDescription: String? = null,
     shape: Shape = CircleShape,
 ) {
     if (!data.isNullOrEmpty()) {
-        Avatar(modifier.size(size), data, contentDescription, shape)
+        Avatar(data = data, modifier = modifier.size(size), contentDescription, shape)
     } else {
-        Avatar(R.drawable.ic_error, size, null, modifier)
+        Avatar(data = DefaultErrorResource, size, modifier, contentDescription, shape)
     }
 }
 
 @Composable
+@NonRestartableComposable
 fun Avatar(
-    modifier: Modifier = Modifier,
     data: Any?,
+    modifier: Modifier = Modifier,
     contentDescription: String? = null,
     shape: Shape = CircleShape
-) =
-    // TODO: Unbox when glide-compose stable released
-    Box(
-        modifier = modifier.clip(shape)
-    ) {
-        GlideImage(
+) {
+    Box(modifier = modifier.clip(shape)) {
+        AsyncImage(
             model = data,
             contentDescription = contentDescription,
             modifier = Modifier.matchParentSize(),
+            error = painterResource(DefaultErrorResource),
             contentScale = ContentScale.Crop,
-            failure = GlideUtil.DefaultErrorPlaceholder,
         )
     }
+}
 
 @Composable
+@NonRestartableComposable
 fun Avatar(
     @DrawableRes data: Int,
     size: Dp,
-    contentDescription: String? = null,
     modifier: Modifier = Modifier,
+    contentDescription: String? = null,
     shape: Shape = CircleShape
 ) = Image(
     painter = painterResource(id = data),
@@ -89,6 +88,7 @@ fun Avatar(
 )
 
 @Composable
+@NonRestartableComposable
 fun Avatar(
     data: Drawable,
     size: Dp,

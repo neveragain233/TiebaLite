@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.rememberScrollState
@@ -42,7 +41,6 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huanchengfly.tieba.post.R
-import com.huanchengfly.tieba.post.components.glide.TbGlideUrl
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.common.theme.compose.BebasFamily
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
@@ -127,12 +125,11 @@ private fun ForumDetailContent(
         verticalAlignment = Alignment.CenterVertically
     ) {
         Avatar(
-            modifier = Modifier
-                .size(Sizes.Medium)
-                .clickableNoIndication {
-                    PhotoViewActivity.launchSinglePhoto(context, url = avatar)
-                },
-            data = TbGlideUrl(avatar),
+            data = avatar,
+            size = Sizes.Medium,
+            modifier = Modifier.clickableNoIndication {
+                PhotoViewActivity.launchSinglePhoto(context, url = avatar)
+            },
         )
         Text(
             text = stringResource(id = R.string.title_forum, name),

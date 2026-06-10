@@ -86,7 +86,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.viewinterop.AndroidView
 import androidx.core.widget.doAfterTextChanged
-import com.bumptech.glide.integration.compose.GlideImage
+import coil3.compose.AsyncImage
 import com.huanchengfly.tieba.post.LocalHabitSettings
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.arch.CommonUiEvent
@@ -620,15 +620,16 @@ private fun ImagePanel(
 //                Spacer(modifier = Modifier.width(16.dp))
 //            }
             itemsIndexed(selectedImages) { index, imageUri ->
-                Box {
-                    GlideImage(
+                Box(
+                    modifier = Modifier.fillMaxHeight().aspectRatio(1f),
+                ) {
+                    AsyncImage(
                         model = imageUri,
                         contentDescription = stringResource(id = R.string.desc_image),
+                        modifier = Modifier.matchParentSize(),
                         contentScale = ContentScale.Crop,
-                        modifier = Modifier
-                            .fillMaxHeight()
-                            .aspectRatio(1f)
                     )
+
                     IconButton(
                         onClick = { onRemoveImage(index) },
                         modifier = Modifier.align(Alignment.TopEnd),

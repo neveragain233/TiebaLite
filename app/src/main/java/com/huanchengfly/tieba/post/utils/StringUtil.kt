@@ -1,7 +1,6 @@
 package com.huanchengfly.tieba.post.utils
 
 import android.content.Context
-import android.graphics.Bitmap
 import android.graphics.drawable.BitmapDrawable
 import android.text.style.ImageSpan
 import androidx.compose.runtime.Stable
@@ -38,8 +37,8 @@ object StringUtil {
                 val end = start + key.length
                 val group1 = matcherEmoticon.group(1) ?: ""
                 val id = getEmoticonIdByName(group1) ?: continue
-                val glideBitmapRec = runCatching { EmoticonManager.getEmoticonBitmap(id, size).get() }
-                val bitmap: Bitmap = glideBitmapRec.getOrNull() ?: continue
+                val rec = runCatching { EmoticonManager.getEmoticonBitmap(id, size) }
+                val bitmap = rec.getOrNull() ?: continue
                 val emoticonDrawable = BitmapDrawable(context.resources, bitmap)
                 val span = EmoticonSpanV2(emoticonDrawable, size)
                 spans.add(AnnotatedString.Range(item = span, start = start, end = end))

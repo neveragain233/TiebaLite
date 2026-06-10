@@ -74,7 +74,7 @@ val PicPageBean.ImgBean.isGif: Boolean
 val PicPageBean.ImgBean.bestQualitySrc: String
     get() = with(this.original) {
         val size = original.size.toLongOrNull() ?: 0
-        when {
+        val url = when {
             isGif -> waterUrl
 
             // Quality: bigCdnSrc > waterUrl = url = originalSrc
@@ -85,5 +85,12 @@ val PicPageBean.ImgBean.bestQualitySrc: String
 
             // Same file hash and url with PbContent.originSrc but id changed
             // else -> this.originalSrc
+        }
+
+        // Note: Use custom Coil disk cache key
+        return if (url.startsWith("http:")) {
+            url.replaceFirst("http:", "https:")
+        } else {
+            url
         }
     }

@@ -55,17 +55,6 @@ fun OneTimeMeasurer(modifier: Modifier = Modifier, content: @Composable BoxScope
     }
 }
 
-@Composable
-fun Measurer(modifier: Modifier = Modifier, content: @Composable BoxScope.(IntSize?) -> Unit) {
-    var size: IntSize? by remember { mutableStateOf(null) }
-
-    Box(
-        modifier = modifier.onSizeChanged { if (it != size) size = it }
-    ) {
-        content(size)
-    }
-}
-
 // un-inlined box
 @Composable
 fun StrongBox(modifier: Modifier = Modifier, content: @Composable BoxScope.() -> Unit) {

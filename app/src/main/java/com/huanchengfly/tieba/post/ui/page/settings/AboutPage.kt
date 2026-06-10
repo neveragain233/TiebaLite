@@ -28,7 +28,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
-import com.bumptech.glide.integration.compose.GlideImage
+import coil3.compose.AsyncImage
 import com.huanchengfly.tieba.post.BuildConfig
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.R
@@ -41,7 +41,6 @@ import com.huanchengfly.tieba.post.ui.page.welcome.UaWebView
 import com.huanchengfly.tieba.post.ui.widgets.compose.AlertDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.NegativeButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
-import com.huanchengfly.tieba.post.ui.widgets.compose.preference.preference
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -95,7 +94,7 @@ fun AboutPage(
 
                 StrongBox {
                     var iconIndex by rememberSaveable { mutableIntStateOf(0) }
-                    GlideImage(
+                    AsyncImage(
                         model = icons[iconIndex],
                         contentDescription = null,
                         modifier = Modifier

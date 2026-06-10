@@ -33,7 +33,6 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -401,7 +400,6 @@ fun ThreadMedia(
                                     modifier = Modifier.matchParentSize(),
                                     imageUrl = medias[index].getPicUrl(habitSettings.imageLoadType),
                                     dimensions = IntSize(width = medias[index].width, height = medias[index].height),
-                                    contentScale = ContentScale.Crop,
                                     photoViewDataProvider = {
                                         getPhotoViewData(
                                             medias = medias.toImmutableList(),

@@ -246,11 +246,8 @@ dependencies {
 
     implementation(libs.haze.blur)
 
-    //Glide
-    implementation(libs.glide)
-    ksp(libs.glide.ksp)
-    implementation(libs.glide.compose)
-    implementation(libs.glide.okhttp3.integration)
+    // Coil
+    implementation(libs.bundles.coil3)
 
     // Image Viewer
     implementation(libs.androidx.recyclerview)

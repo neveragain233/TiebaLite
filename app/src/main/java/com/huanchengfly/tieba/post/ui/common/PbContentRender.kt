@@ -37,7 +37,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
-import com.bumptech.glide.integration.compose.GlideImage
+import coil3.compose.AsyncImage
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.activities.VideoViewActivity
 import com.huanchengfly.tieba.post.models.PhotoViewData
@@ -224,7 +224,7 @@ class VideoContentRender(
             )
         } else {
             val navigator = LocalNavController.current
-            GlideImage(
+            AsyncImage(
                 model  = picUrl,
                 contentDescription = stringResource(id = R.string.desc_video),
                 modifier = picModifier.clickable {

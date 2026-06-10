@@ -1,7 +1,5 @@
 package com.huanchengfly.tieba.post.activities
 
-import android.graphics.drawable.Drawable
-import android.net.Uri
 import androidx.annotation.StringRes
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.animateColorAsState
@@ -10,16 +8,16 @@ import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.TweenSpec
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.animation.core.spring
-import androidx.compose.foundation.background
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
-import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -55,14 +53,19 @@ import androidx.compose.material3.rememberSliderState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.shadow
+import androidx.compose.ui.graphics.BlendMode
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.ScaleFactor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -72,18 +75,13 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.DpSize
 import androidx.compose.ui.unit.dp
-import com.bumptech.glide.integration.compose.GlideImage
-import com.bumptech.glide.load.engine.DiskCacheStrategy
-import com.bumptech.glide.load.resource.bitmap.BitmapTransformation
-import com.bumptech.glide.request.RequestListener
+import coil3.compose.ConstraintsSizeResolver
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.theme.Grey800
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.theme.colorscheme.translucentColorScheme
 import com.huanchengfly.tieba.post.ui.common.theme.compose.PaletteBackground
-import com.huanchengfly.tieba.post.ui.common.theme.compose.block
 import com.huanchengfly.tieba.post.ui.page.settings.AboutPage
-import com.huanchengfly.tieba.post.ui.widgets.compose.Measurer
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.dialogs.ColorPickerDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
@@ -235,72 +233,54 @@ private fun TranslucentThemeContent(
 @Composable
 fun SideBySideWallpaper(
     modifier: Modifier = Modifier,
-    sideBySide: Boolean = !DisplayUtil.isLandscape,
-    wallpaper: Uri?,
+    painter: Painter?,
+    sizeResolver: ConstraintsSizeResolver,
     alpha: Float,
     primary: Color,
     isDarkTheme: Boolean,
-    transformation: BitmapTransformation?,
-    placeHolder: () -> Drawable?,
-    listener: RequestListener<Drawable>?
 ) {
-    val cornerShape = MaterialTheme.shapes.medium
     val density = LocalDensity.current
     val context = LocalContext.current
     val screen: DpSize = remember { DisplayUtil.getScreenPixels(context).toDpSize(density) }
+
+    val movableWallpaperContent = remember {
+        movableContentOf<Modifier, Painter?, Float> { modifier, painter, alpha ->
+            if (painter != null) {
+                Image(
+                    painter = painter,
+                    contentDescription = null,
+                    modifier = modifier,
+                    contentScale = ContentScale.None,
+                    colorFilter = if (alpha < 1) {
+                        ColorFilter.tint(Color.Black.copy(1 - alpha), BlendMode.SrcAtop)
+                    } else {
+                        null
+                    }
+                )
+            } else {
+                PaletteBackground(modifier, shape = MaterialTheme.shapes.medium, blurRadius = 100.dp)
+            }
+        }
+    }
 
     Row(
         modifier = modifier.fillMaxWidth(),
         horizontalArrangement = Arrangement.spacedBy(24.dp, Alignment.CenterHorizontally)
     ) {
-
         // Constraint size by screen aspect ratio
         val wallpaperModifier = Modifier
-            .block {
-                if (sideBySide) weight(1f, false) else fillMaxHeight()
-            }
+            .weight(1f, false)
             .aspectRatio(ratio = screen.width / screen.height)
-            .background(Color.Black, shape = cornerShape)
-            .shadow(6.dp, shape = cornerShape)
+            .shadow(6.dp, shape = MaterialTheme.shapes.medium)
 
-        if (sideBySide) {
-            Wallpaper(wallpaperModifier, wallpaper, alpha, transformation, placeHolder, listener = listener)
+        movableWallpaperContent(wallpaperModifier, painter, alpha)
+
+        BoxWithConstraints(modifier = wallpaperModifier then sizeResolver) {
+            movableWallpaperContent(Modifier.matchParentSize(), painter, alpha)
+
+            val targetSize = DpSize(maxWidth, maxHeight)
+            WallpaperOverlay(screen, targetSize, primary, isDarkTheme)
         }
-
-        Measurer(modifier = wallpaperModifier) { size ->
-            Wallpaper(Modifier.matchParentSize(), wallpaper, alpha, transformation, placeHolder, listener = null)
-
-            val sizeInDp = size?.toDpSize(density) ?: return@Measurer
-            WallpaperOverlay(screen, sizeInDp, primary, isDarkTheme)
-        }
-    }
-}
-
-@Composable
-private fun Wallpaper(
-    modifier: Modifier = Modifier,
-    wallpaper: Uri?,
-    alpha: Float,
-    trans: BitmapTransformation?,
-    placeHolder: () -> Drawable?,
-    listener: RequestListener<Drawable>?
-) {
-    if (wallpaper != null) {
-        GlideImage(
-            model = wallpaper,
-            contentDescription = null,
-            modifier = modifier,
-            alpha = alpha
-        ) {
-            val loadingPlaceHolder = placeHolder()
-            var builder = it
-            if (trans != null) builder = builder.transform(trans)
-            if (listener != null) builder = builder.addListener(listener)
-            if (loadingPlaceHolder != null) builder = builder.placeholder(loadingPlaceHolder)
-            return@GlideImage builder.diskCacheStrategy(DiskCacheStrategy.NONE)
-        }
-    } else {
-        PaletteBackground(modifier, shape = MaterialTheme.shapes.medium, blurRadius = 100.dp)
     }
 }
 

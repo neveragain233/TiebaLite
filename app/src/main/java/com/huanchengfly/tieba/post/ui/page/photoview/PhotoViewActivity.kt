@@ -7,7 +7,6 @@ import android.view.MenuItem
 import android.view.View
 import android.view.ViewGroup
 import android.widget.LinearLayout
-import android.widget.ProgressBar
 import android.widget.Toast
 import androidx.activity.viewModels
 import androidx.appcompat.app.AppCompatActivity
@@ -20,7 +19,7 @@ import androidx.fragment.app.FragmentManager
 import androidx.lifecycle.lifecycleScope
 import androidx.media3.common.MimeTypes
 import androidx.recyclerview.widget.RecyclerView
-import com.bumptech.glide.Glide
+import coil3.imageLoader
 import com.github.iielse.imageviewer.ImageViewerDialogFragment
 import com.github.iielse.imageviewer.core.Components
 import com.github.iielse.imageviewer.core.OverlayCustomizer
@@ -39,7 +38,6 @@ import com.huanchengfly.tieba.post.utils.DisplayUtil.doOnApplyWindowInsets
 import com.huanchengfly.tieba.post.utils.ImageUtil
 import com.huanchengfly.tieba.post.utils.extension.getParcelableExtraCompat
 import com.huanchengfly.tieba.post.utils.extension.toShareIntent
-import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
 class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback {
@@ -55,7 +53,6 @@ class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback
     private var currentPage: Int = 0
 
     private lateinit var appbar: LinearLayout
-    private lateinit var indicator: ProgressBar
     private var toolbar: Toolbar? = null
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -64,8 +61,6 @@ class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback
         WindowCompat.setDecorFitsSystemWindows(window, false)
 
         val data: PhotoViewData = intent.getParcelableExtraCompat(EXTRA_PHOTO_VIEW_DATA)!!
-        val useTbGlideUrl: Boolean = intent.getBooleanExtra(EXTRA_LOAD_WITH_TB_GLIDE_URL, true)
-        val glideRequestManager = Glide.with(this)
 
         viewModel.initData(data)
         viewModel.state.collectIn(this) { uiState ->
@@ -88,10 +83,9 @@ class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback
             if (Components.working) finish()
             Components.initialize(
                 imageLoader = SimpleImageLoader(
-                    glide = glideRequestManager,
+                    lifecycle = lifecycle,
+                    loader = imageLoader,
                     onClick = this::onImageClicked,
-                    useTbGlideUrl = useTbGlideUrl,
-                    onProgress = this::onProgress
                 ),
                 dataProvider = viewModel,
                 transformer = object : Transformer { /*** NO-OP ***/ }
@@ -103,11 +97,8 @@ class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback
                 .add(android.R.id.content, ImageViewerFragment())
                 .commit()
 
-            lifecycleScope.launch { // Wait Glide animation
-                delay(300L)
-                val indicator = findViewById<View>(android.R.id.progress) ?: return@launch
-                (indicator.parent as ViewGroup).removeView(indicator)
-            }
+            val indicator = findViewById<View>(android.R.id.progress) ?: return@collectIn
+            (indicator.parent as ViewGroup).removeView(indicator)
         }
     }
 
@@ -126,7 +117,6 @@ class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback
                 return@doOnApplyWindowInsets true
             }
 
-            indicator = view.findViewById(R.id.progress_indicator)
             toolbar = appbar.findViewById<Toolbar>(R.id.toolbar).apply {
                 inflateMenu(R.menu.menu_photo_view)
                 setNavigationIcon(R.drawable.ic_round_arrow_back)
@@ -170,7 +160,7 @@ class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback
         val currentImg = getCurrentItem() ?: return
         toastShort(R.string.toast_preparing_share_pic)
         lifecycleScope.launch {
-            ImageUtil.downloadForShare(applicationContext, currentImg.originUrl, null)
+            ImageUtil.downloadForShare(applicationContext, currentImg.originUrl)
                 .onSuccess {
                     val intent = it.toShareIntent(this@PhotoViewActivity, MimeTypes.IMAGE_JPEG, getString(R.string.title_share_pic))
                     runCatching { startActivity(intent) }
@@ -181,22 +171,12 @@ class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback
         }
     }
 
-    private fun onProgress(data: PhotoViewItem) {
-        if (data.overallIndex != getCurrentItem()?.overallIndex) return // Preloading item, ignore
-
-        // Hide when progress is 100
-        val progress = if (data.progress == 100) 0 else data.progress
-        indicator.setProgress(progress, false)
-        indicator.isVisible = progress > 0
-    }
-
     override fun onPageSelected(position: Int, viewHolder: RecyclerView.ViewHolder) {
         currentPage = position
         toolbar?.let {
             val state = viewModel.state.value
             val currentItem = state.data[position]
             it.title = "${currentItem.overallIndex} / ${state.totalAmount}"
-            onProgress(currentItem)
         }
     }
 
@@ -211,29 +191,16 @@ class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback
          * */
         const val EXTRA_PHOTO_VIEW_DATA = "photo_view_data"
 
-        /**
-         * Intent Extra: Whether to use TbGlideUrl or not.
-         *
-         * @since 4.0.0-beta.4
-         * */
-        const val EXTRA_LOAD_WITH_TB_GLIDE_URL = "com.huanchengfly.tieba.post.USE_TB_GLIDE_URL"
-
         fun launch(context: Context, data: PhotoViewData) {
             context.goToActivityDebounced<PhotoViewActivity> {
                 putExtra(EXTRA_PHOTO_VIEW_DATA, data)
             }
         }
 
-        fun launchSinglePhoto(context: Context, url: String, useTbGlideUrl: Boolean = true) {
+        fun launchSinglePhoto(context: Context, url: String) {
             if (url.isNotEmpty() && url.isNotBlank()) {
-                context.goToActivityDebounced<PhotoViewActivity> {
-                    val picItem = PicItem(picId = ImageUtil.getPicId(url), picIndex = 1, url)
-                    putExtra(
-                        EXTRA_PHOTO_VIEW_DATA,
-                        PhotoViewData(data = null, picItems = listOf(picItem))
-                    )
-                    putExtra(EXTRA_LOAD_WITH_TB_GLIDE_URL, useTbGlideUrl)
-                }
+                val picItem = PicItem(picId = ImageUtil.getPicId(url), picIndex = 1, url)
+                launch(context, data = PhotoViewData(data = null, picItems = listOf(picItem)))
             } else {
                 context.toastShort(R.string.desc_image_empty_url)
             }

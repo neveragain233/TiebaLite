@@ -1,7 +1,6 @@
 package com.huanchengfly.tieba.post.ui.page.settings.theme
 
 import android.app.Activity.RESULT_OK
-import android.content.ComponentCallbacks2.TRIM_MEMORY_UI_HIDDEN
 import android.content.Intent
 import androidx.activity.compose.BackHandler
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -95,6 +94,7 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onPlaced
 import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.semantics.contentDescription
@@ -112,10 +112,9 @@ import androidx.compose.ui.util.fastForEachIndexed
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import com.bumptech.glide.Glide
-import com.bumptech.glide.integration.compose.GlideImage
-import com.bumptech.glide.integration.compose.placeholder
-import com.bumptech.glide.load.engine.DiskCacheStrategy
+import coil3.compose.AsyncImage
+import coil3.imageLoader
+import coil3.request.ImageRequest
 import com.google.android.material.color.utilities.Variant
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.activities.TranslucentThemeActivity
@@ -363,8 +362,7 @@ fun AppThemePage(
                             isDarkMode = { isDarkMode },
                             onThemePicked = { newTheme ->
                                 if (newTheme.theme == Theme.TRANSLUCENT) {
-                                    // Trim to 50% of cache size
-                                    Glide.get(context).trimMemory(TRIM_MEMORY_UI_HIDDEN)
+                                    context.imageLoader.memoryCache?.clear()
                                     translucentThemeActivityLauncher.launch(
                                         Intent(context, TranslucentThemeActivity::class.java)
                                     )
@@ -771,13 +769,15 @@ private fun ColorSchemeItem(
 
 @Composable
 fun TranslucentThemeBackground(modifier: Modifier = Modifier, file: File?) {
-    GlideImage(
-        model = file ?: R.drawable.user_header,
+    AsyncImage(
+        model = ImageRequest.Builder(LocalContext.current)
+            .data(file)
+            .diskCachePolicy(coil3.request.CachePolicy.DISABLED)
+            .build(),
         contentDescription = null,
         modifier = modifier,
+        error = painterResource(R.drawable.user_header),
         contentScale = ContentScale.Crop,
-        failure = placeholder(R.drawable.user_header),
-        requestBuilderTransform = { it.diskCacheStrategy(DiskCacheStrategy.NONE) }
     )
 }
 

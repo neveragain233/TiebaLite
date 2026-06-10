@@ -2,8 +2,6 @@ package com.huanchengfly.tieba.post.activities
 
 import android.content.Context
 import android.graphics.Bitmap
-import android.graphics.drawable.BitmapDrawable
-import android.graphics.drawable.Drawable
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -41,11 +39,14 @@ import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
-import com.bumptech.glide.Glide
-import com.bumptech.glide.load.DataSource
-import com.bumptech.glide.load.engine.GlideException
-import com.bumptech.glide.request.RequestListener
-import com.bumptech.glide.request.target.Target
+import coil3.compose.rememberAsyncImagePainter
+import coil3.compose.rememberConstraintsSizeResolver
+import coil3.imageLoader
+import coil3.memory.MemoryCache
+import coil3.request.ImageRequest
+import coil3.request.SuccessResult
+import coil3.request.crossfade
+import coil3.request.transformations
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.activities.TranslucentThemeViewModel.Companion.CROP_FILE_PREFIX
@@ -87,7 +88,7 @@ class TranslucentThemeActivity : AppCompatActivity() {
 
     private val vm: TranslucentThemeViewModel by viewModels()
 
-    private var placeHolder: Drawable? = null
+    private var placeHolder: MemoryCache.Key? = null
 
     private val mediaPickerActivityLauncher = registerForActivityResult(PickVisualMedia()) { uri ->
         if (uri == null) return@registerForActivityResult
@@ -112,17 +113,9 @@ class TranslucentThemeActivity : AppCompatActivity() {
         }
     }
 
-    private val glideWallpaperListener = object : RequestListener<Drawable> {
-        override fun onResourceReady(resource: Drawable, model: Any, target: Target<Drawable>?, dataSource: DataSource, isFirstResource: Boolean): Boolean {
-            if (isFirstResource) {
-                val res = resource as? BitmapDrawable ?: throw RuntimeException("Unrecognized res ${resource::class.simpleName}")
-                vm.onWallpaperDecoded(bitmap = res.bitmap)
-                placeHolder = res
-            }
-            return false
-        }
-
-        override fun onLoadFailed(e: GlideException?, model: Any?, target: Target<Drawable>, isFirstResource: Boolean) = false
+    private val coilWallpaperListener: (ImageRequest, SuccessResult) -> Unit = { _, result ->
+        placeHolder = result.memoryCacheKey ?: placeHolder
+        vm.onWallpaperDecoded(result.image)
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -166,16 +159,30 @@ class TranslucentThemeActivity : AppCompatActivity() {
                     val state by vm.uiState.collectAsStateWithLifecycle()
 
                     val wallpaperContent = remember(windowSize) {
-                        movableContentOf<Modifier> {
+                        movableContentOf<Modifier> { modifier ->
+                            val sizeResolver = rememberConstraintsSizeResolver()
+                            val painter = rememberAsyncImagePainter(
+                                model = ImageRequest.Builder(this)
+                                    .data(state.wallpaper)
+                                    .crossfade(false)
+                                    .apply {
+                                        state.wallpaperTransformation?.let { transformations(it) }
+                                        placeholderMemoryCacheKey(placeHolder)
+                                    }
+                                    .size(sizeResolver)
+                                    .diskCachePolicy(coil3.request.CachePolicy.DISABLED)
+                                    .listener(onSuccess = coilWallpaperListener)
+                                    .build()
+                            )
+
+                            val painterState by painter.state.collectAsStateWithLifecycle()
                             SideBySideWallpaper(
-                                modifier = it.padding(16.dp),
-                                wallpaper = state.wallpaper,
+                                modifier = modifier.padding(16.dp),
+                                painter = painterState.painter,
+                                sizeResolver = sizeResolver,
                                 alpha = state.alpha,
                                 primary = state.primaryColor,
                                 isDarkTheme = state.isDarkTheme,
-                                transformation = state.wallpaperTransformation,
-                                placeHolder = { placeHolder },
-                                listener = glideWallpaperListener
                             )
                         }
                     }
@@ -235,7 +242,7 @@ class TranslucentThemeActivity : AppCompatActivity() {
 
     override fun onStop() {
         super.onStop()
-        Glide.get(applicationContext).trimMemory(TRIM_MEMORY_UI_HIDDEN)
+        applicationContext.imageLoader.memoryCache?.clear()
     }
 
     companion object {
