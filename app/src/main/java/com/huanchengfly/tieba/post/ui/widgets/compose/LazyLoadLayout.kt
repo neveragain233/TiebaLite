@@ -38,7 +38,7 @@ import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource.Companion.UserInput
 import androidx.compose.ui.input.nestedscroll.nestedScroll
-import androidx.compose.ui.layout.onFirstVisible
+import androidx.compose.ui.layout.onVisibilityChanged
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
@@ -118,8 +118,8 @@ fun SwipeUpLazyLoadColumn(
                 item(key = LoadMoreContentType, contentType = LoadMoreContentType) {
                     LoadingIndicator(
                         modifier = Modifier
-                            .onFirstVisible(minDurationMs = 300) {
-                                if (!isLoading && state.layoutInfo.visibleItemsInfo.size > 1) onLazyLoad()
+                            .onVisibilityChanged(minDurationMs = 300) { visible ->
+                                if (visible && !isLoading && state.layoutInfo.visibleItemsInfo.size > 1) onLazyLoad()
                             }
                             .padding(vertical = 8.dp)
                     )

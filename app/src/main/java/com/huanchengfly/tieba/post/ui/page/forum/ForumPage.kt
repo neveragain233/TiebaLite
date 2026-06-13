@@ -297,7 +297,7 @@ fun ForumPage(
                 avatar = {
                     ForumAvatar(
                         modifier = Modifier.matchParentSize(),
-                        avatar = avatarUrl ?: forumData?.avatar,
+                        avatar = forumData?.avatar ?: avatarUrl,
                         forum = forumName,
                         transitionKey = transitionKey
                     )

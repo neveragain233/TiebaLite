@@ -105,7 +105,7 @@ class ForumRepository @Inject constructor(
 
         // is result cacheable
         if (key != null) {
-            forumManagers = data.getManagers(habit = habitSettings.first())
+            forumManagers = data.getManagers()
             val normalThreads = if (sortType != -1) typedThreads else cached?.normal
             val goodThreads = if (sortType == -1) typedThreads else cached?.good
             cache.put(key, ForumCache(forumData, forumManagers, normal = normalThreads, good = goodThreads))
@@ -305,14 +305,14 @@ private fun FrsPageResponseData.toData(): ForumData = forum!!.let {
     )
 }
 
-private fun FrsPageResponseData.getManagers(habit: HabitSettings): List<ForumManager>? {
+private fun FrsPageResponseData.getManagers(): List<ForumManager>? {
     return forum
         ?.managers
         ?.takeUnless { it.isEmpty() }
         ?.map {
             ForumManager(
                 id = it.id,
-                name = StringUtil.getUserNameString(habit.showBothName, it.name, it.show_name),
+                name = StringUtil.getUserNameString(showBoth = false, it.name, it.show_name),
                 avatarUrl = StringUtil.getAvatarUrl(it.portrait)
             )
         }
