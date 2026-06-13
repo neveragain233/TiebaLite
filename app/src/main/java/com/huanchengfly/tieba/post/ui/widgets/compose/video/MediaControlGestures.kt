@@ -109,15 +109,15 @@ private fun GestureBox(
                     if (controller.currentState { it.controlsVisible }) {
                         controller.hideControls()
                     } else {
-                        controller.showControls()
+                        controller.showControls(autoHide = controller.currentState { it.isPlaying })
                     }
                 },
-                onDragStart = { offset ->
+                onDragStart = {
                     wasPlaying = controller.currentState { it.isPlaying }
                     controller.pause()
 
-                    currentPosition = controller.currentState { positionProvider() }
-                    duration = controller.currentState { durationProvider() }
+                    currentPosition = positionProvider()
+                    duration = durationProvider()
 
                     resetState()
                 },

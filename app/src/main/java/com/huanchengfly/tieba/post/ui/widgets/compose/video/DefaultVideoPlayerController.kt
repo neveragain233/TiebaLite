@@ -51,8 +51,7 @@ internal class DefaultVideoPlayerController(
     private var fullScreenModeChangedListener: OnFullScreenModeChangedListener? = null
 
     private val _state = MutableStateFlow(initialState)
-    override val state: StateFlow<VideoPlayerState>
-        get() = _state.asStateFlow()
+    override val state: StateFlow<VideoPlayerState> = _state.asStateFlow()
 
     inline fun <T> currentState(filter: (VideoPlayerState) -> T): T {
         return filter(_state.value)

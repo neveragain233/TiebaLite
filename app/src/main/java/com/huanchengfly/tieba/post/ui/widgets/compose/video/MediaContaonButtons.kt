@@ -85,6 +85,9 @@ private fun Modifier.buttonVisibility(controller: DefaultVideoPlayerController) 
     )
 
     Modifier
-        .graphicsLayer { alpha = appearAlpha }
+        .graphicsLayer {
+            alpha = appearAlpha
+            translationY = if (alpha == 0f) size.height * 10 else 0f
+        }
         .background(Color.Black.copy(0.25f), shape = CircleShape)
 }

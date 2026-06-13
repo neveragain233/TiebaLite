@@ -54,36 +54,36 @@ class VideoViewActivity: ComponentActivity(), OnFullScreenModeChangedListener {
         val thumbnailUrl = intent.getStringExtra(EXTRA_THUMBNAIL)
 
         setContent {
-            videoPlayerController = retainVideoPlayerController(
+            val videoPlayerController = retainVideoPlayerController(
                 source = VideoPlayerSource.Network(data.toString()),
                 thumbnailUrl = thumbnailUrl,
                 fullScreenModeChangedListener = this,
                 playWhenReady = true,
-            )
-
-            TiebaLiteTheme(colorSchemeExt = ThemeUtil.colorState.value) {
-                VideoPlayer(videoPlayerController = videoPlayerController!!)
+            ).also {
+                this.videoPlayerController = it
             }
 
-            LaunchedEffect(Unit) {
+            TiebaLiteTheme(colorSchemeExt = ThemeUtil.colorState.value) {
+                VideoPlayer(videoPlayerController = videoPlayerController)
+            }
+
+            LaunchedEffect(videoPlayerController.state) {
                 if (playOnRecreate) {
-                    videoPlayerController!!.play()
+                    videoPlayerController.play()
                 }
-                videoPlayerController!!.state
+                videoPlayerController.state
                     .distinctUntilChangedBy { Objects.hash(it.isPlaying, it.controlsVisible) }
                     .collectIn(this@VideoViewActivity) {
                         if (it.isPlaying) {
                             window.addFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                            // Update SystemBars visibility
-                            if (it.controlsVisible) {
-                                mInsetsController.show(WindowInsetsCompat.Type.systemBars())
-                            } else {
-                                mInsetsController.hide(WindowInsetsCompat.Type.systemBars())
-                            }
                         } else {
                             window.clearFlags(WindowManager.LayoutParams.FLAG_KEEP_SCREEN_ON)
-                            // SystemBars always visible if video paused
+                        }
+                        // Update SystemBars visibility
+                        if (it.controlsVisible) {
                             mInsetsController.show(WindowInsetsCompat.Type.systemBars())
+                        } else {
+                            mInsetsController.hide(WindowInsetsCompat.Type.systemBars())
                         }
                     }
             }
@@ -103,10 +103,8 @@ class VideoViewActivity: ComponentActivity(), OnFullScreenModeChangedListener {
 
     override fun onFullScreenModeChanged() {
         if (resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) {
-            mInsetsController.hide(WindowInsetsCompat.Type.systemBars())
             this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
         } else {
-            mInsetsController.show(WindowInsetsCompat.Type.systemBars())
             this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
         }
     }
