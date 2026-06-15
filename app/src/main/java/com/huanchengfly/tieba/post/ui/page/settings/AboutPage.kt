@@ -29,6 +29,8 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.huanchengfly.tieba.post.BuildConfig
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.R
@@ -95,7 +97,10 @@ fun AboutPage(
                 StrongBox {
                     var iconIndex by rememberSaveable { mutableIntStateOf(0) }
                     AsyncImage(
-                        model = icons[iconIndex],
+                        model = ImageRequest.Builder(LocalContext.current)
+                            .data(icons[iconIndex])
+                            .crossfade(false) // Coil alpha bug in API 28
+                            .build(),
                         contentDescription = null,
                         modifier = Modifier
                             .size(96.dp)

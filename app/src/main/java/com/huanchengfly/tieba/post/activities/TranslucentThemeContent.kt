@@ -65,7 +65,6 @@ import androidx.compose.ui.graphics.ColorFilter
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.painter.Painter
 import androidx.compose.ui.graphics.toArgb
-import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.ScaleFactor
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
@@ -250,7 +249,6 @@ fun SideBySideWallpaper(
                     painter = painter,
                     contentDescription = null,
                     modifier = modifier,
-                    contentScale = ContentScale.None,
                     colorFilter = if (alpha < 1) {
                         ColorFilter.tint(Color.Black.copy(1 - alpha), BlendMode.SrcAtop)
                     } else {
