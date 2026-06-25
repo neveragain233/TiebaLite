@@ -43,6 +43,8 @@
     <string name="title_collect_on">取消收藏</string>
     <string name="title_reply">回复</string>
     <string name="title_thread">发帖</string>
+    <string name="hint_thread_title">输入标题</string>
+    <string name="tip_thread_content">写下正文…</string>
     <string name="tip_reply">评论一番，提高自己的姿势水平…</string>
     <string name="title_account_manage">账号管理</string>
     <string name="title_block_settings">屏蔽设置</string>

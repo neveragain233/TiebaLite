@@ -40,6 +40,7 @@ import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.Send
@@ -81,6 +82,7 @@ import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.rememberTextMeasurer
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
@@ -106,6 +108,7 @@ import com.huanchengfly.tieba.post.ui.page.reply.ReplyPanelType.NONE
 import com.huanchengfly.tieba.post.ui.page.reply.ReplyViewModel.Companion.MAX_SELECTABLE_IMAGE
 import com.huanchengfly.tieba.post.ui.utils.imeNestedScroll
 import com.huanchengfly.tieba.post.ui.widgets.compose.Avatar
+import com.huanchengfly.tieba.post.ui.widgets.compose.BaseTextField
 import com.huanchengfly.tieba.post.ui.widgets.compose.DefaultDialogContentPadding
 import com.huanchengfly.tieba.post.ui.widgets.compose.Dialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogNegativeButton
@@ -216,9 +219,11 @@ private fun ReplyPageContent(
         ReplyType.TOPIC_THREAD -> context.getString(R.string.title_thread)
         else -> context.getString(R.string.title_reply)
     }
+    val isTopicThread = viewModel.isTopicThread
 
     var inputLength by remember { mutableIntStateOf(0) }
     var editTextView by remember { mutableStateOf<UndoableEditText?>(null) }
+    var threadTitle by remember { mutableStateOf("") }
 
     viewModel.onEvent<CommonUiEvent.Toast> {
         Toast.makeText(context, it.message, it.length).show()
@@ -238,7 +243,7 @@ private fun ReplyPageContent(
     viewModel.onEvent<ReplyUiEvent.UploadSuccess> {
         if (waitUploadSuccessToSend) {
             waitUploadSuccessToSend = false
-            viewModel.onSendReplyWithImage(it.resultList, curTbs)
+            viewModel.onSendReplyWithImage(it.resultList, threadTitle, curTbs)
         }
     }
 
@@ -326,6 +331,31 @@ private fun ReplyPageContent(
             )
         }
         HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        if (isTopicThread) {
+            BaseTextField(
+                value = threadTitle,
+                onValueChange = { if (it.length <= 31) threadTitle = it },
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp, vertical = 8.dp),
+                singleLine = true,
+                textStyle = MaterialTheme.typography.titleMedium.copy(
+                    fontWeight = FontWeight.Bold,
+                    fontSize = 15.sp,
+                ),
+                keyboardOptions = KeyboardOptions(
+                    capitalization = KeyboardCapitalization.Sentences,
+                ),
+                placeholder = {
+                    Text(
+                        text = stringResource(id = R.string.hint_thread_title),
+                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    )
+                },
+            )
+            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+        }
         Box(
             modifier = Modifier
                 .wrapContentHeight()
@@ -346,8 +376,11 @@ private fun ReplyPageContent(
                             null
                         ) as UndoableEditText).apply {
                             editTextView = this
-                            if (subPostId != null && subPostId != 0L && replyUserName != null) {
-                                hint = ctx.getString(R.string.hint_reply, replyUserName)
+                            hint = when {
+                                isTopicThread -> ctx.getString(R.string.tip_thread_content)
+                                subPostId != null && subPostId != 0L && replyUserName != null ->
+                                    ctx.getString(R.string.hint_reply, replyUserName)
+                                else -> ctx.getString(R.string.tip_reply)
                             }
 
                             setOnFocusChangeListener { _, hasFocus ->
@@ -409,7 +442,7 @@ private fun ReplyPageContent(
             },
             onReplyClicked = {
                 if (selectedImageList.isEmpty()) {
-                    viewModel.onSendReply(curTbs = curTbs)
+                    viewModel.onSendReply(threadTitle, curTbs)
                 } else {
                     waitUploadSuccessToSend = true
                     viewModel.send(ReplyUiIntent.UploadImages(forumName, selectedImageList, isOriginImage))

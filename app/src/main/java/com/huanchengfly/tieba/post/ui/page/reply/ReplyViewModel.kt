@@ -84,6 +84,8 @@ class ReplyViewModel @Inject constructor(
     //threadId为0时切换为发主题帖
     val replyType = if (forumId != 0L && threadId == 0L) ReplyType.TOPIC_THREAD else ReplyType.NONE
 
+    val isTopicThread = replyType == ReplyType.TOPIC_THREAD
+
     var emoticons: List<Emoticon> = emptyList()
         private set
 
@@ -162,9 +164,9 @@ class ReplyViewModel @Inject constructor(
                         content,
                         forumId,
                         forumName,
-                        title = "",//这三个后面再做
+                        title = title,
                         isHide = 1,
-                        isTitle = 1,
+                        isTitle = if (title.isNullOrEmpty()) 1 else 0,
                     )
                     .map<AddThreadBean, ReplyPartialChange.Send> {
                         if (it.tid == null) throw TiebaUnknownException
@@ -243,7 +245,7 @@ class ReplyViewModel @Inject constructor(
             flowOf(ReplyPartialChange.ToggleIsOriginImage(isOriginImage))
     }
 
-    fun onSendReply(curTbs: String) {
+    fun onSendReply(threadTitle: String, curTbs: String) {
         val text = userDraft ?: return
         val replyContent = if (subPostId == null || subPostId == 0L) {
             text
@@ -257,6 +259,7 @@ class ReplyViewModel @Inject constructor(
                 forumName = forumName,
                 threadId = threadId,
                 tbs = curTbs,
+                title = threadTitle.takeIf { isTopicThread },
                 postId = postId,
                 subPostId = subPostId,
                 replyUserId = replyUserId
@@ -264,7 +267,7 @@ class ReplyViewModel @Inject constructor(
         )
     }
 
-    fun onSendReplyWithImage(resultList: List<UploadPictureResultBean>, curTbs: String) {
+    fun onSendReplyWithImage(resultList: List<UploadPictureResultBean>, threadTitle: String?, curTbs: String) {
         val imageContent = resultList.joinToString("\n") { image ->
             "#(pic,${image.picId ?: 0},${image.picInfo?.originPic?.width ?: 0},${image.picInfo?.originPic?.height ?: 0})"
         }
@@ -276,6 +279,7 @@ class ReplyViewModel @Inject constructor(
                 forumName = forumName,
                 threadId = threadId,
                 tbs = curTbs,
+                title = threadTitle.takeIf { isTopicThread },
                 postId = postId,
                 subPostId = subPostId,
                 replyUserId = replyUserId,
@@ -357,6 +361,7 @@ sealed interface ReplyUiIntent : UiIntent {
         val forumName: String,
         val threadId: Long,
         val tbs: String,
+        val title: String? = null,
         val postId: Long? = null,
         val subPostId: Long? = null,
         val replyUserId: Long? = null,
