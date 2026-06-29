@@ -25,6 +25,8 @@ import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
+import androidx.compose.material3.IconButtonColors
+import androidx.compose.material3.IconButtonDefaults
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -210,6 +212,7 @@ fun ActionItem(
         spacingBetweenTooltipAndAnchor = SpacingBetweenTooltipAndAnchor
     ),
     enabled: Boolean = true,
+    colors: IconButtonColors = IconButtonDefaults.iconButtonColors(),
     onClick: () -> Unit
 ) {
     PlainTooltipBox(
@@ -218,7 +221,7 @@ fun ActionItem(
         contentDescription = contentDescription,
         hasAction = true,
     ) {
-        IconButton(onClick = onClick, enabled = enabled) {
+        IconButton(onClick = onClick, enabled = enabled, colors = colors) {
             Icon(imageVector = icon, contentDescription = contentDescription)
         }
     }

@@ -3,8 +3,9 @@ package com.huanchengfly.tieba.post.components
 import android.content.Context
 import android.net.Uri
 import android.os.Environment
-import androidx.annotation.VisibleForTesting
 import androidx.annotation.WorkerThread
+import androidx.core.net.toUri
+import androidx.media3.common.C
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.database.StandaloneDatabaseProvider
 import androidx.media3.datasource.DataSpec
@@ -15,16 +16,15 @@ import androidx.media3.datasource.cache.Cache
 import androidx.media3.datasource.cache.CacheDataSink
 import androidx.media3.datasource.cache.CacheDataSource
 import androidx.media3.datasource.cache.CacheKeyFactory
+import androidx.media3.datasource.cache.ContentMetadata
 import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
-import com.huanchengfly.tieba.post.api.ClientVersion
-import com.huanchengfly.tieba.post.api.getUserAgent
 import java.io.File
-
-const val BD_VIDEO_HOST = "tb-video.bdstatic.com"
 
 @UnstableApi
 object MediaCache {
+
+    const val BD_VIDEO_HOST = "tb-video.bdstatic.com"
 
     private const val LOCAL_CACHE_DIRECTORY = "media"
 
@@ -42,7 +42,7 @@ object MediaCache {
         return mCache ?: synchronized(this) {
             mCache ?: SimpleCache(
                 context.mediaCacheDir,
-                LeastRecentlyUsedCacheEvictor(100 * 1024 * 1024), // 100 MiB
+                LeastRecentlyUsedCacheEvictor(200 * 1024 * 1024),
                 StandaloneDatabaseProvider(context)
             ).also { mCache = it }
         }
@@ -53,9 +53,7 @@ object MediaCache {
         val cacheSink = CacheDataSink.Factory()
             .setCache(downloadCache)
 
-        val httpFactory = DefaultHttpDataSource.Factory().apply {
-            setUserAgent(getUserAgent("tieba/${ClientVersion.TIEBA_V12.version}"))
-        }
+        val httpFactory = DefaultHttpDataSource.Factory()
         val upstreamFactory = DefaultDataSource.Factory(context, httpFactory)
         val downStreamFactory = FileDataSource.Factory()
 
@@ -68,8 +66,21 @@ object MediaCache {
             .setFlags(CacheDataSource.FLAG_IGNORE_CACHE_ON_ERROR)
     }
 
+    fun getContentLength(key: String?, url: String): Long {
+        val cache = mCache ?: throw NullPointerException("Cache not initialized!")
+        if (!cache.keys.contains(key ?: url)) return C.LENGTH_UNSET.toLong()
+
+        val metadata = cache.getContentMetadata(key ?: url)
+        return ContentMetadata.getContentLength(metadata)
+    }
+
+    fun isCached(url: String): Boolean {
+        val key = url.toUri().getBdVideoMD5()
+        val contentLength = getContentLength(key, url)
+        return contentLength > C.LENGTH_UNSET && mCache!!.isCached(key ?: url, 0, contentLength)
+    }
+
     // Keep it sync with [VideoInfo.videoMD5]
-    @VisibleForTesting()
     fun Uri.getBdVideoMD5(): String? {
         if (host != BD_VIDEO_HOST) return null
 
@@ -88,10 +99,8 @@ object MediaCache {
     }
 
     @WorkerThread
-    fun release() {
-        mCache?.let {
-            it.release()
-            mCache = null
-        }
+    fun release() = synchronized(this) {
+        mCache?.release()
+        mCache = null
     }
 }

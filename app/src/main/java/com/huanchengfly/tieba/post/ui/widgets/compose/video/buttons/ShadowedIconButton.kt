@@ -1,4 +1,4 @@
-package com.huanchengfly.tieba.post.ui.widgets.compose.video
+package com.huanchengfly.tieba.post.ui.widgets.compose.video.buttons
 
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.offset
@@ -30,7 +30,8 @@ fun ShadowedIcon(
         Icon(
             imageVector = icon,
             modifier = Modifier.size(iconSize),
-            contentDescription = null
+            contentDescription = null,
+            tint = Color.White,
         )
     }
 }

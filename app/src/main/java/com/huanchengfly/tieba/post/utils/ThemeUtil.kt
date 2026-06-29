@@ -153,7 +153,7 @@ object ThemeUtil {
     fun getRawTheme() = colorState.value
 
     // Retrieve latest ColorSchemeDayNight from settings
-    private fun savedColorSchemeFlow(themeSettings: Settings<ThemeSettings>, context: Context): Flow<ColorSchemeDayNight> {
+    fun savedColorSchemeFlow(themeSettings: Settings<ThemeSettings>, context: Context): Flow<ColorSchemeDayNight> {
         return themeSettings.map {
             when (it.theme) {
                 Theme.TRANSLUCENT -> translucentColorScheme(it.transColor, it.transDarkColorMode)
