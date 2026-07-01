@@ -2,6 +2,7 @@
 
 package com.huanchengfly.tieba.post.ui.widgets.compose.video
 
+import android.content.Context
 import android.content.pm.ActivityInfo
 import android.content.res.Configuration
 import androidx.compose.animation.AnimatedVisibility
@@ -10,7 +11,6 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -23,6 +23,7 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.ArrowBack
 import androidx.compose.material.icons.rounded.Download
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.PlayArrow
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.material3.ButtonDefaults
@@ -47,11 +48,16 @@ import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.graphics.Brush
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.drawscope.rotate
+import androidx.compose.ui.graphics.toAndroidRectF
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.boundsInWindow
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.roundToIntSize
+import androidx.core.graphics.toRect
 import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
@@ -60,19 +66,24 @@ import androidx.media3.common.util.Util
 import androidx.media3.exoplayer.ExoPlayer
 import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.compose.ContentFrame
+import androidx.media3.ui.compose.PlayerSurface
 import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
 import androidx.media3.ui.compose.material3.buttons.MuteButton
 import androidx.media3.ui.compose.material3.buttons.RepeatButton
 import androidx.media3.ui.compose.material3.buttons.SeekBackButton
 import androidx.media3.ui.compose.material3.buttons.SeekForwardButton
 import androidx.media3.ui.compose.material3.indicator.PositionAndDurationText
+import androidx.media3.ui.compose.modifiers.resizeWithContentScale
+import androidx.media3.ui.compose.state.rememberPresentationState
 import androidx.window.core.layout.WindowSizeClass.Companion.HEIGHT_DP_EXPANDED_LOWER_BOUND
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.components.MediaCache
 import com.huanchengfly.tieba.post.findActivity
 import com.huanchengfly.tieba.post.theme.Grey100
+import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
+import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
@@ -86,7 +97,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.video.buttons.PlaybackSpee
 fun retainVideoPlayer(
     initialMediaItem: MediaItem,
     playWhenReady: Boolean = true,
-): Player {
+): ExoPlayer {
     val context = LocalContext.current
     val player = retain { ExoPlayer.Builder(context.applicationContext).build() }
     var wasPlaying by retain { mutableStateOf(playWhenReady) }
@@ -98,9 +109,7 @@ fun retainVideoPlayer(
 
         onStopOrDispose {
             wasPlaying = player.isPlaying
-            if (player.isCommandAvailable(Player.COMMAND_PLAY_PAUSE)) {
-                player.pause()
-            }
+            Util.handlePauseButtonAction(player)
         }
     }
 
@@ -109,9 +118,7 @@ fun retainVideoPlayer(
     // and initialize the new one. Likewise, the player needs to be disposed of when
     // it stops being retained.
     RetainedEffect(player) {
-        val factory = ProgressiveMediaSource.Factory(MediaCache.Factory(context))
-        player.setMediaSource(factory.createMediaSource(initialMediaItem))
-        player.prepare()
+        player.initialize(context, initialMediaItem)
 
         onRetire {
             if (!player.isReleased) player.release()
@@ -126,32 +133,44 @@ fun retainVideoPlayer(
  *
  * @param player The [Player] instance to be controlled and whose content is displayed.
  * @param modifier The [Modifier] to be applied to the outer [Box].
- * @param contentScale The scaling mode to apply to the content within the [ContentFrame].
+ * @param contentScale The initial scaling mode to apply to the content within the [ContentFrame].
  * @param gestureState The [PlayerGestureState] that manages gesture interactions such as seek
  *   using dragging and tapping gestures.
+ * @param pipState The [PictureInPictureState] for picture-in-picture mode button.
  * @param thumbnailUrl Optional URL to be displayed as a shutter over the content. If `null` or
  *   empty, a black [Box] is used.
  * @param topControls A composable aligned with [Alignment.TopCenter].
  */
 @Composable
 internal fun VideoPlayer(
-    player: Player?,
+    player: Player,
     modifier: Modifier = Modifier,
     contentScale: ContentScale = ContentScale.Fit,
     gestureState: PlayerGestureState = rememberPlayerGestureState(player),
+    pipState: PictureInPictureState = rememberPictureInPictureState(player),
     thumbnailUrl: String? = null,
-    topControls: (@Composable BoxScope.() -> Unit)? = {
-        TopControls(player, modifier = Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets))
+    topControls: (@Composable (PictureInPictureState) -> Unit)? = {
+        TopControls(player, Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets), pipState)
     },
 ) {
     var currentContentScale by remember { mutableStateOf(contentScale) }
+    val presentationState = rememberPresentationState(player)
 
     Box(modifier = modifier) {
-        ContentFrame(
+        PlayerSurface(
             player = player,
             surfaceType = SURFACE_TYPE_SURFACE_VIEW,
-            contentScale = currentContentScale,
-        ) {
+            modifier = Modifier
+                .resizeWithContentScale(currentContentScale, presentationState.videoSizeDp)
+                .onCase(pipState.isPipSupported) {
+                    onGloballyPositioned { layoutCoordinates ->
+                        val videoSize = presentationState.videoSizeDp?.roundToIntSize() ?: return@onGloballyPositioned
+                        val sourceRect = layoutCoordinates.boundsInWindow().toAndroidRectF().toRect()
+                        pipState.setVideoViewRect(sourceRect, videoSize)
+                    }
+                }
+        )
+        if (presentationState.coverSurface) {
             val shutterModifier = Modifier.fillMaxSize().background(Color.Black)
             if (!thumbnailUrl.isNullOrEmpty()) {
                 VideoThumbnail(
@@ -165,6 +184,8 @@ internal fun VideoPlayer(
             }
         }
 
+        if (pipState.isInPictureInPictureMode) return@Box // Disable all gestures in PIP mode
+
         MediaControlGestures(Modifier.matchParentSize(), gestureState)
 
         CompositionLocalProvider(LocalPlayerGestureState provides gestureState) {
@@ -173,7 +194,9 @@ internal fun VideoPlayer(
                     modifier = Modifier.fillMaxSize()
                 ) {
                     if (topControls != null) {
-                        Box(modifier = Modifier.align(Alignment.TopStart), content = topControls)
+                        Box(Modifier.align(Alignment.TopStart)) {
+                            topControls(pipState)
+                        }
                     }
 
                     CenterControls(player, modifier = Modifier.align(Alignment.Center))
@@ -200,6 +223,7 @@ internal fun VideoPlayer(
  *
  * @param player The [Player] to control.
  * @param modifier The [Modifier] to be applied to this top controls composable.
+ * @param pipState The [PictureInPictureState] for picture-in-picture mode button.
  * @param onBack An optional callback invoked when the back button is clicked.
  * @param onDownload An optional callback invoked when the download button is clicked. If `null`,
  *   the download button is not shown.
@@ -208,6 +232,7 @@ internal fun VideoPlayer(
 fun TopControls(
     player: Player?,
     modifier: Modifier = Modifier,
+    pipState: PictureInPictureState? = null,
     onBack: (() -> Unit)? = null,
     onDownload: (() -> Unit)? = null,
 ) {
@@ -240,6 +265,9 @@ fun TopControls(
             )
         }
         MuteButton(player, colors = topButtonColors)
+        if (pipState != null && pipState.isPipSupported) {
+            PictureInPictureButton(pipState, colors = topButtonColors)
+        }
         MediaFormatsButton(player, colors = topButtonColors)
     }
 }
@@ -363,6 +391,32 @@ private fun FullScreenButton(
 }
 
 @Composable
+private fun PictureInPictureButton(
+    pipState: PictureInPictureState,
+    modifier: Modifier = Modifier,
+    colors: IconButtonColors = IconButtonDefaults.iconButtonColors(),
+) {
+    val context = LocalContext.current
+    val gestureState = LocalPlayerGestureState.current
+    ActionItem(
+        modifier = modifier,
+        onClick = {
+            if (!pipState.hasPipPermission) {
+                gestureState?.showControls(autoHide = false)
+                context.toastShort(R.string.toast_enable_pip_from_settings)
+                pipState.openPictureInPictureSettings()
+            } else {
+                gestureState?.hideControls()
+                pipState.enterPictureInPictureMode()
+            }
+        },
+        icon = Icons.Rounded.PictureInPictureAlt,
+        contentDescription = stringResource(R.string.btn_picture_in_picture),
+        colors = colors,
+    )
+}
+
+@Composable
 fun VideoThumbnail(
     modifier: Modifier = Modifier,
     thumbnailUrl: String?,
@@ -389,6 +443,12 @@ fun VideoThumbnail(
             tint = Grey100
         )
     }
+}
+
+fun ExoPlayer.initialize(context: Context, mediaItem: MediaItem) {
+    val factory = ProgressiveMediaSource.Factory(MediaCache.Factory(context))
+    setMediaSource(factory.createMediaSource(mediaItem))
+    prepare()
 }
 
 private fun Modifier.drawControlsScrim(scrim: Color = Color.Black, reverse: Boolean = false): Modifier {

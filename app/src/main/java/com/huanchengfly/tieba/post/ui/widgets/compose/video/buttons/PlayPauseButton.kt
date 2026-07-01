@@ -62,19 +62,21 @@ fun PlayPauseButton(
         enabled = state.isEnabled,
         colors = colors
     ) {
+        val iconModifier = Modifier.size(Sizes.Small)
         with(state) {
             when {
                 !isEnabled || playbackState == Player.STATE_BUFFERING -> CircularProgressIndicator()
 
                 playbackState == Player.STATE_ENDED -> Icon(
                     imageVector = Icons.Sharp.Replay,
-                    contentDescription = stringResource(com.huanchengfly.tieba.post.R.string.button_replay)
+                    contentDescription = stringResource(com.huanchengfly.tieba.post.R.string.button_replay),
+                    modifier = iconModifier,
                 )
 
                 else -> Icon(
                     imageVector = if (showPlay) Icons.Filled.PlayArrow else Icons.Filled.Pause,
                     contentDescription = stringResource(if (showPlay) R.drawable.media3_icon_pause else R.string.playpause_button_pause),
-                    modifier = Modifier.size(Sizes.Small)
+                    modifier = iconModifier,
                 )
             }
         }

@@ -352,6 +352,7 @@
     <string name="btn_search_in_forum">吧内搜索</string>
     <string name="btn_more">更多选项</string>
     <string name="btn_download">下载</string>
+    <string name="btn_picture_in_picture">画中画</string>
     <string name="launcher_not_support_pin_shortcut">启动器不支持创建快捷方式</string>
     <string name="load_shortcut_icon_fail">加载图标失败</string>
     <string name="delete_store_success">取消收藏成功</string>
@@ -573,6 +574,7 @@
     <string name="toast_connecting">连接中请稍候..</string>
     <string name="toast_download_manager_enqueued">任务已提交至系统下载器, 请查看通知</string>
     <string name="toast_exception">出错了 %1$s</string>
+    <string name="toast_enable_pip_from_settings">已停用画中画。在设置中启用它可使用此功能。</string>
     <string name="toast_bad_backup_rule">无效备份规则</string>
     <string name="toast_backup_done">备份完成</string>
     <string name="toast_ban_interact_failed">更新拉黑配置失败 %1$s</string>

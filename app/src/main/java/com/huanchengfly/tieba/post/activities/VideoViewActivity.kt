@@ -23,12 +23,15 @@ import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.core.content.ContextCompat
+import androidx.core.util.Consumer
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
 import androidx.lifecycle.compose.LocalLifecycleOwner
@@ -54,6 +57,7 @@ import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.TopControls
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.VideoPlayer
+import com.huanchengfly.tieba.post.ui.widgets.compose.video.initialize
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.rememberPlayerGestureState
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.retainVideoPlayer
 import com.huanchengfly.tieba.post.utils.DownloadUtil
@@ -61,7 +65,10 @@ import com.huanchengfly.tieba.post.utils.PermissionUtils.askPermission
 import com.huanchengfly.tieba.post.utils.PermissionUtils.onDenied
 import com.huanchengfly.tieba.post.utils.PermissionUtils.onGranted
 import com.huanchengfly.tieba.post.utils.ThemeUtil
+import kotlinx.coroutines.channels.awaitClose
 import kotlinx.coroutines.delay
+import kotlinx.coroutines.flow.callbackFlow
+import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
 import java.io.File
@@ -104,9 +111,8 @@ class VideoViewActivity: AppCompatActivity() {
 
         super.onCreate(savedInstanceState)
         downloadId = savedInstanceState?.getLong(KEY_DOWNLOAD_ID, -1) ?: -1
-
         val data = intent.data ?: throw NullPointerException("No video provided!")
-        val thumbnailUrl = intent.getStringExtra(EXTRA_THUMBNAIL)
+        var thumbnailUrl by mutableStateOf(intent.getStringExtra(EXTRA_THUMBNAIL))
 
         setContent {
             val player = retainVideoPlayer(initialMediaItem = MediaItem.fromUri(data))
@@ -119,11 +125,12 @@ class VideoViewActivity: AppCompatActivity() {
                     modifier = Modifier.fillMaxSize(),
                     gestureState = gestureState,
                     thumbnailUrl = thumbnailUrl,
-                    topControls = {
+                    topControls = { pipState ->
                         val downloadable by collectDownloadableStatusAsState(downloadId)
                         TopControls(
                             player = player,
                             modifier = Modifier.windowInsetsPadding(TopAppBarDefaults.windowInsets),
+                            pipState = pipState,
                             onBack = onBackPressedDispatcher::onBackPressed,
                             onDownload = ::onDownloadClicked.takeIf { downloadable },
                         )
@@ -132,6 +139,22 @@ class VideoViewActivity: AppCompatActivity() {
             }
 
             ObservePlayerError(player)
+
+            LaunchedEffect(Unit) {
+                callbackFlow {
+                    val consumer = Consumer<Intent> { trySend(it) }
+                    addOnNewIntentListener(consumer)
+                    awaitClose { removeOnNewIntentListener(consumer) }
+                }
+                .collectLatest { newIntent ->
+                    val newVideo = newIntent.data?.normalizeScheme() ?: return@collectLatest
+                    if (newVideo != player.currentMediaItem?.localConfiguration?.uri) {
+                        thumbnailUrl = newIntent.getStringExtra(EXTRA_THUMBNAIL)
+                        player.initialize(applicationContext, MediaItem.fromUri(newVideo))
+                        player.playWhenReady = true
+                    }
+                }
+            }
         }
     }
 
@@ -186,7 +209,7 @@ class VideoViewActivity: AppCompatActivity() {
         const val EXTRA_THUMBNAIL = "video_thumbnail"
 
         fun launch(context: Context, videoUrl: String, thumbnailUrl: String? = null) {
-            val data = Uri.parse(videoUrl)
+            val data = Uri.parse(videoUrl).normalizeScheme()
 
             // Check tb-video is unauthorized
             if (data.host == BD_VIDEO_HOST && videoUrl.endsWith(".mp4")) {
@@ -198,6 +221,7 @@ class VideoViewActivity: AppCompatActivity() {
             context.imageLoader.memoryCache?.run { trimToSize((maxSize * 0.2).roundToLong()) }
 
             context.goToActivity<VideoViewActivity> {
+                this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 this.data = data
                 thumbnailUrl?.let { putExtra(EXTRA_THUMBNAIL, it) }
             }
