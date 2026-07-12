@@ -21,7 +21,7 @@ import androidx.media3.datasource.cache.LeastRecentlyUsedCacheEvictor
 import androidx.media3.datasource.cache.SimpleCache
 import java.io.File
 
-@UnstableApi
+@androidx.annotation.OptIn(UnstableApi::class)
 object MediaCache {
 
     const val BD_VIDEO_HOST = "tb-video.bdstatic.com"
@@ -38,7 +38,7 @@ object MediaCache {
     @Volatile
     private var mCache: Cache? = null
 
-    private fun getCache(context: Context): Cache {
+    fun getCache(context: Context): Cache {
         return mCache ?: synchronized(this) {
             mCache ?: SimpleCache(
                 context.mediaCacheDir,
@@ -93,6 +93,8 @@ object MediaCache {
         }
         return null
     }
+
+    fun Uri.getBdMediaId(): String = getBdVideoMD5() ?: hashCode().toString()
 
     private val BdVideoCacheKeyFactory = CacheKeyFactory { dataSpec: DataSpec ->
         dataSpec.uri.getBdVideoMD5() ?: CacheKeyFactory.DEFAULT.buildCacheKey(dataSpec)

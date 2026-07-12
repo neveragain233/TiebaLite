@@ -6,10 +6,13 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.IconButtonColors
@@ -26,6 +29,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.derivedMediaQuery
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -40,9 +44,11 @@ import androidx.media3.common.util.CodecSpecificDataUtil
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.ui.compose.state.PlayerStateObserver
 import androidx.media3.ui.compose.state.observeState
+import androidx.window.core.layout.WindowSizeClass
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.components.MediaCache
-import com.huanchengfly.tieba.post.components.MediaCache.getBdVideoMD5
+import com.huanchengfly.tieba.post.components.MediaCache.getBdMediaId
+import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.AlertDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.DefaultDialogContentPadding
@@ -91,7 +97,7 @@ fun MediaFormatsButton(
             val item = player?.currentMediaItem?.localConfiguration?.uri
             if (item != null && mediaSize == -1L) {
                 coroutineScope.launch {
-                    mediaSize = MediaCache.getContentLength(item.getBdVideoMD5(), item.toString())
+                    mediaSize = MediaCache.getContentLength(item.getBdMediaId(), item.toString())
                 }
             }
             mediaFormats = state.getMediaFormats()
@@ -132,6 +138,10 @@ private fun MediaFormatDialog(
         }
     ) {
         val context = LocalContext.current
+        val isWindowHeightCompact by derivedMediaQuery {
+            windowHeight <= WindowSizeClass.HEIGHT_DP_MEDIUM_LOWER_BOUND.dp
+        }
+
         val (videoInfos, audioInfos) = remember(mediaFormats, mediaSize) {
             val (videoFormat, audioFormat) = mediaFormats
             val video = videoFormat.run {
@@ -177,7 +187,11 @@ private fun MediaFormatDialog(
         }
 
         Column(
-            modifier = Modifier.padding(horizontal = DefaultDialogContentPadding + 16.dp),
+            modifier = Modifier
+                .padding(horizontal = DefaultDialogContentPadding + 16.dp)
+                .onCase(isWindowHeightCompact) {
+                    fillMaxHeight().verticalScroll(rememberScrollState())
+                },
             verticalArrangement = Arrangement.spacedBy(2.dp),
         ) {
             infoListContent(stringResource(R.string.desc_video), videoInfos)
