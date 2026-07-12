@@ -69,11 +69,12 @@ import com.huanchengfly.tieba.post.ui.page.threadstore.ThreadStorePage
 import com.huanchengfly.tieba.post.ui.page.user.UserProfilePage
 import com.huanchengfly.tieba.post.ui.page.webview.WebViewPage
 import com.huanchengfly.tieba.post.ui.page.welcome.WelcomeScreen
+import com.huanchengfly.tieba.post.ui.widgets.compose.video.LocalVideoPreviewState
+import kotlinx.coroutines.currentCoroutineContext
+import kotlinx.coroutines.isActive
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.isActive
 
 const val TB_LITE_DOMAIN = "tblite"
 
@@ -230,7 +231,9 @@ private fun buildRootNavGraph(
 
         animatedComposable<Destination.UserProfile> { backStackEntry ->
             backStackEntry.toRoute<Destination.UserProfile>().run {
-                UserProfilePage(uid, avatar, nickname, username, transitionKey, navController)
+                CompositionLocalProvider(LocalVideoPreviewState provides null) {
+                    UserProfilePage(uid, avatar, nickname, username, transitionKey, navController)
+                }
             }
         }
 

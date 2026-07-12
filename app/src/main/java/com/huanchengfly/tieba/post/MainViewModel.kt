@@ -7,6 +7,7 @@ import androidx.lifecycle.viewModelScope
 import com.huanchengfly.tieba.post.activities.TranslucentThemeViewModel.Companion.translucentBackground
 import com.huanchengfly.tieba.post.arch.stateInViewModel
 import com.huanchengfly.tieba.post.components.ClipBoardLinkDetector
+import com.huanchengfly.tieba.post.components.media.ExoPlayerPool
 import com.huanchengfly.tieba.post.models.database.Account
 import com.huanchengfly.tieba.post.repository.ForumRepository
 import com.huanchengfly.tieba.post.repository.PbPageRepository
@@ -80,6 +81,8 @@ class MainViewModel @Inject constructor(
 
     private val privacySettings: Settings<PrivacySettings> = settingsRepository.privacySettings
 
+    val playerPool: ExoPlayerPool by lazy { ExoPlayerPool.defaultExoPlayerPool(context) }
+
     fun onCheckClipBoard() {
         viewModelScope.launch {
             val setupFinished = uiState.value.uiSettings?.setupFinished == true
@@ -90,4 +93,9 @@ class MainViewModel @Inject constructor(
     }
 
     fun onClipBoardDetectDialogDismiss() = ClipBoardLinkDetector.clear()
+
+    override fun onCleared() {
+        super.onCleared()
+        playerPool.dispose()
+    }
 }

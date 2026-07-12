@@ -11,6 +11,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
@@ -68,6 +69,8 @@ import androidx.media3.exoplayer.source.ProgressiveMediaSource
 import androidx.media3.ui.compose.ContentFrame
 import androidx.media3.ui.compose.PlayerSurface
 import androidx.media3.ui.compose.SURFACE_TYPE_SURFACE_VIEW
+import androidx.media3.ui.compose.SURFACE_TYPE_TEXTURE_VIEW
+import androidx.media3.ui.compose.SurfaceType
 import androidx.media3.ui.compose.material3.buttons.MuteButton
 import androidx.media3.ui.compose.material3.buttons.RepeatButton
 import androidx.media3.ui.compose.material3.buttons.SeekBackButton
@@ -92,6 +95,12 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.video.buttons.LabeledProgr
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.buttons.MediaFormatsButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.buttons.PlayPauseButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.buttons.PlaybackSpeedBottomSheetButton
+
+internal val defaultControlButtonColors: IconButtonColors
+    @Composable get() = IconButtonDefaults.iconButtonColors(
+        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.78f),
+        contentColor = MaterialTheme.colorScheme.primary
+    )
 
 @Composable
 fun retainVideoPlayer(
@@ -125,6 +134,47 @@ fun retainVideoPlayer(
         }
     }
     return player
+}
+
+/**
+ * Video player component for displaying short video preview.
+ *
+ * @param player The [Player] instance to be controlled and whose content is displayed.
+ * @param modifier The [Modifier] to be applied to the outer [Box].
+ * @param contentScale The scaling mode to apply to the content within the [ContentFrame].
+ * @param surfaceType The type of surface to use for video playback. Can be either
+ *   [SURFACE_TYPE_SURFACE_VIEW] or [SURFACE_TYPE_TEXTURE_VIEW].
+ * @param shutter A composable that is displayed when the video surface needs to be covered. By
+ *   default, this is a black background.
+ * @param bottomControls Optional composable aligned with [Alignment.BottomEnd].
+ */
+@Composable
+internal fun PreviewVideoPlayer(
+    player: Player?,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop,
+    surfaceType: @SurfaceType Int = SURFACE_TYPE_TEXTURE_VIEW,
+    shutter: @Composable () -> Unit = { Box(Modifier.fillMaxSize().background(Color.Black)) },
+    bottomControls: (@Composable BoxScope.() -> Unit)? = null,
+) {
+    val colors = defaultControlButtonColors
+   Box(modifier = modifier) {
+       ContentFrame(player, surfaceType = surfaceType, contentScale = contentScale, shutter = shutter)
+
+       Box(
+           modifier = Modifier
+               .align(Alignment.TopEnd)
+               .padding(12.dp)
+               .background(colors.containerColor, MaterialTheme.shapes.extraSmall)
+               .padding(horizontal = 6.dp, vertical = 2.dp),
+       ) {
+           PositionAndDurationText(player, color = colors.contentColor)
+       }
+
+       if (bottomControls != null) {
+           Box(modifier = Modifier.align(Alignment.BottomEnd), content = bottomControls)
+       }
+   }
 }
 
 /**
@@ -287,10 +337,7 @@ fun TopControls(
 private fun CenterControls(
     player: Player?,
     modifier: Modifier = Modifier,
-    buttonColors: IconButtonColors = IconButtonDefaults.iconButtonColors(
-        containerColor = MaterialTheme.colorScheme.secondaryContainer.copy(alpha = 0.78f),
-        contentColor = MaterialTheme.colorScheme.primary
-    ),
+    buttonColors: IconButtonColors = defaultControlButtonColors,
 ) {
     Row(
         modifier = modifier.fillMaxSize(),
@@ -377,7 +424,7 @@ private fun FullScreenButton(
         onClick = {
             with(context.findActivity()!!) {
                 if (resources.configuration.orientation != Configuration.ORIENTATION_LANDSCAPE) {
-                    this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_LANDSCAPE
+                    this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
                 } else {
                     this.requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
                 }
@@ -421,10 +468,10 @@ fun VideoThumbnail(
     modifier: Modifier = Modifier,
     thumbnailUrl: String?,
     contentScale: ContentScale = ContentScale.FillWidth,
-    onClick: () -> Unit
+    onClick: (() -> Unit)? = null,
 ) {
     Box(
-        modifier = modifier.clickableNoIndication(onClick = onClick),
+        modifier = modifier.onNotNull(onClick) { clickableNoIndication(onClick = it) },
         contentAlignment = Alignment.Center
     ) {
         if (thumbnailUrl != null) {

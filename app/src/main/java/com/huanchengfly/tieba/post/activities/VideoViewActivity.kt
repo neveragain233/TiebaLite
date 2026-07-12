@@ -4,13 +4,17 @@ package com.huanchengfly.tieba.post.activities
 
 import android.Manifest
 import android.app.DownloadManager
+import android.app.PictureInPictureParams
 import android.content.BroadcastReceiver
 import android.content.Context
 import android.content.Intent
 import android.content.IntentFilter
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.util.Rational
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
@@ -26,7 +30,6 @@ import androidx.compose.runtime.mutableLongStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
-import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -34,10 +37,12 @@ import androidx.core.content.ContextCompat
 import androidx.core.util.Consumer
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.LifecycleOwner
+import androidx.lifecycle.compose.LifecycleStartEffect
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.lifecycleScope
 import androidx.lifecycle.repeatOnLifecycle
+import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -49,7 +54,7 @@ import com.huanchengfly.tieba.post.api.models.protos.VideoInfo
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.arch.unsafeLazy
 import com.huanchengfly.tieba.post.components.MediaCache.BD_VIDEO_HOST
-import com.huanchengfly.tieba.post.components.MediaCache.getBdVideoMD5
+import com.huanchengfly.tieba.post.components.MediaCache.getBdMediaId
 import com.huanchengfly.tieba.post.goToActivity
 import com.huanchengfly.tieba.post.theme.DefaultDarkColors
 import com.huanchengfly.tieba.post.theme.ExtendedColorScheme
@@ -57,10 +62,12 @@ import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.TopControls
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.VideoPlayer
+import com.huanchengfly.tieba.post.ui.widgets.compose.video.VideoPreviewState
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.initialize
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.rememberPlayerGestureState
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.retainVideoPlayer
 import com.huanchengfly.tieba.post.utils.DownloadUtil
+import com.huanchengfly.tieba.post.utils.MediaUtil
 import com.huanchengfly.tieba.post.utils.PermissionUtils.askPermission
 import com.huanchengfly.tieba.post.utils.PermissionUtils.onDenied
 import com.huanchengfly.tieba.post.utils.PermissionUtils.onGranted
@@ -112,10 +119,16 @@ class VideoViewActivity: AppCompatActivity() {
         super.onCreate(savedInstanceState)
         downloadId = savedInstanceState?.getLong(KEY_DOWNLOAD_ID, -1) ?: -1
         val data = intent.data ?: throw NullPointerException("No video provided!")
+        val mediaId = intent.getStringExtra(EXTRA_MEDIA_ID) ?: data.getBdMediaId()
         var thumbnailUrl by mutableStateOf(intent.getStringExtra(EXTRA_THUMBNAIL))
+        val initPositionMs = intent.getLongExtra(EXTRA_INITIAL_POSITION_MS, C.TIME_UNSET)
+        applyInitialOrientation(initAspectRatio = intent.getFloatExtra(EXTRA_INITIAL_ASPECT_RATIO, 0f))
 
         setContent {
-            val player = retainVideoPlayer(initialMediaItem = MediaItem.fromUri(data))
+            val player = retainVideoPlayer(
+                initialMediaItem = MediaItem.Builder().setUri(data).setMediaId(mediaId).build(),
+                playWhenReady = initPositionMs == C.TIME_UNSET,
+            )
             val gestureState = rememberPlayerGestureState(player)
             val colorScheme by darkColorSchemeFlow.collectAsStateWithLifecycle(DefaultDarkColors)
 
@@ -140,6 +153,23 @@ class VideoViewActivity: AppCompatActivity() {
 
             ObservePlayerError(player)
 
+            if (initPositionMs > 0 && gestureState.isEnabled) { // Seek to initPositionMs
+                LaunchedEffect(Unit) {
+                    MediaUtil.handleSeekToAction(player, initPositionMs)
+                    player.playWhenReady = true
+                }
+            }
+
+            LifecycleStartEffect(player) {
+                VideoPreviewState.onVideoViewMediaChanged(mediaId)
+                onStopOrDispose {
+                    VideoPreviewState.onVideoViewMediaChanged(
+                        mediaId = player.currentMediaItem?.mediaId ?: mediaId,
+                        positionMs = MediaUtil.getCurrentPositionMs(player)
+                    )
+                }
+            }
+
             LaunchedEffect(Unit) {
                 callbackFlow {
                     val consumer = Consumer<Intent> { trySend(it) }
@@ -150,8 +180,12 @@ class VideoViewActivity: AppCompatActivity() {
                     val newVideo = newIntent.data?.normalizeScheme() ?: return@collectLatest
                     if (newVideo != player.currentMediaItem?.localConfiguration?.uri) {
                         thumbnailUrl = newIntent.getStringExtra(EXTRA_THUMBNAIL)
-                        player.initialize(applicationContext, MediaItem.fromUri(newVideo))
+                        val mediaId = newVideo.getBdMediaId()
+                        val mediaItem = MediaItem.Builder().setUri(newVideo).setMediaId(mediaId).build()
+                        player.initialize(applicationContext, mediaItem)
                         player.playWhenReady = true
+                        downloadId = -1
+                        VideoPreviewState.onVideoViewMediaChanged(mediaId)
                     }
                 }
             }
@@ -161,6 +195,20 @@ class VideoViewActivity: AppCompatActivity() {
     override fun onSaveInstanceState(outState: Bundle) {
         outState.putLong(KEY_DOWNLOAD_ID, downloadId)
         super.onSaveInstanceState(outState)
+    }
+
+    private fun applyInitialOrientation(initAspectRatio: Float) {
+        if (initAspectRatio <= 0f) return
+        requestedOrientation = if (initAspectRatio > 1) {
+            ActivityInfo.SCREEN_ORIENTATION_USER_LANDSCAPE
+        } else {
+            ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+        }
+    }
+
+    override fun onPictureInPictureModeChanged(isInPictureInPictureMode: Boolean, newConfig: Configuration) {
+        super.onPictureInPictureModeChanged(isInPictureInPictureMode, newConfig)
+        VideoPreviewState.onPictureInPictureModeChanged(isInPictureInPictureMode)
     }
 
     private fun enqueueDownload(videoUri: Uri) {
@@ -198,6 +246,15 @@ class VideoViewActivity: AppCompatActivity() {
         }
     }
 
+    /**
+     * Finish as soon as possible if [isInPictureInPictureMode], see
+     *   [PictureInPictureParams.Builder.setCloseAction].
+     * */
+    override fun onStop() {
+        super.onStop()
+        if (isInPictureInPictureMode) finish()
+    }
+
     override fun onDestroy() {
         super.onDestroy()
         downloadBroadcastReceiver?.let { unregisterReceiver(it) }
@@ -206,12 +263,22 @@ class VideoViewActivity: AppCompatActivity() {
     companion object {
         private const val KEY_DOWNLOAD_ID = "com.huanchengfly.tieba.post.VideoViewActivity.DOWNLOAD_ID"
 
-        const val EXTRA_THUMBNAIL = "video_thumbnail"
+        private const val EXTRA_THUMBNAIL = "video_thumbnail"
+        private const val EXTRA_MEDIA_ID = "video_media_id"
+        private const val EXTRA_INITIAL_ASPECT_RATIO = "video_aspect_ratio"
+        private const val EXTRA_INITIAL_POSITION_MS = "video_position"
 
-        fun launch(context: Context, videoUrl: String, thumbnailUrl: String? = null) {
+        fun launch(
+            context: Context,
+            videoUrl: String,
+            thumbnailUrl: String? = null,
+            mediaId: String? = null,
+            aspectRatio: Float = 0f,
+            positionMs: Long = C.TIME_UNSET,
+        ) {
             val data = Uri.parse(videoUrl).normalizeScheme()
 
-            // Check tb-video is unauthorized
+            // Check tb-video is unauthorized or expired
             if (data.host == BD_VIDEO_HOST && videoUrl.endsWith(".mp4")) {
                 context.toastShort(R.string.desc_expired_video_link)
                 return
@@ -223,12 +290,23 @@ class VideoViewActivity: AppCompatActivity() {
             context.goToActivity<VideoViewActivity> {
                 this.flags = Intent.FLAG_ACTIVITY_NEW_TASK or Intent.FLAG_ACTIVITY_SINGLE_TOP
                 this.data = data
-                thumbnailUrl?.let { putExtra(EXTRA_THUMBNAIL, it) }
+                if (!thumbnailUrl.isNullOrEmpty()) putExtra(EXTRA_THUMBNAIL, thumbnailUrl)
+
+                if (!mediaId.isNullOrEmpty()) putExtra(EXTRA_MEDIA_ID, mediaId)
+
+                if (positionMs > 0) putExtra(EXTRA_INITIAL_POSITION_MS, positionMs)
+
+                if (aspectRatio > 0) putExtra(EXTRA_INITIAL_ASPECT_RATIO, aspectRatio)
             }
         }
 
-        fun launch(context: Context, videoInfo: VideoInfo) {
-            launch(context, videoInfo.videoUrl, videoInfo.thumbnailUrl)
+        fun launch(context: Context, videoInfo: VideoInfo, positionMs: Long = C.TIME_UNSET) {
+            videoInfo.run {
+                val aspectRatio = Rational(videoWidth, videoHeight)
+                    .takeUnless { it.isNaN || it.isZero }
+                    ?.toFloat() ?: (16/9f)
+                launch(context, videoUrl, thumbnailUrl, mediaId = videoMD5, aspectRatio, positionMs)
+            }
         }
 
         @Composable
@@ -277,6 +355,6 @@ class VideoViewActivity: AppCompatActivity() {
         }
 
         private val Uri.bdFileName: String
-            get() = "${getBdVideoMD5() ?: hashCode()}.mp4"
+            get() = "${this.getBdMediaId()}.mp4"
     }
 }

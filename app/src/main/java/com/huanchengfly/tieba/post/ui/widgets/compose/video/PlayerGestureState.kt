@@ -20,10 +20,10 @@ import androidx.media3.common.C
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.common.util.Util
-import androidx.media3.ui.compose.material3.Player
 import androidx.media3.ui.compose.state.PlayerStateObserver
 import androidx.media3.ui.compose.state.observeState
 import com.huanchengfly.tieba.post.findActivity
+import com.huanchengfly.tieba.post.utils.MediaUtil
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -166,9 +166,7 @@ class PlayerGestureState(
     fun quickSeekForward() {
         if (quickSeekAction == QuickSeekDirection.None && isEnabled) {
             val target = (player!!.currentPosition + 10_000).coerceAtMost(player.duration)
-            if (player.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)) {
-                player.seekTo(target)
-            }
+            MediaUtil.handleSeekToAction(player, target)
             quickSeekAction = QuickSeekDirection.Forward
         }
     }
@@ -176,9 +174,7 @@ class PlayerGestureState(
     fun quickSeekRewind() {
         if (quickSeekAction == QuickSeekDirection.None && isEnabled) {
             val target = (player!!.currentPosition - 10_000).coerceAtLeast(0)
-            if (player.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM)) {
-                player.seekTo(target)
-            }
+            MediaUtil.handleSeekToAction(player, target)
             quickSeekAction = QuickSeekDirection.Rewind
         }
     }
@@ -193,11 +189,7 @@ class PlayerGestureState(
         }
     } ?: Pair(0, C.TIME_UNSET)
 
-    fun onSeekGesture(position: Long) {
-        if (player?.isCommandAvailable(Player.COMMAND_SEEK_IN_CURRENT_MEDIA_ITEM) == true) {
-            player.seekTo(position)
-        }
-    }
+    fun onSeekGesture(positionMs: Long) = MediaUtil.handleSeekToAction(player, positionMs)
 
     fun onSeekGestureEnd(resume: Boolean) {
         if (resume) Util.handlePlayButtonAction(player)

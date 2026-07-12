@@ -13,6 +13,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
@@ -22,17 +23,27 @@ import androidx.compose.material.icons.rounded.OndemandVideo
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PhotoSizeSelectActual
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.DisposableEffect
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.movableContentOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onVisibilityChanged
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
@@ -46,6 +57,7 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEach
+import androidx.media3.exoplayer.ExoPlayer
 import com.google.accompanist.placeholder.PlaceholderHighlight
 import com.huanchengfly.tieba.post.App
 import com.huanchengfly.tieba.post.LocalHabitSettings
@@ -68,6 +80,7 @@ import com.huanchengfly.tieba.post.ui.ForumTitleSharedBoundsKey
 import com.huanchengfly.tieba.post.ui.common.PbContentText
 import com.huanchengfly.tieba.post.ui.common.localSharedBounds
 import com.huanchengfly.tieba.post.ui.common.theme.compose.block
+import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
 import com.huanchengfly.tieba.post.ui.models.Author
@@ -75,9 +88,12 @@ import com.huanchengfly.tieba.post.ui.models.SimpleForum
 import com.huanchengfly.tieba.post.ui.models.ThreadItem
 import com.huanchengfly.tieba.post.ui.page.photoview.PhotoViewActivity
 import com.huanchengfly.tieba.post.ui.utils.getPhotoViewData
+import com.huanchengfly.tieba.post.ui.widgets.compose.video.LocalVideoPreviewState
+import com.huanchengfly.tieba.post.ui.widgets.compose.video.PreviewVideoPlayer
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.VideoThumbnail
 import com.huanchengfly.tieba.post.utils.DateTimeUtils
 import com.huanchengfly.tieba.post.utils.EmoticonUtil.emoticonString
+import com.huanchengfly.tieba.post.utils.MediaUtil
 import com.huanchengfly.tieba.post.utils.ThemeUtil
 import com.huanchengfly.tieba.post.utils.TiebaUtil
 import kotlinx.collections.immutable.persistentListOf
@@ -104,6 +120,9 @@ val ThreadContentType: (index: Int, item: ThreadItem) -> FeedType by unsafeLazy 
 internal val CardHorizontalSpacing = 16.dp
 
 internal val DefaultCardPaddings = PaddingValues(horizontal = CardHorizontalSpacing)
+
+/** The default amount of time that [FeedVideoPreview] should be considered visible. */
+private const val VIDEO_MIN_VISIBLE_DURATION_MS = 500L
 
 @Composable
 fun Card(
@@ -343,14 +362,16 @@ fun ThreadMedia(
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
-                VideoThumbnail(
+                FeedVideoPreview(
                     modifier = Modifier
                         .fillMaxWidth(singleMediaFraction)
                         .aspectRatio(ratio = max(videoInfo.item.aspectRatio(), 16f / 9))
                         .clip(MaterialTheme.shapes.small),
+                    url = videoInfo.item.videoUrl,
                     thumbnailUrl = videoInfo.item.thumbnailUrl,
-                    onClick = {
-                        VideoViewActivity.launch(context, videoInfo.item)
+                    mediaId = videoInfo.item.videoMD5,
+                    onClick = { positionMs ->
+                        VideoViewActivity.launch(context, videoInfo.item, positionMs)
                     }
                 )
             }
@@ -565,6 +586,95 @@ fun FeedCard(
         onClick = { onClick(thread) },
         modifier = modifier,
     )
+}
+
+@Composable
+@NonRestartableComposable
+fun FeedVideoShutter(
+    thumbnailUrl: String,
+    modifier: Modifier = Modifier,
+    isPipMode: Boolean = false,
+    contentScale: ContentScale = ContentScale.Crop,
+) {
+    if (!isPipMode) {
+        VideoThumbnail(modifier = modifier.fillMaxSize(), thumbnailUrl, contentScale)
+    } else {
+        Box(
+            modifier = modifier.fillMaxSize().background(Color.Black),
+            contentAlignment = Alignment.Center
+        ) {
+            Icon(
+                imageVector = Icons.Rounded.PictureInPictureAlt,
+                contentDescription = stringResource(R.string.btn_picture_in_picture),
+                modifier = Modifier.size(Sizes.Large),
+                tint = Color.White
+            )
+        }
+    }
+}
+
+@Composable
+private fun FeedVideoPreview(
+    url: String,
+    thumbnailUrl: String,
+    mediaId: String,
+    modifier: Modifier = Modifier,
+    contentScale: ContentScale = ContentScale.Crop,
+    onClick: (positionMs: Long) -> Unit = {},
+) {
+    val previewState = LocalVideoPreviewState.current
+    var player by remember { mutableStateOf<ExoPlayer?>(null) }
+    var isFullyVisible by remember { mutableStateOf(false) }
+
+    val shutter = remember {
+        movableContentOf<Boolean> { FeedVideoShutter(thumbnailUrl, isPipMode = it, contentScale = contentScale) }
+    }
+
+    Box(
+        modifier = modifier
+            .onNotNull(previewState) {
+                onVisibilityChanged(
+                    minDurationMs = VIDEO_MIN_VISIBLE_DURATION_MS,
+                    minFractionVisible = 1f, // 100%
+                    callback = { isFullyVisible = it }
+                )
+            }
+            .clickableNoIndication {
+                previewState?.onEnterVideoView(mediaId)
+                onClick(MediaUtil.getCurrentPositionMs(player))
+            },
+    ) {
+        if (previewState == null || previewState.isInVideoViewMode) {
+            shutter(previewState?.videoViewMediaId == mediaId && previewState.isInPipMode)
+            return@Box
+        }
+
+        if (player != null) {
+            PreviewVideoPlayer(
+                player = player,
+                modifier = Modifier.matchParentSize(),
+                contentScale = contentScale,
+                shutter = { shutter(false) },
+            )
+        } else {
+            shutter(false)
+        }
+
+        LaunchedEffect(isFullyVisible) {
+            if (!isFullyVisible) return@LaunchedEffect
+            player = player ?: previewState.preparePreview(url, mediaId)
+            previewState.play(mediaId, player)
+        }
+
+        if (isFullyVisible && player != null) {
+            DisposableEffect(player) {
+                onDispose {
+                    previewState.disposePreview(mediaId, player)
+                    player = null
+                }
+            }
+        }
+    }
 }
 
 @Composable
