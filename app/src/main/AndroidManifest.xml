@@ -241,7 +241,9 @@
 
         <activity
             android:name=".activities.VideoViewActivity"
-            android:configChanges="uiMode|screenSize|screenLayout|orientation|navigation"
+            android:configChanges="orientation|screenLayout|screenSize|smallestScreenSize|uiMode|navigation"
+            android:launchMode="singleTop"
+            android:supportsPictureInPicture="true"
             android:theme="@style/Theme.Transparent.PhotoView"
             android:exported="false" />
 

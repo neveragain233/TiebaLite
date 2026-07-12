@@ -13,6 +13,8 @@ import androidx.annotation.Keep
 import androidx.appcompat.app.AppCompatDelegate
 import androidx.compose.runtime.Composer
 import androidx.compose.runtime.ExperimentalComposeRuntimeApi
+import androidx.compose.ui.ComposeUiFlags
+import androidx.compose.ui.ExperimentalComposeUiApi
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
 import coil3.SingletonImageLoader
@@ -92,6 +94,7 @@ class App : Application(), Configuration.Provider {
         AppCompatDelegate.setDefaultNightMode(AppCompatDelegate.MODE_NIGHT_FOLLOW_SYSTEM)
         EmoticonManager.init(this)
         Composer.setDiagnosticStackTraceEnabled(BuildConfig.DEBUG)
+        ComposeUiFlags.isMediaQueryIntegrationEnabled = true
 
         AppBackgroundScope.launch {
             delay(3000)

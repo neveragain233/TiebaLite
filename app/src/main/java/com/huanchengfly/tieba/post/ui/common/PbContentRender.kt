@@ -37,21 +37,25 @@ import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.TextUnit
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
+import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.activities.VideoViewActivity
+import com.huanchengfly.tieba.post.components.MediaCache.getBdMediaId
 import com.huanchengfly.tieba.post.models.PhotoViewData
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_URL
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_USER
+import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.LocalNavController
 import com.huanchengfly.tieba.post.ui.widgets.compose.EmoticonText
+import com.huanchengfly.tieba.post.ui.widgets.compose.FeedVideoShutter
 import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
 import com.huanchengfly.tieba.post.ui.widgets.compose.VoicePlayer
 import com.huanchengfly.tieba.post.ui.widgets.compose.singleMediaFraction
-import com.huanchengfly.tieba.post.ui.widgets.compose.video.VideoThumbnail
+import com.huanchengfly.tieba.post.ui.widgets.compose.video.LocalVideoPreviewState
 import com.huanchengfly.tieba.post.utils.ThemeUtil
 import com.huanchengfly.tieba.post.utils.launchUrl
 
@@ -202,6 +206,8 @@ class VideoContentRender(
     val dimensions: IntSize?
 ) : PbContentRender {
 
+    private val mediaId: String = videoUrl.toUri().getBdMediaId()
+
     init {
         require(picUrl.isNotBlank() && picUrl.isNotEmpty()) { "Invalid video cover url" }
     }
@@ -217,10 +223,13 @@ class VideoContentRender(
 
         if (videoUrl.isNotBlank()) {
             val context = LocalContext.current
-            VideoThumbnail(
-                modifier = picModifier,
+            val previewState = LocalVideoPreviewState.current
+            FeedVideoShutter(
+                modifier = picModifier.clickableNoIndication {
+                    VideoViewActivity.launch(context, videoUrl, picUrl)
+                },
                 thumbnailUrl = picUrl,
-                onClick = { VideoViewActivity.launch(context, videoUrl, picUrl) }
+                isPipMode = previewState?.videoViewMediaId == mediaId && previewState.isInPipMode
             )
         } else {
             val navigator = LocalNavController.current
