@@ -255,7 +255,11 @@ class MainActivityV2 : BaseComposeActivity() {
         content: @Composable () -> Unit
     ) {
         val currentAccount by viewModel.account.collectAsStateWithLifecycle(initialValue = null)
-        val videoPreviewState = rememberVideoPreviewState(viewModel.playerPool)
+        val videoPreviewState = if (!habit.hideMedia && habit.videoAutoplay) {
+            rememberVideoPreviewState(viewModel.playerPool)
+        } else {
+            null
+        }
 
         CompositionLocalProvider(
             LocalAccount provides currentAccount,

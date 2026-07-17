@@ -142,6 +142,7 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
             imageWatermarkType = it[intPreferencesKey(KEY_IMAGE_WATERMARK_TYPE)] ?: WaterType.FORUM_NAME,
             showBothName = it[booleanPreferencesKey(KEY_SHOW_NICKNAME)] == true,
             stickyHeader = it[booleanPreferencesKey(KEY_STICKY_HEADER)] ?: true,
+            videoAutoplay = it[booleanPreferencesKey(KEY_VIDEO_AUTOPLAY)] ?: true
         )
     }
 
@@ -157,6 +158,7 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
         it[intPreferencesKey(KEY_IMAGE_WATERMARK_TYPE)] = habit.imageWatermarkType
         it[booleanPreferencesKey(KEY_SHOW_NICKNAME)] = habit.showBothName
         it[booleanPreferencesKey(KEY_STICKY_HEADER)] = habit.stickyHeader
+        it[booleanPreferencesKey(KEY_VIDEO_AUTOPLAY)] = habit.videoAutoplay
         it -= intPreferencesKey(KEY_FORUM_FAB_FUNCTION)
     }
 
@@ -179,6 +181,7 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
     private const val KEY_REPLY_HIDE_WARNING = "ui_reply_hide_warn"
     private const val KEY_SHOW_NICKNAME = "ui_show_both_name"
     private const val KEY_STICKY_HEADER = "ui_sticky_header"
+    private const val KEY_VIDEO_AUTOPLAY = "ui_video_autoplay"
 }
 
 private object PrivacySettingsTransformer : PreferenceTransformer<PrivacySettings> {

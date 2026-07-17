@@ -81,7 +81,9 @@ class MainViewModel @Inject constructor(
 
     private val privacySettings: Settings<PrivacySettings> = settingsRepository.privacySettings
 
-    val playerPool: ExoPlayerPool by lazy { ExoPlayerPool.defaultExoPlayerPool(context) }
+    private val _playerPool: Lazy<ExoPlayerPool> = lazy { ExoPlayerPool.defaultExoPlayerPool(context) }
+    val playerPool: ExoPlayerPool
+        get() = _playerPool.value
 
     fun onCheckClipBoard() {
         viewModelScope.launch {
@@ -96,6 +98,8 @@ class MainViewModel @Inject constructor(
 
     override fun onCleared() {
         super.onCleared()
-        playerPool.dispose()
+        if (_playerPool.isInitialized()) {
+            _playerPool.value.dispose()
+        }
     }
 }
