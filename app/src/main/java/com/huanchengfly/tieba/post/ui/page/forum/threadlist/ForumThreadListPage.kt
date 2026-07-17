@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
@@ -28,10 +29,12 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.api.models.protos.OriginThreadInfo
 import com.huanchengfly.tieba.post.arch.collectCommonUiEventWithLifecycle
 import com.huanchengfly.tieba.post.arch.collectPartialAsState
 import com.huanchengfly.tieba.post.arch.onGlobalEvent
 import com.huanchengfly.tieba.post.navigateDebounced
+import com.huanchengfly.tieba.post.ui.models.ThreadItem
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.Destination.ForumRuleDetail
 import com.huanchengfly.tieba.post.ui.page.Destination.Thread
@@ -50,7 +53,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import java.util.Objects
 
 @Composable
-fun TopThreadItem(
+private fun TopThreadItem(
     title: String,
     onClick: () -> Unit,
     modifier: Modifier = Modifier,
@@ -63,7 +66,6 @@ fun TopThreadItem(
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(16.dp)
     ) {
-
         Text(
             color = MaterialTheme.colorScheme.onSurface,
             text = type,
@@ -101,13 +103,14 @@ fun ForumThreadList(
     forumId: Long,
     forumName: String,
     type: ForumType,
+    initialSortType: Int,
     forumRuleTitle: String?,
     contentPadding: PaddingValues,
     listState: LazyListState = rememberLazyListState(),
     viewModel: ForumThreadListViewModel = hiltViewModel<ForumThreadListViewModel, ForumVMFactory>(
         key = Objects.hash(forumId, forumName, type).toString()
     ) {
-        it.create(forumName, forumId, type = type)
+        it.create(forumName, forumId, type, initialSortType)
     }
 ) {
     val navigator = LocalNavController.current
@@ -152,26 +155,18 @@ fun ForumThreadList(
         screenPadding = contentPadding,
     ) {
         val hideBlocked by viewModel.hideBlocked.collectAsStateWithLifecycle()
-
-        val isLoadingMore by viewModel.uiState.collectPartialAsState(
-            prop1 = ForumThreadListUiState::isLoadingMore,
-            initial = false
-        )
-        val hasMore by viewModel.uiState.collectPartialAsState(
-            prop1 = ForumThreadListUiState::hasMore,
-            initial = true
-        )
+        val uiState by viewModel.uiState.collectAsStateWithLifecycle()
 
         Container {
             SwipeUpLazyLoadColumn(
                 modifier = modifier.fillMaxSize(),
                 state = listState,
                 contentPadding = contentPadding,
-                isLoading = isLoadingMore,
+                isLoading = uiState.isLoadingMore,
                 onLoad = viewModel::loadMore,
-                onLazyLoad = viewModel::loadMore.takeIf { hasMore },
+                onLazyLoad = viewModel::loadMore.takeIf { uiState.hasMore },
                 bottomIndicator = {
-                    LoadMoreIndicator(noMore = !hasMore, onThreshold = it)
+                    LoadMoreIndicator(noMore = !uiState.hasMore, onThreshold = it)
                 }
             ) {
                 forumRuleTitle?.let { rule ->
@@ -186,41 +181,56 @@ fun ForumThreadList(
                     }
                 }
 
-                itemsIndexed(threadList, key = { _, it -> it.id }, ThreadContentType) { index, thread ->
-                    // Top thread are non-blockable
-                    if (thread.isTop) {
-                        TopThreadItem(
-                            title = thread.title,
-                            onClick = { threadClickListeners.onClicked(thread) }
-                        )
-                    } else {
-                        Column {
-                            if (index > 0) {
-                                if (threadList[index - 1].isTop) {
-                                    Spacer(modifier = Modifier.height(8.dp))
-                                }
-                                HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                            }
-                            BlockableContent(
-                                blocked = thread.blocked,
-                                blockedTip = ThreadBlockedTip,
-                                hideBlockedContent = hideBlocked
-                            ) {
-                                FeedCard(
-                                    thread = thread,
-                                    onClick = threadClickListeners.onClicked,
-                                    onLike = viewModel::onThreadLikeClicked,
-                                    onClickReply = threadClickListeners.onReplyClicked,
-                                    onClickUser = threadClickListeners.onAuthorClicked,
-                                    onClickOriginThread = {
-                                        navigator.navigateDebounced(
-                                            Thread(threadId = it.tid.toLong(), forumId = it.fid)
-                                        )
-                                    },
-                                )
-                            }
-                        }
+                forumThreadList(
+                    threads = threadList,
+                    threadClickListeners = threadClickListeners,
+                    onLikeClicked = viewModel::onThreadLikeClicked,
+                    onOriginThreadClicked = {
+                        val route = Thread(threadId = it.tid.toLong(), forumId = it.fid)
+                        navigator.navigateDebounced(route)
+                    },
+                    hideBlocked = hideBlocked,
+                )
+            }
+        }
+    }
+}
+
+fun LazyListScope.forumThreadList(
+    threads: List<ThreadItem>,
+    threadClickListeners: ThreadClickListeners,
+    onLikeClicked: (ThreadItem) -> Unit,
+    onOriginThreadClicked: (OriginThreadInfo) -> Unit = {},
+    hideBlocked: Boolean = false,
+) {
+    itemsIndexed(threads, key = { _, it -> it.id }, ThreadContentType) { index, thread ->
+        // Top threads are non-blockable
+        if (thread.isTop) {
+            TopThreadItem(
+                title = thread.title,
+                onClick = { threadClickListeners.onClicked(thread) }
+            )
+        } else {
+            Column {
+                if (index > 0) {
+                    if (threads[index - 1].isTop) {
+                        Spacer(modifier = Modifier.height(8.dp))
                     }
+                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+                }
+                BlockableContent(
+                    blocked = thread.blocked,
+                    blockedTip = ThreadBlockedTip,
+                    hideBlockedContent = hideBlocked
+                ) {
+                    FeedCard(
+                        thread = thread,
+                        onClick = threadClickListeners.onClicked,
+                        onLike = onLikeClicked,
+                        onClickReply = threadClickListeners.onReplyClicked,
+                        onClickUser = threadClickListeners.onAuthorClicked,
+                        onClickOriginThread = onOriginThreadClicked,
+                    )
                 }
             }
         }

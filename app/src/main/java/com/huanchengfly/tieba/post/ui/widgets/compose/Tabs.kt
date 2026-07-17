@@ -60,6 +60,7 @@ private val DEFAULT_INDICATOR_HEIGHT = 3.dp
 @Composable
 fun TabIndicatorScope.FancyAnimatedIndicatorWithModifier(
     index: Int,
+    scrollable: Boolean = false,
     indicatorColor: Color = MaterialTheme.colorScheme.primary,
 ) {
     var startAnimatable by remember { mutableStateOf<Animatable<Dp, AnimationVector1D>?>(null) }
@@ -72,7 +73,7 @@ fun TabIndicatorScope.FancyAnimatedIndicatorWithModifier(
                                   constraints: Constraints,
                                   tabPositions: List<TabPosition> ->
                 val newStart = tabPositions[index].left
-                val newEnd = tabPositions[index].right
+                val newEnd = newStart + tabPositions[index].contentWidth
 
                 val startAnim =
                     startAnimatable
@@ -118,15 +119,16 @@ fun TabIndicatorScope.FancyAnimatedIndicatorWithModifier(
 
                 val indicatorWidth = indicatorEnd - indicatorStart
                 val indicatorHeight = DEFAULT_INDICATOR_HEIGHT.roundToPx()
-                val horizontalPadding = (tabPositions[index].width - tabPositions[index].contentWidth).times(0.5f).roundToPx()
+                val horizontalPadding = if (scrollable) {
+                    0
+                } else {
+                    (tabPositions[index].width - tabPositions[index].contentWidth).times(0.5f).roundToPx()
+                }
 
                 // Apply an offset from the start to correctly position the indicator around the tab
                 val placeable =
                     measurable.measure(
-                        Constraints.fixed(
-                            width = (indicatorWidth - horizontalPadding * 2).coerceIn(0, indicatorWidth),
-                            height = indicatorHeight
-                        )
+                        Constraints.fixed(width = indicatorWidth, height = indicatorHeight)
                     )
                 layout(constraints.maxWidth, constraints.maxHeight) {
                     placeable.place(

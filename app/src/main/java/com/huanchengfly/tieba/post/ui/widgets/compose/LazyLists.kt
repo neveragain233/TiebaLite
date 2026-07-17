@@ -13,6 +13,7 @@ import androidx.compose.foundation.lazy.grid.LazyGridState
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
@@ -86,6 +87,12 @@ fun MyLazyVerticalGrid(
         userScrollEnabled = userScrollEnabled,
         content = content
     )
+}
+
+suspend fun LazyListState?.scrollToTop(scrollBehavior: TopAppBarScrollBehavior?) {
+    scrollBehavior?.state?.contentOffset = 0f
+    scrollBehavior?.state?.heightOffset = 0f
+    this?.scrollToItem(0, 0)
 }
 
 /**

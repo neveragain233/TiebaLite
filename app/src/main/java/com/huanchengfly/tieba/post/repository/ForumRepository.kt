@@ -1,13 +1,10 @@
 package com.huanchengfly.tieba.post.repository
 
-import android.content.Context
+import android.util.Log
 import androidx.collection.LruCache
-import androidx.datastore.preferences.core.PreferenceDataStoreFactory
-import androidx.datastore.preferences.core.Preferences
-import androidx.datastore.preferences.core.edit
-import androidx.datastore.preferences.core.intPreferencesKey
-import androidx.datastore.preferences.preferencesDataStoreFile
+import com.huanchengfly.tieba.post.BuildConfig
 import com.huanchengfly.tieba.post.api.models.SignResultBean
+import com.huanchengfly.tieba.post.api.models.protos.FrsTabInfo
 import com.huanchengfly.tieba.post.api.models.protos.ThreadInfo
 import com.huanchengfly.tieba.post.api.models.protos.frsPage.FrsPageResponseData
 import com.huanchengfly.tieba.post.api.models.protos.plainText
@@ -27,50 +24,32 @@ import com.huanchengfly.tieba.post.ui.models.settings.BlockSettings
 import com.huanchengfly.tieba.post.ui.models.settings.ForumSortType
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
 import com.huanchengfly.tieba.post.utils.StringUtil
-import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
-import kotlinx.coroutines.flow.flow
-import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
 private typealias CacheKey = String
 
-private typealias ForumPageResult  = Triple<ForumData, ThreadItemList, List<ForumManager>?>
-
-private data class ForumCache(
-    val forum: ForumData,
-    val managers: List<ForumManager>?,
-    val normal: ThreadItemList?,
-    val good: ThreadItemList?
-) {
-    fun getItemsByType(isGood: Boolean): ThreadItemList? = if (isGood) good else normal
-}
+private typealias ForumPageResult = Triple<ForumData, ThreadItemList, List<ForumManager>?>
 
 @Singleton
 class ForumRepository @Inject constructor(
-    @ApplicationContext context: Context,
     settingsRepo: SettingsRepository,
     private val blockRepo: BlockRepository,
     private val homeRepo: HomeRepository
 ) {
-
     private val networkDataSource = ForumNetworkDataSource
 
     private val blockedSettings: Flow<BlockSettings> = settingsRepo.blockSettings
 
     private val habitSettings: Flow<HabitSettings> = settingsRepo.habitSettings
 
-    private val dataStore by lazy {
-        PreferenceDataStoreFactory.create {
-            context.preferencesDataStoreFile(name = "forum_preferences")
-        }
-    }
+    private val cache: LruCache<CacheKey, ForumCache> = LruCache(MAX_FORUM_CACHE_SIZE)
 
-    private val cache: LruCache<CacheKey, ForumCache> = LruCache(2)
+    private val generalThreadCache: LruCache<CacheKey, ThreadItemList> = LruCache(MAX_GENERAL_THREAD_CACHE_SIZE)
 
     private suspend fun frsPage(
         forumName: String,
@@ -80,6 +59,7 @@ class ForumRepository @Inject constructor(
         goodClassifyId: Int?,
         forceNew: Boolean = false
     ): ForumPageResult {
+        val start = System.currentTimeMillis()
         var key: CacheKey? = null
         var cached: ForumCache? = null
         val cacheable = if (sortType == -1) (goodClassifyId ?: 0) == 0 else sortType == ForumSortType.BY_REPLY
@@ -90,6 +70,7 @@ class ForumRepository @Inject constructor(
             cached = cache[key]
             val typedItemList = cached?.getItemsByType(isGood = goodClassifyId != null)
             if (!forceNew && typedItemList != null) {
+                Log.i(TAG, "onFrsPage: Load $forumName from cache, good: $goodClassifyId, size: ${typedItemList.threads.size}")
                 return ForumPageResult(cached.forum, typedItemList, cached.managers)
             }
         }
@@ -111,6 +92,11 @@ class ForumRepository @Inject constructor(
             val goodThreads = if (sortType == -1) typedThreads else cached?.good
             cache.put(key, ForumCache(forumData, forumManagers, normal = normalThreads, good = goodThreads))
         }
+        if (BuildConfig.DEBUG) {
+            val size = typedThreads.threads.size
+            val cost = System.currentTimeMillis() - start
+            Log.d(TAG, "onFrsPage: Load $forumName from network, sort $sortType, good: $goodClassifyId, size: $size, cost ${cost}ms")
+        }
         return ForumPageResult(forumData, typedThreads, forumManagers)
     }
 
@@ -119,8 +105,11 @@ class ForumRepository @Inject constructor(
     }
 
     suspend fun loadForumDetail(forumName: String): ForumDetail {
+        val start = System.currentTimeMillis()
         val (forumData, _, managers) = frsPage(forumName, page = 1, loadType = 1, sortType = 0, null)
         val detail = networkDataSource.loadForumDetail(forumData.id)
+        val cost = System.currentTimeMillis() - start
+        Log.i(TAG, "onLoadForumDetail: $forumName, managers: ${managers?.size}, cost ${cost}ms")
 
         return ForumDetail(
             avatar = forumData.avatar,
@@ -142,7 +131,7 @@ class ForumRepository @Inject constructor(
         sortType = sortType,
         goodClassifyId = null,
         forceNew = forceNew
-    ).second
+    ).threadList
 
     suspend fun loadGoodPage(forum: String, page: Int, goodClassifyId: Int?, forceNew: Boolean): ThreadItemList = frsPage(
         forumName = forum,
@@ -151,7 +140,7 @@ class ForumRepository @Inject constructor(
         sortType = -1,
         goodClassifyId = goodClassifyId ?: 0,
         forceNew = forceNew
-    ).second
+    ).threadList
 
     suspend fun loadMorePage(forum: String, page: Int, sortType: Int): ThreadItemList = frsPage(
         forumName = forum,
@@ -160,7 +149,7 @@ class ForumRepository @Inject constructor(
         sortType = sortType,
         goodClassifyId = null,
         forceNew = false
-    ).second
+    ).threadList
 
     suspend fun loadMoreGood(forum: String, page: Int, goodClassifyId: Int?): ThreadItemList = frsPage(
         forumName = forum,
@@ -169,9 +158,9 @@ class ForumRepository @Inject constructor(
         sortType = -1,
         goodClassifyId = goodClassifyId ?: 0,
         forceNew = false
-    ).second
+    ).threadList
 
-    fun generalTabList(
+    suspend fun generalTabList(
         forumId: Long,
         forumName: String,
         tabId: Int,
@@ -182,7 +171,19 @@ class ForumRepository @Inject constructor(
         sortType: Int = -1,
         lastThreadId: Long = 0,
         isDefaultNavTab: Int = 0,
-    ): Flow<ThreadItemList> = flow {
+        forceNew: Boolean = false,
+    ): ThreadItemList {
+        val start = System.currentTimeMillis()
+        var cacheKey: CacheKey? = null
+        // Load first page from LruCache if possible
+        if (pn == 1 && isGeneralTab == 1) {
+            cacheKey = "${forumId}_${tabId}_${tabType}_${sortType}_${lastThreadId}"
+            val cached = generalThreadCache[cacheKey]
+            if (!forceNew && cached != null) {
+                Log.i(TAG, "onGeneralTabList: Load $tabName, sort: $sortType from cache, size: ${cached.threads.size}")
+                return cached
+            }
+        }
         val data = networkDataSource.loadGeneralTabList(
             forumId, forumName, tabId, tabType, tabName, isGeneralTab,
             pn, sortType, lastThreadId, isDefaultNavTab
@@ -190,8 +191,39 @@ class ForumRepository @Inject constructor(
         val blockedSettings = blockedSettings.first()
         val showBothName = habitSettings.first().showBothName
         val threadList = data.general_list.mapUiModel(blockedSettings, showBothName, blockRepo::isBlocked)
-        emit(ThreadItemList(threadList, threadIds = emptyList(), hasMore = data.has_more == 1))
+        val result = ThreadItemList(threadList, threadIds = emptyList(), hasMore = data.has_more == 1)
+        if (cacheKey != null) {
+            generalThreadCache.put(cacheKey, result)
+        }
+        if (BuildConfig.DEBUG) {
+            val cost = System.currentTimeMillis() - start
+            Log.d(TAG, "onGeneralTabList: Load $tabName pn: $pn from network, sort: $sortType, size: ${threadList.size}, cost ${cost}ms")
+        }
+        return result
     }
+
+    suspend fun generalTabList(
+        forumId: Long,
+        forumName: String,
+        tabInfo: FrsTabInfo,
+        pn: Int = 1,
+        sortType: Int = -1,
+        lastThreadId: Long = 0,
+        forceNew: Boolean = false,
+    ): ThreadItemList =
+        generalTabList(
+            forumId = forumId,
+            forumName = forumName,
+            tabId = tabInfo.tabId,
+            tabType = tabInfo.tabType,
+            tabName = tabInfo.tabName,
+            isGeneralTab = tabInfo.isGeneralTab,
+            pn = pn,
+            sortType = sortType,
+            lastThreadId = lastThreadId,
+            isDefaultNavTab = tabInfo.isGeneralTab,
+            forceNew = forceNew,
+        )
 
     suspend fun threadList(forumId: Long, forumName: String, page: Int, sortType: Int, threadIds: List<Long>): List<ThreadItem> {
         return networkDataSource
@@ -255,31 +287,34 @@ class ForumRepository @Inject constructor(
         return userInfo
     }
 
-    /**
-     * Sort preference per forum
-     *
-     * @see [ForumSortType]
-     * */
-    fun getSortType(forumName: String): Flow<Int> {
-        return dataStore.data
-            // Note: No need to track habit changes
-            .map { it[forumName.sortKey] ?: habitSettings.first().forumSortType }
-    }
+    companion object {
+        private const val TAG = "ForumRepository"
 
-    suspend fun saveSortType(forumName: String, @ForumSortType sortType: Int) {
-        // Default from app_preference
-        val default: Int = habitSettings.first().forumSortType
-        dataStore.edit {
-            if (sortType == default) { // Keep DataStore clean
-                it.remove(key = forumName.sortKey)
-            } else {
-                it[forumName.sortKey] = sortType
-            }
+        private const val MAX_FORUM_CACHE_SIZE = 2
+
+        private const val MAX_GENERAL_THREAD_CACHE_SIZE = 10
+
+        private inline val ForumPageResult.threadList
+            get() = second
+
+        private data class ForumCache(
+            val forum: ForumData,
+            val managers: List<ForumManager>?,
+            val normal: ThreadItemList?,
+            val good: ThreadItemList?
+        ) {
+            fun getItemsByType(isGood: Boolean): ThreadItemList? = if (isGood) good else normal
         }
     }
+}
 
-    private val String.sortKey: Preferences.Key<Int>
-        get() = intPreferencesKey("${hashCode()}_sort")
+// Note from zzc10086: 像视频,合辑这种需要特殊适配的列表目前做屏蔽处理
+private fun List<FrsTabInfo>?.filterNavTab(): List<FrsTabInfo> = if (!isNullOrEmpty()) {
+    filter { tab ->
+        tab.isGeneralTab == 1 && tab.tabType == 15
+    }
+} else {
+    emptyList()
 }
 
 private suspend fun List<ThreadInfo>.mapUiModel(
@@ -325,7 +360,7 @@ private fun FrsPageResponseData.toData(): ForumData = forum!!.let {
         goodClassifies = it.good_classify
             .takeUnless { c -> c.size <= 1 }
             ?.map { c -> GoodClassify(c.class_name, c.class_id) },
-        navTabInfo = nav_tab_info,
+        navTabInfo = nav_tab_info?.tab.filterNavTab(),
     )
 }
 

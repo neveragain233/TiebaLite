@@ -37,7 +37,6 @@ import androidx.compose.ui.unit.round
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.Options
-import com.huanchengfly.tieba.post.ui.widgets.compose.preference.StringLabelOptions
 import kotlinx.coroutines.flow.filterIsInstance
 
 class MenuScope(
@@ -162,30 +161,6 @@ class MenuScope(
             )
         }
     }
-
-    @Composable
-    fun <Option> ListPickerMenuStringLabelItems(
-        items: StringLabelOptions<Option>,
-        picked: Option,
-        onItemPicked: (item: Option) -> Unit,
-        pickedIndicator: @Composable () -> Unit = {
-            Icon(
-                imageVector = Icons.Rounded.Check,
-                contentDescription = stringResource(id = R.string.desc_checked),
-            )
-        }
-    ) {
-        items.forEach { (option, title) ->
-            ListPickerMenuItem(
-                text = title,
-                picked = option == picked,
-                onClick = {
-                    onItemPicked(option)
-                },
-                pickedIndicator = pickedIndicator.takeIf { option == picked }
-            )
-        }
-    }
 }
 
 @Composable
@@ -198,6 +173,7 @@ fun ClickMenu(
     triggerShape: Shape? = null,
     menuShape: Shape = MenuDefaults.shape,
     onDismiss: (() -> Unit)? = null,
+    enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
     val menuScope = MenuScope(menuState, onDismiss)
@@ -215,6 +191,7 @@ fun ClickMenu(
             .combinedClickable(
                 interactionSource = interactionSource,
                 indication = indication,
+                enabled = enabled,
                 onClick = {
                     menuState.expanded = true
                 }

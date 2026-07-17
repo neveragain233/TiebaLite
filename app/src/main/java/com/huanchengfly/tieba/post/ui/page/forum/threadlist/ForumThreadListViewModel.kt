@@ -22,9 +22,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.StateFlow
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
@@ -36,6 +34,7 @@ class ForumThreadListViewModel @AssistedInject constructor(
     @Assisted val forumName: String,
     @Assisted val forumId: Long,
     @Assisted val type: ForumType,
+    @Assisted val initialSortType: Int,
     private val forumRepo: ForumRepository,
     private val threadRepo: PbPageRepository,
     settingsRepo: SettingsRepository,
@@ -51,9 +50,6 @@ class ForumThreadListViewModel @AssistedInject constructor(
         }
     }
 
-    private val sortTypeFlow: Flow<Int>? =
-        if (type == ForumType.Latest) forumRepo.getSortType(forumName) else null
-
     override fun createInitialState(): ForumThreadListUiState = ForumThreadListUiState(isRefreshing = true)
 
     val hideBlocked: StateFlow<Boolean> = settingsRepo.blockSettings
@@ -62,15 +58,15 @@ class ForumThreadListViewModel @AssistedInject constructor(
 
     init {
         launchInVM {
-            loadInternal(sortType = null, classifyId = null)
+            val sortType = if (type == ForumType.Latest) initialSortType else 0
+            loadInternal(sortType, classifyId = null)
         }
     }
 
-    private suspend fun loadInternal(sortType: Int?, classifyId: Int?, forceNew: Boolean = false) {
-        _uiState.update { it.copy(isRefreshing = true) }
+    private suspend fun loadInternal(sortType: Int, classifyId: Int?, forceNew: Boolean = false) {
+        _uiState.update { it.copy(isRefreshing = true, sortType = sortType) }
         val data = if (type == ForumType.Latest) {
-            val sort = sortType ?: sortTypeFlow!!.first()
-            forumRepo.loadPage(forumName, page = 1, sortType = sort, forceNew)
+            forumRepo.loadPage(forumName, page = 1, sortType = sortType, forceNew)
         } else {
             forumRepo.loadGoodPage(forumName, page = 1, classifyId, forceNew)
         }
@@ -90,11 +86,11 @@ class ForumThreadListViewModel @AssistedInject constructor(
         if (state.isRefreshing) return
         launchInVM {
             // Load cached result if id classifyId is 0
-            loadInternal(sortType = null, classifyId, forceNew = classifyId != 0)
+            loadInternal(state.sortType, classifyId, forceNew = classifyId != 0)
         }
     }
 
-    fun onSortTypeChanged(@ForumSortType sortType: Int?) {
+    fun onSortTypeChanged(@ForumSortType sortType: Int) {
         if (currentState.isRefreshing) return
         launchInVM {
             // Load cached result
@@ -106,10 +102,10 @@ class ForumThreadListViewModel @AssistedInject constructor(
         if (currentState.isRefreshing) return
         launchInVM {
             if (type == ForumType.Latest) {
-                loadInternal(sortType = sortTypeFlow!!.first(), classifyId = null, forceNew = true)
+                loadInternal(sortType = currentState.sortType, classifyId = null, forceNew = true)
             } else {
                 val currentClassifyId = currentState.goodClassifyId ?: 0
-                loadInternal(sortType = null, classifyId = currentClassifyId, forceNew = true)
+                loadInternal(sortType = 0, classifyId = currentClassifyId, forceNew = true)
             }
         }
     }
@@ -119,7 +115,7 @@ class ForumThreadListViewModel @AssistedInject constructor(
         if (state.isLoadingMore) return else _uiState.update { it.copy(isLoadingMore = true) }
 
         launchInVM {
-            val sortType = if (type == ForumType.Latest) sortTypeFlow!!.first() else 0
+            val sortType = if (type == ForumType.Latest) currentState.sortType else 0
             if (state.threadIds.isNotEmpty()) {
                 val size = min(state.threadIds.size, 30)
                 val threadIds = state.threadIds.subList(0, size)
@@ -185,7 +181,7 @@ class ForumThreadListViewModel @AssistedInject constructor(
 
         @AssistedFactory
         interface ForumVMFactory {
-            fun create(forumName: String, forumId: Long, type: ForumType): ForumThreadListViewModel
+            fun create(forumName: String, forumId: Long, type: ForumType, initialSortType: Int): ForumThreadListViewModel
         }
     }
 }
@@ -202,6 +198,7 @@ data class ForumThreadListUiState(
     val threadIds: List<Long> = emptyList(),
     val currentPage: Int = 1,
     val hasMore: Boolean = true,
+    @ForumSortType val sortType: Int = ForumSortType.BY_REPLY,
     val error: Throwable? = null
 ) : UiState
 
