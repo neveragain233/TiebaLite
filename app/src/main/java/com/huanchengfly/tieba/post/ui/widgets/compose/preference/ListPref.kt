@@ -114,9 +114,11 @@ fun <T> SegmentedListPreference(
             } else {
                 MenuDefaults.DropdownMenuItemContentPadding
             }
+            val itemColors = MenuDefaults.selectableItemColors()
 
             DropdownMenuGroup(
                 shapes = MenuDefaults.groupShapes(),
+                containerColor = MenuDefaults.groupStandardContainerColor,
             ) {
                 options.forEach { (option: T, optionLabel: String) ->
                     val checked = option == value
@@ -142,6 +144,7 @@ fun <T> SegmentedListPreference(
                             }
                         },
                         checked = checked,
+                        colors = itemColors,
                         contentPadding = itemContentPadding,
                         onCheckedChange = {
                             if (it) onValueChange(option)

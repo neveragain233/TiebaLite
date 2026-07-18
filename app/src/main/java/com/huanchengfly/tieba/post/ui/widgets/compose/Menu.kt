@@ -7,13 +7,14 @@ import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.offset
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Check
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
+import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -29,23 +30,27 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.graphics.vector.ImageVector
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.IntOffset
-import androidx.compose.ui.unit.round
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.Options
+import com.huanchengfly.tieba.post.utils.DisplayUtil.toDpOffset
 import kotlinx.coroutines.flow.filterIsInstance
+
+val DefaultMenuItemContentPadding: PaddingValues = MenuDefaults.DropdownMenuItemContentPadding
 
 class MenuScope(
     private val menuState: MenuState,
+    private val menuItemContentPadding: PaddingValues = DefaultMenuItemContentPadding,
     private val onDismiss: (() -> Unit)? = null,
 ) {
     fun dismiss() {
         onDismiss?.invoke()
-        menuState.expanded = false
+        menuState.dismiss()
     }
 
     @NonRestartableComposable
@@ -67,6 +72,8 @@ class MenuScope(
                 dismiss()
             },
             modifier = modifier,
+            colors = MenuDefaults.itemColors(),
+            contentPadding = menuItemContentPadding,
         )
 
     /**
@@ -92,6 +99,7 @@ class MenuScope(
             Icon(imageVector = icon, contentDescription = null)
         },
         enabled = enabled,
+        contentPadding = menuItemContentPadding,
     )
 
     @Composable
@@ -103,23 +111,18 @@ class MenuScope(
         onClick: () -> Unit
     ) =
         DropdownMenuItem(
-            text = {
-                Text(text = text)
-            },
+            selected = picked,
             onClick = {
                 if (!picked) {
                     onClick()
                 }
                 dismiss()
             },
+            text = { Text(text = text) },
+            shapes = MenuDefaults.itemShapes(),
             modifier = modifier,
             trailingIcon = pickedIndicator,
-            colors = if (picked) {
-                val primary = MaterialTheme.colorScheme.primary
-                MenuDefaults.itemColors(textColor = primary, trailingIconColor = primary)
-            } else {
-                MenuDefaults.itemColors()
-            }
+            contentPadding = menuItemContentPadding,
         )
 
     @Composable
@@ -168,20 +171,19 @@ fun ClickMenu(
     menuContent: @Composable MenuScope.() -> Unit,
     modifier: Modifier = Modifier,
     menuState: MenuState = rememberMenuState(),
+    menuItemContentPadding: PaddingValues = DefaultMenuItemContentPadding,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     indication: Indication? = LocalIndication.current,
     triggerShape: Shape? = null,
-    menuShape: Shape = MenuDefaults.shape,
     onDismiss: (() -> Unit)? = null,
     enabled: Boolean = true,
     content: @Composable () -> Unit,
 ) {
-    val menuScope = MenuScope(menuState, onDismiss)
     LaunchedEffect(interactionSource) {
         interactionSource.interactions
             .filterIsInstance<PressInteraction.Press>()
             .collect {
-                menuState.offset = it.pressPosition.round()
+                menuState.offset = it.pressPosition
             }
     }
 
@@ -192,24 +194,26 @@ fun ClickMenu(
                 interactionSource = interactionSource,
                 indication = indication,
                 enabled = enabled,
-                onClick = {
-                    menuState.expanded = true
-                }
+                onClick = menuState::show
             )
     ) {
         content()
 
-        Box(
-            modifier = Modifier.offset { menuState.offset }
-        ) {
-            DropdownMenu(
+        Box {
+            DropdownMenuPopup(
                 expanded = menuState.expanded,
-                onDismissRequest = menuScope::dismiss,
+                onDismissRequest = {
+                    menuState.dismiss()
+                    onDismiss?.invoke()
+                },
+                offset = menuState.offset.toDpOffset(LocalDensity.current),
                 modifier = modifier,
-                shape = menuShape,
-                containerColor = MaterialTheme.colorScheme.background,
             ) {
-                menuScope.menuContent()
+                DropdownMenuGroup(
+                    shapes = MenuDefaults.groupShapes(),
+                ) {
+                    MenuScope(menuState, menuItemContentPadding, onDismiss).menuContent()
+                }
             }
         }
     }
@@ -221,18 +225,18 @@ fun LongClickMenu(
     modifier: Modifier = Modifier,
     enabled: Boolean = true,
     menuState: MenuState = rememberMenuState(),
+    menuItemContentPadding: PaddingValues = DefaultMenuItemContentPadding,
     onClick: (() -> Unit)? = null,
     shape: Shape? = null,
     interactionSource: MutableInteractionSource = remember { MutableInteractionSource() },
     indication: Indication? = LocalIndication.current,
     content: @Composable () -> Unit,
 ) {
-    val menuScope = MenuScope(menuState)
     LaunchedEffect(interactionSource) {
         interactionSource.interactions
             .filterIsInstance<PressInteraction.Press>()
             .collect {
-                menuState.offset = it.pressPosition.round()
+                menuState.offset = it.pressPosition
             }
     }
 
@@ -243,22 +247,24 @@ fun LongClickMenu(
                 interactionSource = interactionSource,
                 indication = indication,
                 enabled = enabled,
-                onLongClick = {
-                    menuState.expanded = true
-                },
+                onLongClick = menuState::show,
                 onClick = onClick ?: {}
             )
     ) {
         content()
-        Box(
-            modifier = Modifier.offset { menuState.offset }
-        ) {
-            DropdownMenu(
+
+        Box {
+            DropdownMenuPopup(
                 expanded = menuState.expanded,
                 onDismissRequest = menuState::dismiss,
-                containerColor = MaterialTheme.colorScheme.background,
+                offset = menuState.offset.toDpOffset(LocalDensity.current),
+                modifier = modifier,
             ) {
-                menuScope.menuContent()
+                val menuScope = MenuScope(menuState, menuItemContentPadding)
+                DropdownMenuGroup(
+                    shapes = MenuDefaults.groupShapes(),
+                    content = { menuScope.menuContent() }
+                )
             }
         }
     }
@@ -272,39 +278,36 @@ fun rememberMenuState(): MenuState {
     )
 }
 
+/** The State object of [DropdownMenu] */
 @Stable
 class MenuState internal constructor() {
+
     private var _expanded by mutableStateOf(false)
-
-    fun toggle() {
-        expanded = !expanded
-    }
-
-    fun show() {
-        expanded = true
-    }
-
-    fun dismiss() {
-        expanded = false
-    }
-
-    var expanded: Boolean
+    /** Whether the menu is expanded */
+    val expanded: Boolean
         get() = _expanded
-        set(value) {
-            if (value != _expanded) {
-                _expanded = value
-            }
-        }
 
-    private var _offset by mutableStateOf(IntOffset.Zero)
-
-    var offset: IntOffset
+    private var _offset by mutableStateOf(Offset.Zero)
+    /** Current offset from the original position of the menu*/
+    var offset: Offset
         get() = _offset
         set(value) {
             if (value != _offset) {
                 _offset = value
             }
         }
+
+    fun toggle() {
+        _expanded = !expanded
+    }
+
+    fun show() {
+        _expanded = true
+    }
+
+    fun dismiss() {
+        _expanded = false
+    }
 
     companion object {
         val Saver: Saver<MenuState, *> = listSaver(
@@ -316,8 +319,8 @@ class MenuState internal constructor() {
             },
             restore = {
                 MenuState().apply {
-                    expanded = it[0] as Boolean
-                    offset = IntOffset(it[1] as Long)
+                    _expanded = it[0] as Boolean
+                    offset = Offset(it[1] as Long)
                 }
             }
         )

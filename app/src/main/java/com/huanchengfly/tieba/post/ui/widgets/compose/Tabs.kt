@@ -44,7 +44,6 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.round
 import kotlinx.coroutines.flow.filterIsInstance
 import kotlinx.coroutines.launch
 
@@ -174,7 +173,7 @@ fun TabClickMenu(
         interactionSource.interactions
             .filterIsInstance<PressInteraction.Press>()
             .collect {
-                menuState.offset = it.pressPosition.round()
+                menuState.offset = it.pressPosition
             }
     }
 
