@@ -143,7 +143,7 @@ fun SearchForumItem(forum: SearchForum, transitionKey: String? = null, onClick: 
                 style = MaterialTheme.typography.titleMedium
             )
 
-            if (forum.slogan != null) {
+            if (!forum.slogan.isNullOrEmpty()) {
                 Text(
                     text = forum.slogan,
                     color = MaterialTheme.colorScheme.onSurfaceVariant,
@@ -152,7 +152,7 @@ fun SearchForumItem(forum: SearchForum, transitionKey: String? = null, onClick: 
                 )
             }
 
-            if (forum.postNum != null && forum.concernNum != null) {
+            if (!forum.postNum.isNullOrEmpty() && !forum.concernNum.isNullOrEmpty()) {
                 Row(
                     modifier = Modifier.fillMaxWidth(),
                     horizontalArrangement = Arrangement.spacedBy(8.dp),

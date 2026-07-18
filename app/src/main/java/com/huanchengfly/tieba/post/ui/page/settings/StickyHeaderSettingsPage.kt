@@ -222,7 +222,7 @@ private fun ThreadColumnWithStickyHeader(
     ) {
         LazyColumn(modifier = Modifier.fillMaxSize(), state = listState) {
             item(contentType = Type.FirstPost) {
-                UserPostCardWidget(account = null, postText = R.string.tip_empty)
+                UserPostCardWidget(account = null, postText = R.string.title_empty)
             }
 
             if (stickyHeader) {

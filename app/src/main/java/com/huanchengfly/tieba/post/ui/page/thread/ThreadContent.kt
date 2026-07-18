@@ -780,7 +780,7 @@ private fun SubPostItem(
                 }
             }
         },
-        shape = MaterialTheme.shapes.extraSmall,
+        indication = null,
         onClick = { onOpenSubPosts(subPost.id) }
     ) {
         PbContentText(

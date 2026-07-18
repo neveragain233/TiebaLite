@@ -37,7 +37,6 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.ContentCopy
-import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Verified
 import androidx.compose.material.icons.rounded.Warning
 import androidx.compose.material3.CircularProgressIndicator
@@ -136,6 +135,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.CollapsingAvatarTopAppBar
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogNegativeButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.FancyAnimatedIndicatorWithModifier
+import com.huanchengfly.tieba.post.ui.widgets.compose.MoreMenuItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
 import com.huanchengfly.tieba.post.ui.widgets.compose.PositiveButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.Switch
@@ -495,14 +495,9 @@ private fun UserProfileTopAppBar(
                     }
                 }
             },
-            triggerShape = CircleShape
-        ) {
-            Icon(
-                imageVector = Icons.Rounded.MoreVert,
-                contentDescription = stringResource(id = R.string.btn_more),
-                modifier = Modifier.minimumInteractiveComponentSize()
-            )
-        }
+            triggerShape = CircleShape,
+            content = MoreMenuItem,
+        )
     }
 
     val navIcon = remember {

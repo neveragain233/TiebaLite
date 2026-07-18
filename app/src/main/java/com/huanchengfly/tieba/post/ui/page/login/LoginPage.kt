@@ -5,25 +5,18 @@ import android.content.Context
 import android.webkit.CookieManager
 import android.webkit.WebView
 import androidx.activity.compose.BackHandler
-import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.MoreVert
-import androidx.compose.material3.Icon
 import androidx.compose.material3.SnackbarDuration
 import androidx.compose.material3.SnackbarHost
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
-import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -33,6 +26,7 @@ import com.huanchengfly.tieba.post.components.TbWebViewClient
 import com.huanchengfly.tieba.post.components.TiebaWebView
 import com.huanchengfly.tieba.post.ui.page.webview.WebviewTopAppBar
 import com.huanchengfly.tieba.post.ui.widgets.compose.ClickMenu
+import com.huanchengfly.tieba.post.ui.widgets.compose.MoreMenuItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
 import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.WebView
@@ -92,18 +86,9 @@ fun LoginPage(
                     menuContent = {
                         TextMenuItem(text = R.string.title_refresh, onClick = webViewNavigator::reload)
                     },
-                    triggerShape = CircleShape
-                ) {
-                    Box(
-                        modifier = Modifier.minimumInteractiveComponentSize(),
-                        contentAlignment = Alignment.Center
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.MoreVert,
-                            contentDescription = stringResource(id = R.string.btn_more)
-                        )
-                    }
-                }
+                    triggerShape = CircleShape,
+                    content = MoreMenuItem,
+                )
             }
         },
         snackbarHostState = snackbarHostState,

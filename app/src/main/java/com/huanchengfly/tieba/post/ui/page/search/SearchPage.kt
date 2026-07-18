@@ -502,7 +502,7 @@ fun SearchHistoryList(
                 contentAlignment = Alignment.Center
             ) {
                 Text(
-                    text = stringResource(id = R.string.tip_empty),
+                    text = stringResource(id = R.string.title_empty),
                     fontSize = 16.sp
                 )
             }
