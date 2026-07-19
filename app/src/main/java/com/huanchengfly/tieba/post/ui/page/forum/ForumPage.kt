@@ -52,6 +52,7 @@ import androidx.compose.runtime.movableContentOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
@@ -199,14 +200,14 @@ fun ForumPage(
 
     val uiState by viewModel.uiState.collectAsStateWithLifecycle()
     val forumData = uiState.forum
-    val forumTabs: List<FrsTabInfo> = remember(forumData?.navTabInfo) {
-        context.buildForumTabs(forumData?.navTabInfo)
+    val forumTabs: List<FrsTabInfo> by remember {
+        derivedStateOf { context.buildForumTabs(uiState.forum?.navTabInfo) }
     }
     val forumSortTypes = viewModel.forumSortTypes
     val defaultSortType = LocalHabitSettings.current.forumSortType
 
     val pagerState = rememberPagerState { forumTabs.size }
-    val listStates = rememberPagerListStates(pagerState.pageCount)
+    val listStates by rememberUpdatedState(rememberPagerListStates(pagerState.pageCount))
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
     val scrollOrientationConnection = rememberScrollOrientationConnection()
 
