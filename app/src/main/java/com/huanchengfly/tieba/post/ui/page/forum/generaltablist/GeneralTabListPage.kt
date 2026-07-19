@@ -22,6 +22,7 @@ import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.LocalNavController
 import com.huanchengfly.tieba.post.ui.page.forum.generaltablist.GeneralTabListViewModel.Companion.GeneralTabListVMFactory
 import com.huanchengfly.tieba.post.ui.page.forum.threadlist.forumThreadList
+import com.huanchengfly.tieba.post.ui.page.main.explore.ConsumeThreadPageResult
 import com.huanchengfly.tieba.post.ui.page.main.explore.ThreadClickListeners
 import com.huanchengfly.tieba.post.ui.widgets.compose.Chip
 import com.huanchengfly.tieba.post.ui.widgets.compose.Container
@@ -69,6 +70,8 @@ fun GeneralTabListPage(
     onGlobalEvent<GeneralTabListUiEvent.Refresh>(filter = { it.tabId == navTabInfo.tabId }) {
         viewModel.onRefresh()
     }
+
+    ConsumeThreadPageResult<Destination.Forum>(navigator, viewModel::onThreadResult)
 
     StateScreen(
         isEmpty = threadList.isEmpty(),
