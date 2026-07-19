@@ -46,8 +46,8 @@ import androidx.media3.ui.compose.state.PlayerStateObserver
 import androidx.media3.ui.compose.state.observeState
 import androidx.window.core.layout.WindowSizeClass
 import com.huanchengfly.tieba.post.R
-import com.huanchengfly.tieba.post.components.MediaCache
-import com.huanchengfly.tieba.post.components.MediaCache.getBdMediaId
+import com.huanchengfly.tieba.post.components.media.MediaCache
+import com.huanchengfly.tieba.post.components.media.MediaCache.getBdMediaId
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.AlertDialog

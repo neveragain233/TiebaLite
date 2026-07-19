@@ -14,7 +14,6 @@ import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
 import androidx.media3.exoplayer.trackselection.DefaultTrackSelector
 import androidx.media3.exoplayer.util.EventLogger
 import com.huanchengfly.tieba.post.BuildConfig
-import com.huanchengfly.tieba.post.components.MediaCache
 import com.huanchengfly.tieba.post.utils.MediaUtil.idHash
 import com.huanchengfly.tieba.post.utils.MediaUtil.tryRelease
 import kotlinx.coroutines.channels.Channel

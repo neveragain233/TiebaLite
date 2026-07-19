@@ -41,7 +41,7 @@ import androidx.core.net.toUri
 import coil3.compose.AsyncImage
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.activities.VideoViewActivity
-import com.huanchengfly.tieba.post.components.MediaCache.getBdMediaId
+import com.huanchengfly.tieba.post.components.media.MediaCache.getBdMediaId
 import com.huanchengfly.tieba.post.models.PhotoViewData
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_URL

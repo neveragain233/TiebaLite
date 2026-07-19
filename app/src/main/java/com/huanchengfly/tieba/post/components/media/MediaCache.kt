@@ -1,4 +1,4 @@
-package com.huanchengfly.tieba.post.components
+package com.huanchengfly.tieba.post.components.media
 
 import android.content.Context
 import android.net.Uri

@@ -81,7 +81,7 @@ import androidx.media3.ui.compose.state.rememberPresentationState
 import androidx.window.core.layout.WindowSizeClass.Companion.HEIGHT_DP_EXPANDED_LOWER_BOUND
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.R
-import com.huanchengfly.tieba.post.components.MediaCache
+import com.huanchengfly.tieba.post.components.media.MediaCache
 import com.huanchengfly.tieba.post.findActivity
 import com.huanchengfly.tieba.post.theme.Grey100
 import com.huanchengfly.tieba.post.toastShort

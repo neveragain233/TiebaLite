@@ -53,8 +53,8 @@ import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.models.protos.VideoInfo
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.arch.unsafeLazy
-import com.huanchengfly.tieba.post.components.MediaCache.BD_VIDEO_HOST
-import com.huanchengfly.tieba.post.components.MediaCache.getBdMediaId
+import com.huanchengfly.tieba.post.components.media.MediaCache.BD_VIDEO_HOST
+import com.huanchengfly.tieba.post.components.media.MediaCache.getBdMediaId
 import com.huanchengfly.tieba.post.goToActivity
 import com.huanchengfly.tieba.post.theme.DefaultDarkColors
 import com.huanchengfly.tieba.post.theme.ExtendedColorScheme
