@@ -3,6 +3,7 @@ package com.huanchengfly.tieba.post.utils
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.withAnnotation
+import com.huanchengfly.tieba.post.ui.common.PbInlineType
 import org.intellij.lang.annotations.RegExp
 import java.util.regex.Pattern
 
@@ -13,7 +14,8 @@ object EmoticonUtil {
     const val EMOTICON_ALL_WEB_TYPE = 3
     const val EMOTICON_CLASSIC_WEB_TYPE = 4
     const val EMOTICON_EMOJI_WEB_TYPE = 5
-    const val INLINE_CONTENT_TAG = "androidx.compose.foundation.text.inlineContent"
+
+    private const val INLINE_CONTENT_TAG = "androidx.compose.foundation.text.inlineContent"
 
     private val ALL_TYPE_REGEX_PATTERN: Pattern by lazy { Pattern.compile(REGEX) }
 
@@ -31,14 +33,19 @@ object EmoticonUtil {
         else -> ALL_TYPE_REGEX_PATTERN
     }
 
+    val String.singleEmoticonString: AnnotatedString
+        get() = buildAnnotatedString {
+            withAnnotation(INLINE_CONTENT_TAG, PbInlineType.EMOTICON.name) {
+                append(this@singleEmoticonString)
+            }
+        }
+
     val String.emoticonString: AnnotatedString
         get() {
             val regexPattern = getRegexPattern(EMOTICON_ALL_TYPE)
             val matcher = regexPattern.matcher(this)
             return buildAnnotatedString {
-                withAnnotation("Emoticon", "true") {
-                    append(this@emoticonString)
-                }
+                append(this@emoticonString)
                 while (matcher.find()) {
                     val start = matcher.start()
                     val end = matcher.end()
@@ -46,34 +53,7 @@ object EmoticonUtil {
                     if (emoticonName != null) {
                         addStringAnnotation(
                             INLINE_CONTENT_TAG,
-                            "Emoticon#${EmoticonManager.getEmoticonIdByName(emoticonName)}",
-                            start,
-                            end,
-                        )
-                    }
-                }
-            }
-        }
-
-    val AnnotatedString.emoticonString: AnnotatedString
-        get() {
-            if (hasStringAnnotations("Emoticon", 0, length)) {
-                return this
-            }
-
-            val matcher = ALL_TYPE_REGEX_PATTERN.matcher(this.text)
-            return buildAnnotatedString {
-                withAnnotation("Emoticon", "true") {
-                    append(this@emoticonString)
-                }
-                while (matcher.find()) {
-                    val start = matcher.start()
-                    val end = matcher.end()
-                    val emoticonName = matcher.group(1)
-                    if (emoticonName != null) {
-                        addStringAnnotation(
-                            INLINE_CONTENT_TAG,
-                            "Emoticon#${EmoticonManager.getEmoticonIdByName(emoticonName)}",
+                            PbInlineType.EMOTICON.name,
                             start,
                             end,
                         )
@@ -83,4 +63,8 @@ object EmoticonUtil {
         }
 
     fun inlineTextFormat(name: String) = "#($name)"
+
+    fun inlineTextToName(text: String): String {
+        return if (text.length > 3) text.substring(2, text.length - 1) else text
+    }
 }

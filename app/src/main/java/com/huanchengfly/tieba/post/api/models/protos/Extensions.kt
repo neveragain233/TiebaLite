@@ -14,11 +14,9 @@ import androidx.core.net.toUri
 import com.huanchengfly.tieba.post.components.ClipBoardLinkDetector.isTieba
 import com.huanchengfly.tieba.post.theme.RedA700
 import com.huanchengfly.tieba.post.ui.common.PbContentRender
-import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.INLINE_LINK
-import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.INLINE_LINK_MALICIOUS
-import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.INLINE_VIDEO
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_URL
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_USER
+import com.huanchengfly.tieba.post.ui.common.PbInlineType
 import com.huanchengfly.tieba.post.ui.common.PicContentRender
 import com.huanchengfly.tieba.post.ui.common.PureTextContentRender
 import com.huanchengfly.tieba.post.ui.common.TextContentRender.Companion.appendText
@@ -27,7 +25,7 @@ import com.huanchengfly.tieba.post.ui.common.VoiceContentRender
 import com.huanchengfly.tieba.post.ui.utils.getPhotoViewData
 import com.huanchengfly.tieba.post.utils.EmoticonManager
 import com.huanchengfly.tieba.post.utils.EmoticonUtil
-import com.huanchengfly.tieba.post.utils.EmoticonUtil.emoticonString
+import com.huanchengfly.tieba.post.utils.EmoticonUtil.singleEmoticonString
 import com.huanchengfly.tieba.post.utils.ImageUtil
 import com.huanchengfly.tieba.post.utils.ThemeUtil
 import kotlinx.collections.immutable.ImmutableList
@@ -186,7 +184,7 @@ fun List<PbContent>.buildRenders(imageLoadType: Int): ImmutableList<PbContentRen
                 1 -> {
                     val text = if (isMaliciousLink(it)) {
                         buildAnnotatedString {
-                            appendInlineContent(INLINE_LINK_MALICIOUS, alternateText = "🔗")
+                            appendInlineContent(PbInlineType.LINK_MALICIOUS.name, alternateText = "🔗")
                             // Display actual link when it's malicious
                             withAnnotation(tag = TAG_URL, annotation = it.link) {
                                 withStyle(redHighLightStyle) { append(it.link) }
@@ -194,7 +192,7 @@ fun List<PbContent>.buildRenders(imageLoadType: Int): ImmutableList<PbContentRen
                         }
                     } else {
                         buildAnnotatedString {
-                            appendInlineContent(INLINE_LINK, alternateText = "🔗")
+                            appendInlineContent(PbInlineType.LINK.name, alternateText = "🔗")
                             withAnnotation(tag = TAG_URL, annotation = it.link) {
                                 withStyle(highLightStyle) { append(it.text) }
                             }
@@ -205,7 +203,7 @@ fun List<PbContent>.buildRenders(imageLoadType: Int): ImmutableList<PbContentRen
 
                 2 -> {
                     if (EmoticonManager.registerEmoticon(it.text, it.c)) {
-                        renders.appendText(EmoticonUtil.inlineTextFormat(name = it.c).emoticonString)
+                        renders.appendText(EmoticonUtil.inlineTextFormat(name = it.c).singleEmoticonString)
                     } else {
                         renders.appendText(EmoticonUtil.inlineTextFormat(name = it.c))
                     }
@@ -246,7 +244,7 @@ fun List<PbContent>.buildRenders(imageLoadType: Int): ImmutableList<PbContentRen
                         )
                     } else {
                         val text = buildAnnotatedString {
-                            appendInlineContent(INLINE_VIDEO, alternateText = "🎥")
+                            appendInlineContent(PbInlineType.VIDEO.name, alternateText = "🎥")
                             withAnnotation(tag = TAG_URL, annotation = it.text) {
                                 withStyle(highLightStyle) {
                                     append(PbContentRender.MEDIA_VIDEO)

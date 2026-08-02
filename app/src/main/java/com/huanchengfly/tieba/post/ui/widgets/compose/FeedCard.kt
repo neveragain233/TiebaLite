@@ -77,7 +77,6 @@ import com.huanchengfly.tieba.post.theme.ProvideContentColorTextStyle
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.ForumAvatarSharedBoundsKey
 import com.huanchengfly.tieba.post.ui.ForumTitleSharedBoundsKey
-import com.huanchengfly.tieba.post.ui.common.PbContentText
 import com.huanchengfly.tieba.post.ui.common.localSharedBounds
 import com.huanchengfly.tieba.post.ui.common.theme.compose.block
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication

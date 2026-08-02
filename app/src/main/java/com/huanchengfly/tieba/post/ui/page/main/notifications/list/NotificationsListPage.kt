@@ -30,12 +30,12 @@ import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.Error
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorCode
 import com.huanchengfly.tieba.post.navigateDebounced
+import com.huanchengfly.tieba.post.ui.widgets.compose.BasicPbContentText
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.LocalNavController
 import com.huanchengfly.tieba.post.ui.page.main.notifications.list.NotificationsListViewModel.Companion.NotificationsListVmFactory
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockTip
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockableContent
-import com.huanchengfly.tieba.post.ui.widgets.compose.EmoticonText
 import com.huanchengfly.tieba.post.ui.widgets.compose.LazyLoad
 import com.huanchengfly.tieba.post.ui.widgets.compose.PullToRefreshBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.SwipeUpLazyLoadColumn
@@ -165,7 +165,7 @@ private fun NotificationsListContent(
                         )
 
                         if (info.content != null) {
-                            EmoticonText(text = info.content)
+                            BasicPbContentText(text = info.content)
                         }
 
                         val quoteText = if (type == NotificationsType.ReplyMe && info.isFloor) {
@@ -175,7 +175,7 @@ private fun NotificationsListContent(
                         }
                         if (quoteText.isNullOrEmpty()) return@Column
 
-                        EmoticonText(
+                        BasicPbContentText(
                             text = quoteText,
                             modifier = Modifier
                                 .fillMaxWidth()

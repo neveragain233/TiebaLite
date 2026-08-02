@@ -49,6 +49,8 @@ import com.huanchengfly.tieba.post.components.ShortcutInitializer
 import com.huanchengfly.tieba.post.components.ShortcutInitializer.Companion.TbShortcut
 import com.huanchengfly.tieba.post.theme.ExtendedColorScheme
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
+import com.huanchengfly.tieba.post.ui.common.LocalPbInlineContentCache
+import com.huanchengfly.tieba.post.ui.common.PbInlineContentCache.Companion.rememberPbInlineContentCache
 import com.huanchengfly.tieba.post.ui.common.theme.compose.animateBackground
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
@@ -70,7 +72,6 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.video.LocalVideoPreviewSta
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.rememberVideoPreviewState
 import com.huanchengfly.tieba.post.utils.AccountUtil
 import com.huanchengfly.tieba.post.utils.ClientUtils
-import com.huanchengfly.tieba.post.utils.EmoticonManager
 import com.huanchengfly.tieba.post.utils.LocalAccount
 import com.huanchengfly.tieba.post.utils.PermissionUtils.askPermission
 import com.huanchengfly.tieba.post.utils.QuickPreviewUtil
@@ -242,11 +243,6 @@ class MainActivityV2 : BaseComposeActivity() {
         }
     }
 
-    override fun onDestroy() {
-        super.onDestroy()
-        EmoticonManager.clear()
-    }
-
     @NonRestartableComposable
     @Composable
     private fun TiebaLiteLocalProvider(
@@ -263,6 +259,7 @@ class MainActivityV2 : BaseComposeActivity() {
 
         CompositionLocalProvider(
             LocalAccount provides currentAccount,
+            LocalPbInlineContentCache provides rememberPbInlineContentCache(),
             LocalHabitSettings provides habit,
             LocalUISettings provides uiSettings,
             LocalVideoPreviewState provides videoPreviewState,

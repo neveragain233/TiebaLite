@@ -3,25 +3,10 @@ package com.huanchengfly.tieba.post.utils
 import android.app.Application
 import android.content.Context
 import android.graphics.Bitmap
+import android.text.TextUtils
 import android.util.Log
 import androidx.collection.ArraySet
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Link
-import androidx.compose.material.icons.rounded.Report
-import androidx.compose.material.icons.rounded.SlowMotionVideo
-import androidx.compose.material3.Icon
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.ui.Alignment
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.text.Placeholder
-import androidx.compose.ui.text.PlaceholderVerticalAlign
-import androidx.compose.ui.unit.dp
-import androidx.compose.ui.unit.sp
+import androidx.compose.ui.unit.TextUnit
 import coil3.BitmapImage
 import coil3.executeBlocking
 import coil3.imageLoader
@@ -29,17 +14,11 @@ import coil3.network.HttpException
 import coil3.request.ErrorResult
 import coil3.request.ImageRequest
 import com.huanchengfly.tieba.post.App
-import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.arch.ControlledRunner
 import com.huanchengfly.tieba.post.fromJson
 import com.huanchengfly.tieba.post.models.EmoticonCache
-import com.huanchengfly.tieba.post.pxToDp
-import com.huanchengfly.tieba.post.pxToSp
-import com.huanchengfly.tieba.post.theme.RedA700
 import com.huanchengfly.tieba.post.toJson
-import com.huanchengfly.tieba.post.ui.common.PbContentRender
-import com.huanchengfly.tieba.post.ui.widgets.compose.EmoticonInlineImage
 import com.huanchengfly.tieba.post.utils.CoilUtil.downloadOnly
 import com.huanchengfly.tieba.post.utils.FileUtil.deleteQuietly
 import kotlinx.coroutines.CoroutineName
@@ -89,71 +68,11 @@ object EmoticonManager {
     private val emoticonIds: MutableSet<String> = Collections.synchronizedSet(ArraySet())
     private val badEmoticonIds: MutableSet<String> = Collections.synchronizedSet(ArraySet())
 
-    private val inlineTextCache = HashMap<Int, WeakReference<Map<String, InlineTextContent>>>()
-
     private val emoticonMapping: MutableMap<String, String> = ConcurrentHashMap()
 
     private val scope = CoroutineScope(Dispatchers.Main + CoroutineName(TAG) + SupervisorJob())
 
     private val cacheUpdateRunner = ControlledRunner<Unit>()
-
-    fun getEmoticonInlineContent(sizePx: Int, emoticonScale: Float): Map<String, InlineTextContent> {
-        val size = (sizePx * emoticonScale).pxToSp()
-        val cached = inlineTextCache[size]?.get()
-        if (cached == null) {
-            val placeholder = Placeholder(size.sp, size.sp, PlaceholderVerticalAlign.TextCenter)
-            val dpSize = sizePx.pxToDp().dp
-            return emoticonIds.toTypedArray().associate { id ->
-                "Emoticon#$id" to InlineTextContent(
-                    placeholder = placeholder,
-                    children = {
-                        Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.Center) {
-                            EmoticonInlineImage(id, size = dpSize) {
-                                onLoadError(id, error = it.result.throwable)
-                            }
-                        }
-                    }
-                )
-            }
-            .plus(map = getIconInlineContent(sizePx))
-            .apply { inlineTextCache[size] = WeakReference(this) }
-        } else {
-            return cached
-        }
-    }
-
-    fun getIconInlineContent(sizePx: Int): Map<String, InlineTextContent> {
-        val sizeSp = (sizePx * 9 / 10).pxToSp().sp
-        val sizeDp = sizePx.pxToDp().dp
-        val placeholder = Placeholder(sizeSp, sizeSp, PlaceholderVerticalAlign.TextCenter)
-
-        return mapOf(
-            PbContentRender.INLINE_LINK to InlineTextContent(placeholder = placeholder) {
-                Icon(
-                    imageVector = Icons.Rounded.Link,
-                    contentDescription = stringResource(id = R.string.link),
-                    modifier = Modifier.size(sizeDp),
-                    tint = MaterialTheme.colorScheme.primaryContainer,
-                )
-            },
-            PbContentRender.INLINE_LINK_MALICIOUS to InlineTextContent(placeholder = placeholder) {
-                Icon(
-                    imageVector = Icons.Rounded.Report,
-                    contentDescription = stringResource(id = R.string.link),
-                    modifier = Modifier.size(sizeDp),
-                    tint = RedA700,
-                )
-            },
-            PbContentRender.INLINE_VIDEO to InlineTextContent(placeholder = placeholder) {
-                Icon(
-                    imageVector = Icons.Rounded.SlowMotionVideo,
-                    contentDescription = stringResource(id = R.string.desc_video),
-                    modifier = Modifier.size(sizeDp),
-                    tint = MaterialTheme.colorScheme.primaryContainer,
-                )
-            }
-        )
-    }
 
     fun init(context: Application) = scope.launch {
         contextRef = WeakReference(context)
@@ -190,7 +109,6 @@ object EmoticonManager {
 
     private fun updateCache() {
         scope.launch {
-            inlineTextCache.clear()
             cacheUpdateRunner.cancelPreviousThenRun(Dispatchers.IO) {
                 // Limit update rate to 1/min to avoid unnecessary disk writes
                 delay(60000L)
@@ -249,6 +167,9 @@ object EmoticonManager {
     }
 
     fun registerEmoticon(id: String, name: String): Boolean {
+        if (id.isEmpty() || name.isEmpty()) {
+            return false
+        }
         if (!(id.startsWith(EMOTICON_ID_PREFIX) || id.startsWith(EMOTICON_ID_PREFIX2))) {
             return false
         }
@@ -298,7 +219,7 @@ object EmoticonManager {
         }
     }
 
-    private fun onLoadError(id: String, error: Throwable, updateCache: Boolean = true) {
+    fun onLoadError(id: String, error: Throwable, updateCache: Boolean = true) {
         if (error is HttpException && error.response.code == 404) {
             Log.e(TAG, "onLoadError: Unsupported ID: $id")
             badEmoticonIds.add(id)
@@ -312,9 +233,5 @@ object EmoticonManager {
         } else {
             Log.w(TAG, "onLoadError: Unable to load emoticon $id: ${error.getErrorMessage()}")
         }
-    }
-
-    fun clear() {
-        inlineTextCache.clear()
     }
 }

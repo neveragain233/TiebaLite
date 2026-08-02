@@ -29,7 +29,7 @@ import com.huanchengfly.tieba.post.arch.collectPartialAsState
 import com.huanchengfly.tieba.post.arch.onGlobalEvent
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.toastShort
-import com.huanchengfly.tieba.post.ui.common.PbContentText
+import com.huanchengfly.tieba.post.ui.widgets.compose.PbContentText
 import com.huanchengfly.tieba.post.ui.models.Author
 import com.huanchengfly.tieba.post.ui.models.SimpleForum
 import com.huanchengfly.tieba.post.ui.models.ThreadItem

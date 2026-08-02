@@ -1,14 +1,10 @@
 package com.huanchengfly.tieba.post.ui.page.thread
 
 import android.content.Context
-import androidx.compose.foundation.text.InlineTextContent
-import androidx.compose.material3.MaterialTheme
-import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.util.fastFilter
 import androidx.compose.ui.util.fastMap
 import androidx.lifecycle.SavedStateHandle
@@ -33,7 +29,6 @@ import com.huanchengfly.tieba.post.repository.PbPageRepository
 import com.huanchengfly.tieba.post.repository.PbPageUiResponse
 import com.huanchengfly.tieba.post.repository.ThreadStoreRepository
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
-import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_LZ
 import com.huanchengfly.tieba.post.ui.models.PostData
 import com.huanchengfly.tieba.post.ui.models.SubPostItemData
 import com.huanchengfly.tieba.post.ui.page.Destination
@@ -41,12 +36,10 @@ import com.huanchengfly.tieba.post.ui.page.Destination.Companion.navTypeOf
 import com.huanchengfly.tieba.post.ui.page.Destination.Reply
 import com.huanchengfly.tieba.post.ui.page.Destination.SubPosts
 import com.huanchengfly.tieba.post.ui.page.threadstore.ThreadStoreUiEvent
-import com.huanchengfly.tieba.post.ui.widgets.compose.buildChipInlineContent
-import com.huanchengfly.tieba.post.utils.extension.set
 import com.huanchengfly.tieba.post.utils.TiebaUtil
+import com.huanchengfly.tieba.post.utils.extension.set
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
-import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.CoroutineExceptionHandler
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
@@ -64,7 +57,6 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.flow.updateAndGet
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
-import java.lang.ref.WeakReference
 import javax.inject.Inject
 import kotlin.reflect.typeOf
 
@@ -716,19 +708,6 @@ class ThreadViewModel @Inject constructor(
             val page = if (sortType == ThreadSortType.BY_DESC) previous + 1 else previous - 1
             return page.coerceIn(1, total)
         }
-
-        @Volatile
-        private var LzInlineContentMap: WeakReference<Map<String, InlineTextContent>?> = WeakReference(null)
-
-        val cachedLzInlineContent: Map<String, InlineTextContent>
-            @Composable get() = LzInlineContentMap.get() ?: synchronized(this) {
-                LzInlineContentMap.get() ?: persistentMapOf(
-                    TAG_LZ to buildChipInlineContent(
-                        text = stringResource(id = R.string.tip_lz),
-                        textStyle = MaterialTheme.typography.labelMedium
-                    )
-                ).apply { LzInlineContentMap = WeakReference(this) }
-            }
 
         private fun ThreadUiState.updateLikedPost(postId: Long, liked: Boolean, loading: Boolean) = copy(
             data = this.data.fastMap { post ->

@@ -66,7 +66,7 @@ import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.models.protos.PollOption
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
-import com.huanchengfly.tieba.post.ui.common.PbContentText
+import com.huanchengfly.tieba.post.ui.widgets.compose.PbContentText
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.models.PostData
@@ -789,7 +789,6 @@ private fun SubPostItem(
             overflow = TextOverflow.Ellipsis,
             maxLines = 4,
             lineSpacing = 0.4.sp,
-            inlineContent = if (subPost.isLz) ThreadViewModel.cachedLzInlineContent else null,
             style = MaterialTheme.typography.bodyMedium,
         )
     }

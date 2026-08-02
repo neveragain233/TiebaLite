@@ -24,8 +24,8 @@ import com.huanchengfly.tieba.post.arch.wrapImmutable
 import com.huanchengfly.tieba.post.repository.source.network.ThreadNetworkDataSource
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
 import com.huanchengfly.tieba.post.ui.common.PbContentRender
-import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_LZ
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_USER
+import com.huanchengfly.tieba.post.ui.common.PbInlineType
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.LikeZero
 import com.huanchengfly.tieba.post.ui.models.PostData
@@ -369,7 +369,7 @@ private fun buildAbstractContent(content: List<PbContentRender>, user: UserData)
             }
         }
         if (user.isLz) {
-            appendInlineContent(TAG_LZ)
+            appendInlineContent(PbInlineType.LZ.name)
         }
         append(": ")
         content.forEach { append(it.toAnnotationString()) }
