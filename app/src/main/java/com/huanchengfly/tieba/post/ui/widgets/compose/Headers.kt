@@ -5,6 +5,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
@@ -25,6 +26,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextAlign
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.TextUnit
@@ -197,6 +199,7 @@ fun SharedTransitionUserHeader(
     },
     name = {
         SharedTransitionUserName(
+            modifier = Modifier.fillMaxWidth(),
             name = author.userShowBothName ?: author.nameShow,
             userLevel = author.levelId,
             isLz = author.isLz,
@@ -238,20 +241,21 @@ private fun SharedTransitionUserName(
     bawuType: String? = null,
     extraKey: Any? = null,
 ) {
-    Row(
+    FlowRow(
         modifier = modifier,
-        verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(4.dp)
+        horizontalArrangement = Arrangement.spacedBy(4.dp),
+        itemVerticalAlignment = Alignment.CenterVertically,
     ) {
         Text(
             text = name,
             modifier = Modifier.onCase(!LocalHabitSettings.current.showBothName) {
                 sharedUserNickname(nickname = name, extraKey = extraKey)
-            }
+            },
+            overflow = TextOverflow.Ellipsis,
+            maxLines = 1,
         )
 
         val levelColor = Color(getIconColorByLevel(userLevel))
-
         TextChip(
             text = userLevel.toString(),
             fontSize = 11.sp,
@@ -296,6 +300,7 @@ private fun TextChip(
     color = color,
     fontSize = fontSize,
     textAlign = TextAlign.Center,
+    maxLines = 1,
     style = LocalTextStyle.current.merge(DefaultChipTextStyle)
 )
 
