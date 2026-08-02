@@ -55,7 +55,7 @@ object StringUtil {
     fun getUserNameString(showBoth: Boolean, username: String, nickname: String?): String {
         val canShowBoth = !nickname.isNullOrBlank() && username != nickname && username.isNotBlank()
         return if (canShowBoth && showBoth) {
-            "$nickname $username"
+            "$nickname ($username)"
         } else {
             nickname ?: username
         }
