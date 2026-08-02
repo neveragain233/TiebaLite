@@ -55,6 +55,7 @@ import com.huanchengfly.tieba.post.theme.isDarkScheme
 import com.huanchengfly.tieba.post.theme.isTranslucent
 import com.huanchengfly.tieba.post.ui.common.theme.compose.BebasFamily
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
+import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.LocalNavController
 import com.huanchengfly.tieba.post.ui.page.main.MainNavigationSuiteType.Companion.isFloatingNavigationBar
@@ -88,7 +89,13 @@ private fun StatCardPlaceholder(modifier: Modifier = Modifier) {
  * User status card
  * */
 @Composable
-fun StatCard(posts: String?, fans: String?, concerned: String?, modifier: Modifier = Modifier) {
+fun StatCard(
+    posts: String?,
+    fans: String?,
+    concerned: String?,
+    modifier: Modifier = Modifier,
+    onFollowClick: (() -> Unit)? = null
+) {
     Row(
         modifier = modifier
             .padding(vertical = 16.dp)
@@ -101,7 +108,11 @@ fun StatCard(posts: String?, fans: String?, concerned: String?, modifier: Modifi
         StatCardItem(title = stringResource(R.string.text_stat_fans), stat = fans)
         VerticalDivider(color = MaterialTheme.colorScheme.outline)
 
-        StatCardItem(title = stringResource(R.string.text_stat_follow), stat = concerned)
+        StatCardItem(
+            modifier = Modifier.onNotNull(onFollowClick) { clickable(onClick = it) },
+            title = stringResource(R.string.text_stat_follow),
+            stat = concerned,
+        )
     }
 }
 
@@ -175,9 +186,9 @@ private fun InfoCard(
 }
 
 @Composable
-private fun RowScope.StatCardItem(title: String, stat: String?) {
+private fun RowScope.StatCardItem(title: String, stat: String?, modifier: Modifier = Modifier) {
     Column(
-        modifier = Modifier.weight(1f),
+        modifier = modifier.weight(1f),
         horizontalAlignment = Alignment.CenterHorizontally,
     ) {
         Text(text = stat ?: 0.toString(), fontSize = 20.sp, fontFamily = BebasFamily)
@@ -262,7 +273,14 @@ fun UserPage(viewModel: UserViewModel = viewModel()) {
                         shape = MaterialTheme.shapes.small,
                         color = colorScheme.secondaryContainer,
                     ) {
-                        StatCard(account.posts, account.fans, account.concerned)
+                        StatCard(
+                            posts = account.posts,
+                            fans = account.fans,
+                            concerned = account.concerned,
+                            onFollowClick = {
+                                navigator.navigateDebounced(Destination.UserFollowList(uid = account.uid))
+                            }
+                        )
                     }
                 } else if (isLoading) {
                     InfoCardPlaceHolder(modifier = Modifier.padding(16.dp))

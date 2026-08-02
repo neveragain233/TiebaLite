@@ -98,6 +98,9 @@ sealed interface Destination {
         val isDialog: Boolean = false,
     ): Destination
 
+    @Serializable
+    data class UserFollowList(val uid: Long): Destination
+
     /**
      * @param uid 用户ID
      * @param avatar 用户头像Url

@@ -153,7 +153,12 @@
     <string name="title_sort_by_send">发贴时间排序</string>
     <string name="button_follow">关注</string>
     <string name="button_unfollow">取消关注</string>
+    <string name="filter_follow_all">我的关注</string>
+    <string name="filter_follow_mutual">互相关注</string>
+    <string name="text_follow_list_count">共关注%1$d个吧友</string>
+    <string name="text_followed">已关注</string>
     <string name="error_unknown">未知错误</string>
+    <string name="title_follow_list">全部关注</string>
     <string name="title_top_forum">置顶</string>
     <string name="title_use_webview">系统 WebView</string>
     <string name="title_settings_read_habit">使用习惯</string>
@@ -582,6 +587,8 @@
     <string name="toast_backup_done">备份完成</string>
     <string name="toast_ban_interact_failed">更新拉黑配置失败 %1$s</string>
     <string name="toast_block_rule_updated">本地屏蔽规则已更新</string>
+    <string name="toast_follow_list_unfollow_success">已取消关注</string>
+    <string name="toast_follow_list_follow_success">关注成功</string>
     <string name="toast_preview_image_too_large">无法预览超大图</string>
     <string name="toast_video_downloaded">视频保存在 %1$s</string>
     <string name="welcome_intro">欢迎使用贴吧 Lite</string>

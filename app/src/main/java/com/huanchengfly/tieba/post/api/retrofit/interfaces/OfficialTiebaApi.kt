@@ -151,6 +151,14 @@ interface OfficialTiebaApi {
         @Field("in_live") inLive: Int = 0
     ): Flow<FollowBean>
 
+    @Headers("${Header.FORCE_LOGIN}: ${Header.FORCE_LOGIN_TRUE}")
+    @POST("/c/u/follow/followList")
+    @FormUrlEncoded
+    fun followListFlow(
+        @Field("pn") page: Int = 1,
+        @Field("uid") uid: Long? = null,
+    ): Flow<FollowListBean>
+
     @Headers(
         "${Header.FORCE_LOGIN}: ${Header.FORCE_LOGIN_TRUE}",
         "${Header.NO_COMMON_PARAMS}: BDUSS"

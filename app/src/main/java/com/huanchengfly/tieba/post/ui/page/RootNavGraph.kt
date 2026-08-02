@@ -61,6 +61,7 @@ import com.huanchengfly.tieba.post.ui.page.thread.ThreadPage
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadViewModel
 import com.huanchengfly.tieba.post.ui.page.threadstore.ThreadStorePage
 import com.huanchengfly.tieba.post.ui.page.user.UserProfilePage
+import com.huanchengfly.tieba.post.ui.page.user.followlist.FollowListPage
 import com.huanchengfly.tieba.post.ui.page.webview.WebViewPage
 import com.huanchengfly.tieba.post.ui.page.welcome.WelcomeScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.LocalVideoPreviewState
@@ -198,6 +199,11 @@ private fun SharedTransitionScope.buildRootNavGraph(
             deepLinks = listOf(navDeepLink<Destination.Search>(basePath = "$TB_LITE_DOMAIN://search"))
         ) {
             SearchPage(navController)
+        }
+
+        animatedComposable<Destination.UserFollowList> { backStackEntry ->
+            val params = backStackEntry.toRoute<Destination.UserFollowList>()
+            FollowListPage(uid = params.uid, navController)
         }
 
         animatedComposable<Destination.UserProfile> { backStackEntry ->
