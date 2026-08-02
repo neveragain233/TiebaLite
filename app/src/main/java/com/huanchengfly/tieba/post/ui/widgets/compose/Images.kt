@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.systemBars
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Refresh
@@ -39,8 +40,10 @@ import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
+import coil3.compose.AsyncImage
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import coil3.compose.rememberConstraintsSizeResolver
@@ -59,6 +62,7 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.page.photoview.PhotoViewActivity
 import com.huanchengfly.tieba.post.utils.CoilUtil
+import com.huanchengfly.tieba.post.utils.EmoticonManager
 
 @DrawableRes
 val DefaultErrorResource: Int = R.drawable.ic_error
@@ -121,6 +125,26 @@ fun ErrorImage(modifier: Modifier = Modifier, tip: String) {
                 .padding(4.dp),
             color = MaterialTheme.colorScheme.onSecondaryContainer,
             style = MaterialTheme.typography.bodySmall
+        )
+    }
+}
+
+@Composable
+@NonRestartableComposable
+fun EmoticonInlineImage(
+    id: String,
+    size: Dp,
+    modifier: Modifier = Modifier,
+    description: String = id,
+    onError: ((AsyncImagePainter.State.Error) -> Unit)? = null,
+) {
+    Box(modifier = modifier.size(size)) {
+        AsyncImage(
+            model = EmoticonManager.getEmoticonUri(id),
+            contentDescription = description,
+            modifier = Modifier.matchParentSize(),
+            error = painterResource(R.drawable.ic_error),
+            onError = onError
         )
     }
 }

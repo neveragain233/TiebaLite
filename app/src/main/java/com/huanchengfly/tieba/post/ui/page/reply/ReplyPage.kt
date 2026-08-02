@@ -109,13 +109,13 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.Dialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogNegativeButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogPositiveButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogState
+import com.huanchengfly.tieba.post.ui.widgets.compose.EmoticonInlineImage
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.edittext.widget.UndoableEditText
 import com.huanchengfly.tieba.post.utils.DisplayUtil.toDpSize
 import com.huanchengfly.tieba.post.utils.Emoticon
-import com.huanchengfly.tieba.post.utils.EmoticonManager.EmoticonInlineImage
 import com.huanchengfly.tieba.post.utils.EmoticonUtil
 import com.huanchengfly.tieba.post.utils.LocalAccount
 import com.huanchengfly.tieba.post.utils.StringUtil
@@ -566,7 +566,7 @@ private fun EmoticonPanel(
     emoticons: List<Emoticon>,
     onEmoticonClick: (Emoticon) -> Unit,
 ) {
-    val emoSize = Sizes.Medium
+    val emoSize = Sizes.Small
 
     Column(
         modifier = modifier.padding(horizontal = 16.dp, vertical = 8.dp)
@@ -574,17 +574,15 @@ private fun EmoticonPanel(
         LazyVerticalGrid(
             columns = GridCells.Adaptive(minSize = emoSize),
             modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
-            verticalArrangement = Arrangement.spacedBy(8.dp)
+            horizontalArrangement = Arrangement.spacedBy(10.dp),
+            verticalArrangement = Arrangement.spacedBy(10.dp)
         ) {
             items(emoticons) { emoticon ->
                 EmoticonInlineImage(
+                    modifier = Modifier.clickable { onEmoticonClick(emoticon) },
                     id = emoticon.id,
+                    size = emoSize,
                     description = emoticon.name,
-                    modifier = Modifier
-                        .size(size = emoSize)
-                        .padding(8.dp)
-                        .clickable { onEmoticonClick(emoticon) }
                 )
             }
         }

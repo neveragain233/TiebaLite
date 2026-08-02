@@ -204,9 +204,11 @@ fun List<PbContent>.buildRenders(imageLoadType: Int): ImmutableList<PbContentRen
                 }
 
                 2 -> {
-                    EmoticonManager.registerEmoticon(it.text, it.c)
-                    val emoticonText = EmoticonUtil.inlineTextFormat(name = it.c).emoticonString
-                    renders.appendText(emoticonText)
+                    if (EmoticonManager.registerEmoticon(it.text, it.c)) {
+                        renders.appendText(EmoticonUtil.inlineTextFormat(name = it.c).emoticonString)
+                    } else {
+                        renders.appendText(EmoticonUtil.inlineTextFormat(name = it.c))
+                    }
                 }
 
                 3 -> {

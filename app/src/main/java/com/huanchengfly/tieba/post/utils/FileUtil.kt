@@ -18,14 +18,17 @@ import com.huanchengfly.tieba.post.utils.PermissionUtils.askPermission
 import com.huanchengfly.tieba.post.utils.PermissionUtils.onGranted
 import kotlinx.coroutines.MainScope
 import kotlinx.coroutines.launch
+import okhttp3.internal.closeQuietly
 import okio.buffer
 import okio.sink
 import okio.source
 import java.io.BufferedReader
+import java.io.BufferedWriter
 import java.io.File
 import java.io.FileOutputStream
 import java.io.IOException
 import java.io.InputStreamReader
+import java.io.OutputStreamWriter
 import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
 
@@ -159,6 +162,34 @@ object FileUtil {
             }
         } catch (e: IOException) {
             e.printStackTrace()
+        }
+        return false
+    }
+
+    /**
+     * Sets the content of the [file] as [texts] encoded using UTF-8. If the file exists, it
+     * becomes overwritten.
+     *
+     * @param file destination file
+     * @param texts list of text to write into file.
+     * */
+    @WorkerThread
+    fun writeLines(file: File, texts: List<CharSequence>): Boolean {
+        var writer: BufferedWriter? = null
+        var outputStreamWriter: OutputStreamWriter? = null
+        try {
+            file.ensureParents()
+            outputStreamWriter = OutputStreamWriter(file.outputStream())
+            writer = BufferedWriter(outputStreamWriter)
+            texts.forEach {
+                writer.appendLine(it)
+            }
+            return true
+        } catch (e: IOException) {
+            e.printStackTrace()
+        } finally {
+            writer?.closeQuietly()
+            outputStreamWriter?.closeQuietly()
         }
         return false
     }
