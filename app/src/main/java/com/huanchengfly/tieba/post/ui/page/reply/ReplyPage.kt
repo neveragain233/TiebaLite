@@ -73,9 +73,11 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.text.font.FontWeight
@@ -180,6 +182,7 @@ private fun ReplyPageContent(
     replyUserName: String? = null,
     tbs: String? = null,
 ) {
+    val haptic = LocalHapticFeedback.current
     val pickMediasLauncher = rememberLauncherForActivityResult(PickMultipleVisualMedia(MAX_SELECTABLE_IMAGE)) { uris ->
         if (uris.isEmpty()) return@rememberLauncherForActivityResult
         viewModel.send(ReplyUiIntent.AddImage(uris.map { it.toString() }))
@@ -440,6 +443,7 @@ private fun ReplyPageContent(
                                 val emoText = EmoticonUtil.inlineTextFormat(name = emoticon.name)
                                 it.text?.insert(start, emoText)
                                 it.setSelection(start + emoText.length)
+                                haptic.performHapticFeedback(HapticFeedbackType.KeyboardTap)
                             }
                         }
                     )
