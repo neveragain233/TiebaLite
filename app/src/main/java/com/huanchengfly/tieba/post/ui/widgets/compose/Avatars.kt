@@ -12,10 +12,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.painterResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
 import com.google.accompanist.drawablepainter.rememberDrawablePainter
 
 object Sizes {
@@ -36,7 +39,6 @@ fun AvatarPlaceholder(size: Dp, modifier: Modifier = Modifier)  {
 }
 
 @Composable
-@NonRestartableComposable
 fun Avatar(
     data: String?,
     size: Dp,
@@ -59,9 +61,13 @@ fun Avatar(
     contentDescription: String? = null,
     shape: Shape = CircleShape
 ) {
+    val context = LocalContext.current
     Box(modifier = modifier.clip(shape)) {
         AsyncImage(
-            model = data,
+            model = ImageRequest.Builder(context)
+                .data(data)
+                .crossfade(false)
+                .build(),
             contentDescription = contentDescription,
             modifier = Modifier.matchParentSize(),
             error = painterResource(DefaultErrorResource),

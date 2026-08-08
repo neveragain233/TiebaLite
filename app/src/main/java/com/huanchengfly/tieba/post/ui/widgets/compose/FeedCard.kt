@@ -11,6 +11,7 @@ import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
@@ -18,12 +19,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.OndemandVideo
 import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PhotoSizeSelectActual
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
@@ -41,6 +45,8 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.draw.drawWithCache
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.layout.onVisibilityChanged
@@ -53,6 +59,7 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.text.withStyle
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
@@ -75,11 +82,9 @@ import com.huanchengfly.tieba.post.arch.unsafeLazy
 import com.huanchengfly.tieba.post.arch.wrapImmutable
 import com.huanchengfly.tieba.post.theme.ProvideContentColorTextStyle
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
-import com.huanchengfly.tieba.post.ui.ForumAvatarSharedBoundsKey
-import com.huanchengfly.tieba.post.ui.ForumTitleSharedBoundsKey
-import com.huanchengfly.tieba.post.ui.common.localSharedBounds
 import com.huanchengfly.tieba.post.ui.common.theme.compose.block
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
+import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
 import com.huanchengfly.tieba.post.ui.models.Author
@@ -120,8 +125,25 @@ internal val CardHorizontalSpacing = 16.dp
 
 internal val DefaultCardPaddings = PaddingValues(horizontal = CardHorizontalSpacing)
 
+/** The default thickness of Feed Card divider. */
+internal val CardDividerThickness = 2.dp
+
 /** The default amount of time that [FeedVideoPreview] should be considered visible. */
 private const val VIDEO_MIN_VISIBLE_DURATION_MS = 500L
+
+fun Modifier.cardBottomDivider(
+    color: Color,
+    horizontalSpacing: Dp = CardHorizontalSpacing,
+): Modifier = this.drawWithCache {
+    onDrawBehind {
+        drawLine(
+            color = color,
+            strokeWidth = CardDividerThickness.toPx(),
+            start = Offset(horizontalSpacing.toPx(), size.height),
+            end = Offset(size.width - horizontalSpacing.toPx(), size.height - CardDividerThickness.toPx() / 2),
+        )
+    }
+}
 
 @Composable
 fun Card(
@@ -261,10 +283,8 @@ fun ForumInfoChip(
     modifier: Modifier = Modifier,
     forumName: String,
     avatarUrl: String? = null,
-    transitionKey: Any? = null,
     onClick: () -> Unit
 ) {
-    val extraKey = transitionKey?.toString()
     Row(
         modifier = modifier
             .height(IntrinsicSize.Min)
@@ -273,22 +293,17 @@ fun ForumInfoChip(
             .clickable(onClick = onClick)
             .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
         avatarUrl?.let {
             Avatar(
                 data = avatarUrl,
-                modifier = Modifier
-                    .fillMaxHeight()
-                    .aspectRatio(1f)
-                    .localSharedBounds(key = ForumAvatarSharedBoundsKey(forumName, extraKey)),
+                modifier = Modifier.fillMaxHeight().aspectRatio(1f),
                 shape = MaterialTheme.shapes.extraSmall
             )
         }
+        Spacer(modifier = Modifier.width(width = ButtonDefaults.IconSpacing))
         Text(
             text = stringResource(id = R.string.title_forum_name, forumName),
-            modifier = Modifier
-                .localSharedBounds(key = ForumTitleSharedBoundsKey(forumName, extraKey)),
             color = MaterialTheme.colorScheme.onSecondaryContainer,
             maxLines = 1,
             style = MaterialTheme.typography.bodySmall,
@@ -512,6 +527,7 @@ fun FeedCard(
     onClickUser: (ThreadItem) -> Unit = {},
     onClickForum: ((ThreadItem) -> Unit)? = null, // Parse Null to Hide ForumInfo
     onClickOriginThread: (OriginThreadInfo) -> Unit = {},
+    cardDivider: Boolean = false,
     dislikeAction: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -563,7 +579,6 @@ fun FeedCard(
                 ForumInfoChip(
                     forumName = forumName,
                     avatarUrl = forumAvatar,
-                    transitionKey = thread.id,
                     onClick = { onClickForum(thread) }
                 )
             }
@@ -583,7 +598,8 @@ fun FeedCard(
             )
         },
         onClick = { onClick(thread) },
-        modifier = modifier,
+        modifier = modifier
+            .onCase(cardDivider) { cardBottomDivider(DividerDefaults.color) },
     )
 }
 

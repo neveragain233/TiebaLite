@@ -15,7 +15,6 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -30,6 +29,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
@@ -142,6 +142,7 @@ fun PersonalizedPage(
             val data = uiState.data
             val isLoadingMore = uiState.isLoadingMore
             val dislikeReasons = remember { mutableStateSetOf<Dislike>() }
+            val itemPlacementSpec = MaterialTheme.motionScheme.slowSpatialSpec<IntOffset>()
 
             SwipeUpLazyLoadColumn(
                 modifier = modifier.fillMaxSize().testColumn(),
@@ -153,51 +154,41 @@ fun PersonalizedPage(
             ) {
                 itemsIndexed(data, key = { _, it -> it.id }, ThreadContentType) { index, thread ->
                     val isHidden = thread.blocked && hideBlockedContent
-
                     trace(MacrobenchmarkConstant.TRACE_FEED_CARD) {
                         BlockableContent(
                             blocked = thread.blocked,
                             blockedTip = ThreadBlockedTip,
-                            modifier = Modifier.fillMaxWidth().animateItem(),
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .animateItem(fadeInSpec = null, placementSpec = itemPlacementSpec, fadeOutSpec = null),
                             hideBlockedContent = hideBlockedContent
                         ) {
-                            Column {
-                                FeedCard(
-                                    thread = thread,
-                                    onClick = threadClickListeners.onClicked,
-                                    onLike = viewModel::onThreadLikeClicked,
-                                    onClickReply = threadClickListeners.onReplyClicked,
-                                    onClickUser = threadClickListeners.onAuthorClicked,
-                                    onClickForum = threadClickListeners.onForumClicked,
-                                    dislikeAction = {
-                                        if (thread.dislikeResource.isNullOrEmpty()) return@FeedCard
-                                        Dislike(
-                                            dislikeResource = thread.dislikeResource,
-                                            selectedReasons = dislikeReasons,
-                                            onDismiss = dislikeReasons::clear,
-                                            onDislikeSelected = {
-                                                if (it in dislikeReasons) {
-                                                    dislikeReasons.remove(it)
-                                                } else {
-                                                    dislikeReasons.add(it)
-                                                }
-                                            },
-                                        ) {
-                                            viewModel.onThreadDislike(
-                                                thread,
-                                                dislikeReasons.toList()
-                                            )
-                                        }
+                            FeedCard(
+                                thread = thread,
+                                onClick = threadClickListeners.onClicked,
+                                onLike = viewModel::onThreadLikeClicked,
+                                onClickReply = threadClickListeners.onReplyClicked,
+                                onClickUser = threadClickListeners.onAuthorClicked,
+                                onClickForum = threadClickListeners.onForumClicked,
+                                dislikeAction = {
+                                    if (thread.dislikeResource.isNullOrEmpty()) return@FeedCard
+                                    Dislike(
+                                        dislikeResource = thread.dislikeResource,
+                                        selectedReasons = dislikeReasons,
+                                        onDismiss = dislikeReasons::clear,
+                                        onDislikeSelected = {
+                                            if (it in dislikeReasons) {
+                                                dislikeReasons.remove(it)
+                                            } else {
+                                                dislikeReasons.add(it)
+                                            }
+                                        },
+                                    ) {
+                                        viewModel.onThreadDislike(thread, dislikeReasons.toList())
                                     }
-                                )
-
-                                if (!isHidden && index < data.lastIndex) {
-                                    HorizontalDivider(
-                                        modifier = Modifier.padding(horizontal = 16.dp),
-                                        thickness = 2.dp
-                                    )
-                                }
-                            }
+                                },
+                                cardDivider = !isHidden && index < data.lastIndex,
+                            )
                         }
                     }
                 }

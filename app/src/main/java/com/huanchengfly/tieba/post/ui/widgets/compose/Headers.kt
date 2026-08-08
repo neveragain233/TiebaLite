@@ -37,6 +37,7 @@ import com.huanchengfly.tieba.post.LocalHabitSettings
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.theme.ProvideContentColorTextStyle
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
+import com.huanchengfly.tieba.post.ui.common.LocalAnimatedVisibilityScope
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
@@ -46,7 +47,6 @@ import com.huanchengfly.tieba.post.ui.page.user.sharedUserAvatar
 import com.huanchengfly.tieba.post.ui.page.user.sharedUserNickname
 import com.huanchengfly.tieba.post.utils.ColorUtils.getIconColorByLevel
 
-@NonRestartableComposable
 @Composable
 fun UserHeaderPlaceholder(
     modifier: Modifier = Modifier,
@@ -70,6 +70,7 @@ fun UserHeaderPlaceholder(
     }
 )
 
+@NonRestartableComposable
 @Composable
 fun UserHeader(
     modifier: Modifier = Modifier,
@@ -105,7 +106,6 @@ fun UserHeader(
     }
 }
 
-@NonRestartableComposable
 @Composable
 fun UserHeader(
     modifier: Modifier = Modifier,
@@ -131,38 +131,6 @@ fun UserHeader(
     content = content
 )
 
-@NonRestartableComposable
-@Composable
-fun SharedTransitionUserHeader(
-    modifier: Modifier = Modifier,
-    uid: Long,
-    avatar: String?,
-    name: String,
-    extraKey: Any? = null,
-    desc: String? = null,
-    onClick: (() -> Unit)?,
-    content: (@Composable RowScope.() -> Unit)? = null,
-) {
-    UserHeader(
-        modifier = modifier,
-        avatar = {
-            SharedTransitionUserAvatar(uid = uid, avatar = avatar, extraKey = extraKey, onClick = onClick)
-        },
-        name = {
-            Text(
-                text = name,
-                modifier = Modifier
-                    .onCase(onClick != null && !LocalHabitSettings.current.showBothName) {
-                        sharedUserNickname(nickname = name, extraKey = extraKey)
-                    }
-            )
-        },
-        desc = desc?.let { { Text(text = desc) } },
-        content = content
-    )
-}
-
-@NonRestartableComposable
 @Composable
 fun SharedTransitionUserHeader(
     modifier: Modifier = Modifier,
@@ -171,19 +139,32 @@ fun SharedTransitionUserHeader(
     desc: String? = null,
     onClick: (() -> Unit)?,
     content: (@Composable RowScope.() -> Unit)? = null,
-) =
-    SharedTransitionUserHeader(
+) {
+    UserHeader(
         modifier = modifier,
-        uid = user.id,
-        avatar = user.avatarUrl,
-        name = user.name,
-        extraKey = extraKey,
-        desc = desc,
-        onClick = onClick,
+        avatar = {
+            SharedTransitionUserAvatar(
+                uid = user.id,
+                avatar = user.avatarUrl,
+                extraKey = extraKey,
+                onClick = onClick
+            )
+        },
+        name = {
+            val sharedTransition = onClick != null && !LocalHabitSettings.current.showBothName
+            Text(
+                text = user.name,
+                modifier = Modifier
+                    .onCase(sharedTransition && LocalAnimatedVisibilityScope.current != null) {
+                        sharedUserNickname(nickname = user.name, extraKey = extraKey)
+                    }
+            )
+        },
+        desc = desc?.let { { Text(text = desc) } },
         content = content
     )
+}
 
-@NonRestartableComposable
 @Composable
 fun SharedTransitionUserHeader(
     modifier: Modifier = Modifier,
@@ -241,6 +222,7 @@ private fun SharedTransitionUserName(
     bawuType: String? = null,
     extraKey: Any? = null,
 ) {
+    val sharedTransition = LocalAnimatedVisibilityScope.current != null && !LocalHabitSettings.current.showBothName
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(4.dp),
@@ -248,7 +230,7 @@ private fun SharedTransitionUserName(
     ) {
         Text(
             text = name,
-            modifier = Modifier.onCase(!LocalHabitSettings.current.showBothName) {
+            modifier = Modifier.onCase(sharedTransition) {
                 sharedUserNickname(nickname = name, extraKey = extraKey)
             },
             overflow = TextOverflow.Ellipsis,

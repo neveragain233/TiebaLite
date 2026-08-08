@@ -39,8 +39,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
-import androidx.tracing.trace
 import com.huanchengfly.tieba.post.MacrobenchmarkConstant
+import com.huanchengfly.tieba.post.MacrobenchmarkConstant.testColumn
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.arch.collectCommonUiEventWithLifecycle
 import com.huanchengfly.tieba.post.arch.collectPartialAsState
@@ -65,6 +65,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.VerticalGrid
 import com.huanchengfly.tieba.post.ui.widgets.compose.itemsIndexed
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import com.huanchengfly.tieba.post.utils.StringUtil.getShortNumString
+import com.huanchengfly.tieba.post.utils.trace
 
 private enum class HotType {
     TopicHeader, TopicList, ThreadTabs, ThreadListTip, Thread, PlaceHolder
@@ -117,7 +118,7 @@ fun HotPage(
             val threadList = uiState.threads
 
             LazyColumn(
-                modifier = modifier.fillMaxSize(),
+                modifier = modifier.fillMaxSize().testColumn(),
                 state = listState,
                 contentPadding = contentPadding,
             ) {
@@ -234,9 +235,7 @@ fun HotPage(
                     key = { _, thread -> thread.id },
                     contentType = { _,_ -> HotType.Thread }
                 ) { index, thread ->
-                    // Start of FeedCard trace
                     trace(MacrobenchmarkConstant.TRACE_FEED_CARD) {
-                    Column {
                         FeedCard(
                             thread = thread,
                             onClick = threadClickListeners.onClicked,
@@ -244,15 +243,12 @@ fun HotPage(
                             onClickReply = threadClickListeners.onReplyClicked,
                             onClickUser = threadClickListeners.onAuthorClicked,
                             onClickForum = threadClickListeners.onForumClicked,
+                            cardDivider = index != threadList.lastIndex,
                         ) {
                             HotRankText(rank = index + 1, hotNum = thread.hotNum)
                         }
-
-                        if (index != threadList.lastIndex) {
-                            HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 2.dp)
-                        }
                     }
-                } } // End of FeedCard trace
+                }
             }
         }
     }

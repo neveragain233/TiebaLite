@@ -191,7 +191,6 @@ fun SearchThreadItem(
                 ForumInfoChip(
                     forumName = item.forumInfo.forumName,
                     avatarUrl = item.forumInfo.avatar,
-                    transitionKey = item.pid
                 ) {
                     onForumClick(item.forumInfo, item.pid.toString())
                 }

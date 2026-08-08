@@ -34,7 +34,7 @@ fun BlockTip(
 }
 
 @Composable
-fun BlockableContent(
+inline fun BlockableContent(
     blocked: Boolean,
     modifier: Modifier = Modifier,
     blockedTip: @Composable BoxScope.() -> Unit = { BlockTip() },

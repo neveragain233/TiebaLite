@@ -4,19 +4,16 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.BoxScope
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -34,6 +31,7 @@ import com.huanchengfly.tieba.post.arch.collectCommonUiEventWithLifecycle
 import com.huanchengfly.tieba.post.arch.collectPartialAsState
 import com.huanchengfly.tieba.post.arch.onGlobalEvent
 import com.huanchengfly.tieba.post.navigateDebounced
+import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.models.ThreadItem
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.Destination.ForumRuleDetail
@@ -49,6 +47,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.FeedCard
 import com.huanchengfly.tieba.post.ui.widgets.compose.LoadMoreIndicator
 import com.huanchengfly.tieba.post.ui.widgets.compose.SwipeUpLazyLoadColumn
 import com.huanchengfly.tieba.post.ui.widgets.compose.ThreadContentType
+import com.huanchengfly.tieba.post.ui.widgets.compose.cardBottomDivider
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import java.util.Objects
 
@@ -207,31 +206,28 @@ fun LazyListScope.forumThreadList(
         // Top threads are non-blockable
         if (thread.isTop) {
             TopThreadItem(
+                modifier = Modifier.onCase(threads.getOrNull(index + 1)?.isTop != true) {
+                    // Add bottom divider and padding on the last top thread
+                    cardBottomDivider(DividerDefaults.color).padding(bottom = 8.dp)
+                },
                 title = thread.title,
                 onClick = { threadClickListeners.onClicked(thread) }
             )
         } else {
-            Column {
-                if (index > 0) {
-                    if (threads[index - 1].isTop) {
-                        Spacer(modifier = Modifier.height(8.dp))
-                    }
-                    HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
-                }
-                BlockableContent(
-                    blocked = thread.blocked,
-                    blockedTip = ThreadBlockedTip,
-                    hideBlockedContent = hideBlocked
-                ) {
-                    FeedCard(
-                        thread = thread,
-                        onClick = threadClickListeners.onClicked,
-                        onLike = onLikeClicked,
-                        onClickReply = threadClickListeners.onReplyClicked,
-                        onClickUser = threadClickListeners.onAuthorClicked,
-                        onClickOriginThread = onOriginThreadClicked,
-                    )
-                }
+            BlockableContent(
+                blocked = thread.blocked,
+                blockedTip = ThreadBlockedTip,
+                hideBlockedContent = hideBlocked
+            ) {
+                FeedCard(
+                    thread = thread,
+                    onClick = threadClickListeners.onClicked,
+                    onLike = onLikeClicked,
+                    onClickReply = threadClickListeners.onReplyClicked,
+                    onClickUser = threadClickListeners.onAuthorClicked,
+                    cardDivider = true,
+                    onClickOriginThread = onOriginThreadClicked,
+                )
             }
         }
     }

@@ -1,18 +1,14 @@
 package com.huanchengfly.tieba.post.ui.page.main.explore.concern
 
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
@@ -87,19 +83,15 @@ fun ConcernPage(
                 bottomIndicator = defaultBottomIndicator,
             ) {
                 itemsIndexed(data, key = { _, it -> it.id }, ThreadContentType) { i, thread ->
-                    Column {
-                        FeedCard(
-                            thread = thread,
-                            onClick = threadClickListeners.onClicked,
-                            onLike = viewModel::onThreadLikeClicked,
-                            onClickReply = threadClickListeners.onReplyClicked,
-                            onClickUser = threadClickListeners.onAuthorClicked,
-                            onClickForum = threadClickListeners.onForumClicked,
-                        )
-                        if (i < data.lastIndex) {
-                            HorizontalDivider(Modifier.padding(horizontal = 16.dp), thickness = 2.dp)
-                        }
-                    }
+                    FeedCard(
+                        thread = thread,
+                        onClick = threadClickListeners.onClicked,
+                        onLike = viewModel::onThreadLikeClicked,
+                        onClickReply = threadClickListeners.onReplyClicked,
+                        onClickUser = threadClickListeners.onAuthorClicked,
+                        onClickForum = threadClickListeners.onForumClicked,
+                        cardDivider = i < data.lastIndex
+                    )
                 }
             }
         }

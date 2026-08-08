@@ -2,7 +2,6 @@ package com.huanchengfly.tieba.post.ui.page.hottopic.detail
 
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -10,7 +9,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.itemsIndexed
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.text.TextAutoSize
-import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -158,22 +156,15 @@ fun TopicDetailPage(
                                     modifier = Modifier.fillMaxWidth(),
                                     hideBlockedContent = hideBlockedContent
                                 ) {
-                                    Column {
-                                        FeedCard(
-                                            thread = item,
-                                            onClick = threadClickListeners.onClicked,
-                                            onLike = viewModel::onThreadLikeClicked,
-                                            onClickReply = threadClickListeners.onReplyClicked,
-                                            onClickUser = threadClickListeners.onAuthorClicked,
-                                            onClickForum = threadClickListeners.onForumClicked,
-                                        )
-                                        if (index < uiState.threads.lastIndex) {
-                                            HorizontalDivider(
-                                                modifier = Modifier.padding(horizontal = 16.dp),
-                                                thickness = 2.dp
-                                            )
-                                        }
-                                    }
+                                    FeedCard(
+                                        thread = item,
+                                        onClick = threadClickListeners.onClicked,
+                                        onLike = viewModel::onThreadLikeClicked,
+                                        onClickReply = threadClickListeners.onReplyClicked,
+                                        onClickUser = threadClickListeners.onAuthorClicked,
+                                        onClickForum = threadClickListeners.onForumClicked,
+                                        cardDivider = index < uiState.threads.lastIndex,
+                                    )
                                 }
                             }
                         }

@@ -2,6 +2,7 @@ package com.huanchengfly.tieba.post.ui.widgets.compose
 
 import androidx.annotation.DrawableRes
 import androidx.compose.animation.core.animateFloatAsState
+import androidx.compose.animation.core.tween
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.background
 import androidx.compose.foundation.gestures.detectTapGestures
@@ -269,7 +270,11 @@ fun NetworkImage(
         when (state) {
             is AsyncImagePainter.State.Empty,
             is AsyncImagePainter.State.Loading -> {
-                CircularLoadingPlaceholder()
+                Box(
+                    modifier = Modifier
+                        .matchParentSize()
+                        .background(MaterialTheme.colorScheme.outline, MaterialTheme.shapes.medium)
+                )
             }
 
             is AsyncImagePainter.State.Success -> {
@@ -290,7 +295,9 @@ fun NetworkImage(
                             modifier = Modifier.graphicsLayer {
                                 alpha = previewAlpha
                             },
-                            model = photoViewDataProvider?.invoke()?.data?.originUrl ?: imageUrl,
+                            model = remember(photoViewDataProvider) {
+                                photoViewDataProvider?.invoke()?.data?.originUrl ?: imageUrl
+                            },
                             placeholder = (state as AsyncImagePainter.State.Success).result.memoryCacheKey,
                             dimensions = dimensions,
                         )
