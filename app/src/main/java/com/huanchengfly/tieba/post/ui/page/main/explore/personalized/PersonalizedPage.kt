@@ -34,6 +34,8 @@ import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.huanchengfly.tieba.post.MacrobenchmarkConstant
+import com.huanchengfly.tieba.post.MacrobenchmarkConstant.testColumn
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaNotLoggedInException
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
@@ -58,6 +60,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.SwipeUpLazyLoadColumn
 import com.huanchengfly.tieba.post.ui.widgets.compose.ThreadContentType
 import com.huanchengfly.tieba.post.ui.widgets.compose.defaultBottomIndicator
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
+import com.huanchengfly.tieba.post.utils.trace
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 
@@ -141,7 +144,7 @@ fun PersonalizedPage(
             val dislikeReasons = remember { mutableStateSetOf<Dislike>() }
 
             SwipeUpLazyLoadColumn(
-                modifier = modifier.fillMaxSize(),
+                modifier = modifier.fillMaxSize().testColumn(),
                 state = listState,
                 contentPadding = contentPadding,
                 isLoading = isLoadingMore,
@@ -151,13 +154,11 @@ fun PersonalizedPage(
                 itemsIndexed(data, key = { _, it -> it.id }, ThreadContentType) { index, thread ->
                     val isHidden = thread.blocked && hideBlockedContent
 
-                    Column(
-                        modifier = Modifier.animateItem()
-                    ) {
+                    trace(MacrobenchmarkConstant.TRACE_FEED_CARD) {
                         BlockableContent(
                             blocked = thread.blocked,
                             blockedTip = ThreadBlockedTip,
-                            modifier = Modifier.fillMaxWidth(),
+                            modifier = Modifier.fillMaxWidth().animateItem(),
                             hideBlockedContent = hideBlockedContent
                         ) {
                             Column {

@@ -3,6 +3,7 @@
 package com.huanchengfly.tieba.post.di
 
 import android.content.Context
+import com.huanchengfly.tieba.post.MacrobenchmarkConstant
 import com.huanchengfly.tieba.post.models.database.TbLiteDatabase
 import com.huanchengfly.tieba.post.models.database.dao.AccountDao
 import com.huanchengfly.tieba.post.models.database.dao.BlockDao
@@ -15,6 +16,9 @@ import com.huanchengfly.tieba.post.models.database.dao.ThreadHistoryDao
 import com.huanchengfly.tieba.post.models.database.dao.TimestampDao
 import com.huanchengfly.tieba.post.models.database.dao.TransactionRunner
 import com.huanchengfly.tieba.post.models.database.dao.UserProfileDao
+import com.huanchengfly.tieba.post.repository.source.local.ExploreAssetsDataSource
+import com.huanchengfly.tieba.post.repository.source.local.ExploreLocalDataSource
+import com.huanchengfly.tieba.post.repository.source.local.ExploreLocalFileDataSource
 import com.huanchengfly.tieba.post.repository.source.network.HomeNetworkDataSource
 import com.huanchengfly.tieba.post.repository.source.network.HomeNetworkDataSourceImpl
 import com.huanchengfly.tieba.post.repository.source.network.HotTopicNetworkDataSource
@@ -45,6 +49,22 @@ abstract class RepositoryModule {
     @Singleton
     @Binds
     abstract fun bindOKSignRepository(repository: OKSignRepositoryImp): OKSignRepository
+}
+
+// TODO: Gradle Modularization
+@Module
+@InstallIn(SingletonComponent::class)
+object ExploreLocalCacheModule {
+
+    @Singleton
+    @Provides
+    fun provideLocalDataSource(@ApplicationContext context: Context): ExploreLocalDataSource {
+        return if (!MacrobenchmarkConstant.TRACE_ENABLED) {
+            ExploreLocalFileDataSource(context)
+        } else {
+            ExploreAssetsDataSource(context)
+        }
+    }
 }
 
 @Module

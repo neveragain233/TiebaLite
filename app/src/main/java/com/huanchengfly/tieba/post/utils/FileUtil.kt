@@ -9,6 +9,7 @@ import android.os.Build
 import android.os.Environment
 import android.provider.MediaStore
 import android.text.TextUtils
+import android.util.Log
 import android.webkit.URLUtil
 import androidx.annotation.WorkerThread
 import androidx.core.content.FileProvider
@@ -33,6 +34,9 @@ import java.io.PrintWriter
 import java.nio.charset.StandardCharsets
 
 object FileUtil {
+
+    private const val TAG = "FileUtil"
+
     const val FILE_TYPE_DOWNLOAD = 0
     const val FILE_TYPE_VIDEO = 1
     const val FILE_TYPE_AUDIO = 2
@@ -210,6 +214,27 @@ object FileUtil {
     }
 
     fun Context.createFileInCacheDir(file: String) = File(cacheDir, "misc/$file")
+
+    fun deleteWithPrefixSafe(dir: File, prefix: String) {
+        val start = System.currentTimeMillis()
+        var deleted = 0
+        val files = runCatching { dir.listFiles() }.getOrNull() ?: return
+        files.forEach { f ->
+            try {
+                // delete file with prefix
+                if (f.isFile && f.name.startsWith(prefix) && f.delete()) {
+                    deleted++
+                }
+            } catch (e: Throwable) {
+                Log.w(TAG, "Delete ${f.name} Failed: ${e.message}.")
+            }
+        }
+
+        if (BuildConfig.DEBUG) {
+            val cost = System.currentTimeMillis() - start
+            Log.i(TAG, "Delete $deleted files of $prefix, cost ${cost}ms")
+        }
+    }
 
     fun File.isCacheExpired(expireMill: Long): Boolean {
         return lastModified() + expireMill < System.currentTimeMillis()

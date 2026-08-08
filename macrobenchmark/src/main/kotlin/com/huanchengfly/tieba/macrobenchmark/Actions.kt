@@ -13,7 +13,7 @@ fun UiAutomatorTestScope.startActivityAndSetup(
         setComponent(ComponentName(TARGET_PACKAGE, "com.huanchengfly.tieba.post.MainActivityV2"))
         addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)
         addFlags(Intent.FLAG_ACTIVITY_CLEAR_TASK)
-        putExtra(KEY_WELCOME_SETUP, welcomeScreen)
+        putExtra(EXTRA_WELCOME_SETUP, welcomeScreen)
         if (intentBuilder != null) {
             intentBuilder()
         }

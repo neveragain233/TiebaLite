@@ -3,6 +3,7 @@ package com.huanchengfly.tieba.post.repository.source.local
 import android.content.Context
 import androidx.collection.MutableLongSet
 import com.huanchengfly.tieba.post.api.models.protos.PostInfoList
+import com.huanchengfly.tieba.post.utils.FileUtil
 import com.huanchengfly.tieba.post.utils.FileUtil.deleteQuietly
 import com.huanchengfly.tieba.post.utils.FileUtil.isCacheExpired
 import com.huanchengfly.tieba.post.utils.ProtobufCacheUtil.decodeListCache
@@ -62,16 +63,16 @@ class UserProfileLocalDataSource @Inject constructor(@ApplicationContext context
     /**
      * Remove all cached post and thread of this user
      * */
-    suspend fun purgeByUid(uid: Long): Int = withContext(Dispatchers.IO) {
+    suspend fun purgeByUid(uid: Long) = withContext(Dispatchers.IO) {
         mutex.withLock {
-            deleteWithPrefixSafe(cacheDir, prefix = "${uid}_")
+            FileUtil.deleteWithPrefixSafe(cacheDir, prefix = "${uid}_")
         }
     }
 
     suspend fun purgeUserThreadPost(uid: Long, isThread: Boolean) = withContext(Dispatchers.IO) {
         mutex.withLock {
             val prefix = if (isThread) "${uid}_t_" else "${uid}_p_"
-            deleteWithPrefixSafe(cacheDir, prefix)
+            FileUtil.deleteWithPrefixSafe(cacheDir, prefix)
         }
     }
 

@@ -462,7 +462,7 @@ private fun MainNavigationItems(
                         atEnd = selected
                     ),
                     modifier = Modifier.size(Sizes.Tiny),
-                    contentDescription = null,
+                    contentDescription = stringResource(destination.titleRes),
                 )
             },
             label = if (mainNavigationSuiteType != MainNavigationSuiteType.NavigationRail &&

@@ -40,7 +40,8 @@ import androidx.navigation.NavController
 import androidx.navigation.NavDeepLinkRequest
 import androidx.navigation.NavOptions
 import androidx.navigation.compose.rememberNavController
-import com.huanchengfly.tieba.post.MacrobenchmarkConstant.KEY_WELCOME_SETUP
+import com.huanchengfly.tieba.post.MacrobenchmarkConstant.EXTRA_REDUCE_EFFECT
+import com.huanchengfly.tieba.post.MacrobenchmarkConstant.EXTRA_WELCOME_SETUP
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.arch.BaseComposeActivity
 import com.huanchengfly.tieba.post.components.ClipBoardLinkDetector
@@ -96,9 +97,7 @@ class MainActivityV2 : BaseComposeActivity() {
 
     private val viewModel: MainViewModel by viewModels()
 
-    /**
-     * Used in Macrobenchmark to control the initial welcome screen state
-     * */
+    /** Used to control the initial welcome screen state in Macrobenchmark */
     private var welcomeScreen: Boolean? = null
 
     private suspend fun requestNotificationPermission() {
@@ -107,7 +106,6 @@ class MainActivityV2 : BaseComposeActivity() {
         }
     }
 
-    @Suppress("KotlinConstantConditions")
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
@@ -120,8 +118,11 @@ class MainActivityV2 : BaseComposeActivity() {
         }
 
         intent?.run {
-            if (BuildConfig.BUILD_TYPE != "release" && BuildConfig.BUILD_TYPE != "ci") {
-                welcomeScreen = extras?.getBoolean(KEY_WELCOME_SETUP, false)
+            if (MacrobenchmarkConstant.TRACE_ENABLED) {
+                extras?.getBoolean(EXTRA_REDUCE_EFFECT, false)?.let { reduceEffect ->
+                    viewModel.settingsRepository.uiSettings.save { it.copy(reduceEffect = reduceEffect) }
+                }
+                welcomeScreen = extras?.getBoolean(EXTRA_WELCOME_SETUP, false)
             }
             ShortcutInitializer.getTbShortcut(this)?.also { onNewShortcut(it) }
             data?.normalizeScheme()?.let { pendingAppLink = appLinkToNavRoute(uri = it) }

@@ -10,15 +10,25 @@ import androidx.compose.ui.semantics.testTagsAsResourceId
 object MacrobenchmarkConstant {
 
     /**
-     * Intent extra: Used in Macrobenchmark to control the initial welcome screen state.
+     * Intent extra: Used to override the [UISettings.reduceEffect] settings.
+     *
+     * Note: 暗黑模式下为缓解色带会禁用缩放并添加单色杂色, 在中低端设备上性能消耗会明显增加
      * */
-    const val KEY_WELCOME_SETUP = "welcome"
+    const val EXTRA_REDUCE_EFFECT = "reduce_effect"
+
+    /**
+     * Intent extra: Used to control the initial welcome screen state.
+     * */
+    const val EXTRA_WELCOME_SETUP = "welcome"
 
     const val TAG_COLUMN = "column"
 
-    const val TRACE_THREAD = "ThreadTrace"
+    @Suppress("KotlinConstantConditions", "SimplifyBooleanWithConstants")
+    const val TRACE_ENABLED = BuildConfig.BUILD_TYPE == "benchmarkRelease" || BuildConfig.BUILD_TYPE == "composeTracing"
 
     const val TRACE_FEED_CARD = "FeedCardTrace"
+
+    const val TRACE_THREAD = "ThreadTrace"
 
     /**
      * Applies [TAG_COLUMN] to allow modified column to be found in tests.

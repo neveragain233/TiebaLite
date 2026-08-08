@@ -12,6 +12,7 @@ import androidx.test.filters.LargeTest
 import androidx.test.uiautomator.Direction
 import androidx.test.uiautomator.textAsString
 import androidx.test.uiautomator.uiAutomator
+import com.huanchengfly.tieba.macrobenchmark.TAG_COLUMN
 import com.huanchengfly.tieba.macrobenchmark.TARGET_PACKAGE
 import com.huanchengfly.tieba.macrobenchmark.TRACE_FEED_CARD
 import com.huanchengfly.tieba.macrobenchmark.startActivityAndSetup
@@ -67,7 +68,10 @@ class HotPageFrameTimingBenchmark {
             }
         ) {
             uiAutomator {
-                onElement(timeoutMs = 300) { isScrollable }.fling(Direction.DOWN)
+                onElement(timeoutMs = 100) { viewIdResourceName == TAG_COLUMN }.run {
+                    setGestureMarginPercentage(0.25f)
+                    fling(Direction.DOWN)
+                }
             }
         }
     }

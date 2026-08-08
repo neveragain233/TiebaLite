@@ -125,6 +125,12 @@ android {
         includeInApk = false
     }
 
+    sourceSets {
+        getByName("composeTracing") {
+            assets.directories.add("src/benchmarkRelease/assets")
+        }
+    }
+
     namespace = "com.huanchengfly.tieba.post"
 }
 

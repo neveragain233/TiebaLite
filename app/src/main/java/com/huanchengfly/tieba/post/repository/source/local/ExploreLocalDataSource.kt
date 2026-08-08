@@ -11,6 +11,7 @@ import com.huanchengfly.tieba.post.api.models.protos.personalized.PersonalizedRe
 import com.huanchengfly.tieba.post.api.models.protos.userLike.UserLikeResponseData
 import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaNotLoggedInException
 import com.huanchengfly.tieba.post.ui.models.Like
+import com.huanchengfly.tieba.post.utils.FileUtil
 import com.huanchengfly.tieba.post.utils.FileUtil.deleteQuietly
 import com.huanchengfly.tieba.post.utils.FileUtil.isCacheExpired
 import com.huanchengfly.tieba.post.utils.ProtobufCacheUtil.decodeCache
@@ -22,28 +23,57 @@ import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import java.io.File
 import java.io.IOException
-import javax.inject.Inject
-import javax.inject.Singleton
 
-private const val CACHE_DIR_NAME = "Explore"
+interface ExploreLocalDataSource {
 
-private const val CACHE_PERSONALIZED_PREFIX = "p_"
+    suspend fun loadHotThread(tabCode: String): HotThreadListResponseData?
 
-private const val CACHE_HOT_PREFIX = "hot_"
+    suspend fun loadPersonalized(page: Int): PersonalizedResponseData?
 
-private const val HOT_THREAD_EXPIRE_MILL = 0x36EE80 // 1 hour
-private const val PERSONALIZED_EXPIRE_MILL = 0x5265C00 // 1 day
+    suspend fun loadUserLikeDataFirstPage(uid: Long): Pair<Long, UserLikeResponseData?>
 
-private const val TAG = "ExploreLocalDataSource"
+    suspend fun saveHotThread(tabCode: String, data: HotThreadListResponseData): Boolean
 
-@Singleton
-class ExploreLocalDataSource @Inject constructor(@ApplicationContext context: Context) {
+    suspend fun savePersonalized(data: PersonalizedResponseData, page: Int): Boolean
+
+    suspend fun saveUserLikeFirstPage(uid: Long, data: UserLikeResponseData): Boolean
+
+    suspend fun purgeHotThread()
+
+    suspend fun purgePersonalized()
+
+    suspend fun updateHotThreadLike(tabCode: String, threadId: Long, like: Like)
+
+    suspend fun updatePersonalizedLike(threadId: Long, like: Like)
+
+    suspend fun updateUserLike(uid: Long, threadId: Long, like: Like)
+
+    suspend fun dislikePersonalized(threadId: Long)
+}
+
+class ExploreLocalFileDataSource(@ApplicationContext context: Context): ExploreLocalDataSource {
+
+    companion object {
+        private const val TAG = "ExploreLocalDataSource"
+
+        private const val CACHE_DIR_NAME = "Explore"
+
+        private const val CACHE_PERSONALIZED_PREFIX = "p_"
+        private const val CACHE_HOT_PREFIX = "hot_"
+
+        private const val HOT_THREAD_EXPIRE_MILL = 0x36EE80 // 1 hour
+        private const val PERSONALIZED_EXPIRE_MILL = 0x5265C00 // 1 day
+
+        private fun ThreadInfo.setLikeStatus(like: Like): ThreadInfo {
+            return copy(agree = Agree(agreeNum = like.count, hasAgree = like.liked.booleanToInt()))
+        }
+    }
 
     private val cacheDir = File(context.cacheDir, CACHE_DIR_NAME)
 
     private val mutex = Mutex()
 
-    suspend fun loadHotThread(tabCode: String): HotThreadListResponseData? = withContext(Dispatchers.IO) {
+    override suspend fun loadHotThread(tabCode: String): HotThreadListResponseData? = withContext(Dispatchers.IO) {
         val cacheFile = hotCacheFile(tabCode)
         mutex.withLock {
             runCatching {
@@ -53,14 +83,14 @@ class ExploreLocalDataSource @Inject constructor(@ApplicationContext context: Co
         }
     }
 
-    suspend fun saveHotThread(tabCode: String, data: HotThreadListResponseData) = withContext(Dispatchers.IO) {
+    override suspend fun saveHotThread(tabCode: String, data: HotThreadListResponseData) = withContext(Dispatchers.IO) {
         val cacheFile = hotCacheFile(tabCode)
         mutex.withLock {
             runCatching { HotThreadListResponseData.ADAPTER.encodeCache(cacheFile, data) }.isSuccess
         }
     }
 
-    suspend fun updateHotThreadLike(tabCode: String, threadId: Long, like: Like) = withContext(Dispatchers.IO) {
+    override suspend fun updateHotThreadLike(tabCode: String, threadId: Long, like: Like) = withContext(Dispatchers.IO) {
         val cacheFile = hotCacheFile(tabCode)
         mutex.withLock {
             try {
@@ -77,16 +107,16 @@ class ExploreLocalDataSource @Inject constructor(@ApplicationContext context: Co
         }
     }
 
-    suspend fun purgeHotThread() = withContext(Dispatchers.IO) {
+    override suspend fun purgeHotThread() = withContext(Dispatchers.IO) {
         mutex.withLock {
-            deleteWithPrefixSafe(cacheDir, CACHE_HOT_PREFIX)
+            FileUtil.deleteWithPrefixSafe(cacheDir, CACHE_HOT_PREFIX)
         }
     }
 
     /**
      * @return Cached personalized data at [page]
      * */
-    suspend fun loadPersonalized(page: Int): PersonalizedResponseData? = withContext(Dispatchers.IO) {
+    override suspend fun loadPersonalized(page: Int): PersonalizedResponseData? = withContext(Dispatchers.IO) {
         val cacheFile = personalizedCacheFile(page)
         mutex.withLock {
             val cacheExpireMill = PERSONALIZED_EXPIRE_MILL.takeIf { page == 1 }?.toLong()
@@ -99,7 +129,7 @@ class ExploreLocalDataSource @Inject constructor(@ApplicationContext context: Co
         }
     }
 
-    suspend fun savePersonalized(data: PersonalizedResponseData, page: Int) = withContext(Dispatchers.IO) {
+    override suspend fun savePersonalized(data: PersonalizedResponseData, page: Int) = withContext(Dispatchers.IO) {
         val cacheFile = personalizedCacheFile(page)
         mutex.withLock {
             runCatching {
@@ -109,7 +139,7 @@ class ExploreLocalDataSource @Inject constructor(@ApplicationContext context: Co
         }
     }
 
-    suspend fun dislikePersonalized(threadId: Long) = withContext(Dispatchers.IO) {
+    override suspend fun dislikePersonalized(threadId: Long) = withContext(Dispatchers.IO) {
         mutex.withLock {
             try {
                 // Remove target thread from local cache
@@ -121,7 +151,7 @@ class ExploreLocalDataSource @Inject constructor(@ApplicationContext context: Co
         }
     }
 
-    suspend fun updatePersonalizedLike(threadId: Long, like: Like) = withContext(Dispatchers.IO) {
+    override suspend fun updatePersonalizedLike(threadId: Long, like: Like) = withContext(Dispatchers.IO) {
         mutex.withLock {
             try {
                 updatePersonalized { threadInfo ->
@@ -137,9 +167,9 @@ class ExploreLocalDataSource @Inject constructor(@ApplicationContext context: Co
     /**
      * Delete all cached personalized page
      * */
-    suspend fun purgePersonalized() = withContext(Dispatchers.IO) {
+    override suspend fun purgePersonalized() = withContext(Dispatchers.IO) {
         mutex.withLock {
-            deleteWithPrefixSafe(cacheDir, CACHE_PERSONALIZED_PREFIX)
+            FileUtil.deleteWithPrefixSafe(cacheDir, CACHE_PERSONALIZED_PREFIX)
         }
     }
 
@@ -147,7 +177,7 @@ class ExploreLocalDataSource @Inject constructor(@ApplicationContext context: Co
      * @return last request unix time (10-digit Unix timestamp), cached user like data of
      *   first page (**null** if not exists or expired).
      * */
-    suspend fun loadUserLikeDataFirstPage(uid: Long): Pair<Long, UserLikeResponseData?> = withContext(Dispatchers.IO) {
+    override suspend fun loadUserLikeDataFirstPage(uid: Long): Pair<Long, UserLikeResponseData?> = withContext(Dispatchers.IO) {
         val cacheFile = userLikeCacheFile(uid)
         val userExpireMill = HOT_THREAD_EXPIRE_MILL
         mutex.withLock {
@@ -170,14 +200,14 @@ class ExploreLocalDataSource @Inject constructor(@ApplicationContext context: Co
         }
     }
 
-    suspend fun saveUserLikeFirstPage(uid: Long, data: UserLikeResponseData) = withContext(Dispatchers.IO) {
+    override suspend fun saveUserLikeFirstPage(uid: Long, data: UserLikeResponseData) = withContext(Dispatchers.IO) {
         val cacheFile = userLikeCacheFile(uid)
         mutex.withLock {
             runCatching { UserLikeResponseData.ADAPTER.encodeCache(cacheFile, data) }.isSuccess
         }
     }
 
-    suspend fun updateUserLike(uid: Long, threadId: Long, like: Like) = withContext(Dispatchers.IO) {
+    override suspend fun updateUserLike(uid: Long, threadId: Long, like: Like) = withContext(Dispatchers.IO) {
         val cacheFile = userLikeCacheFile(uid)
         mutex.withLock {
             try {
@@ -271,29 +301,33 @@ class ExploreLocalDataSource @Inject constructor(@ApplicationContext context: Co
     }
 }
 
-fun deleteWithPrefixSafe(dir: File, prefix: String): Int {
-    val start = System.currentTimeMillis()
-    var deleted = 0
-    // list all files safely
-    val files = runCatching { dir.listFiles() }.getOrNull() ?: return 0
-    files.forEach { f ->
-        try {
-            // delete file with prefix
-            if (f.isFile && f.name.startsWith(prefix) && f.delete()) {
-                deleted++
-            }
-        } catch (e: Throwable) {
-            Log.w(CACHE_DIR_NAME, "Delete ${f.name} Failed: ${e.message}.")
+class ExploreAssetsDataSource(@ApplicationContext val context: Context): ExploreLocalDataSource {
+
+    override suspend fun loadHotThread(tabCode: String): HotThreadListResponseData? = null
+
+    override suspend fun loadPersonalized(page: Int) = withContext(Dispatchers.IO) {
+        context.assets.open("personalized/PersonalizedResponseData_12.52.1.0.pb").use { input ->
+            PersonalizedResponseData.ADAPTER.decode(input)
         }
     }
 
-    if (BuildConfig.DEBUG) {
-        val cost = System.currentTimeMillis() - start
-        Log.i(CACHE_DIR_NAME, "Delete $deleted files of $prefix, cost ${cost}ms")
-    }
-    return deleted
-}
+    override suspend fun loadUserLikeDataFirstPage(uid: Long): Pair<Long, UserLikeResponseData?> = Pair(0, null)
 
-private fun ThreadInfo.setLikeStatus(like: Like): ThreadInfo {
-    return copy(agree = Agree(agreeNum = like.count, hasAgree = like.liked.booleanToInt()))
+    override suspend fun saveHotThread(tabCode: String, data: HotThreadListResponseData): Boolean = true
+
+    override suspend fun savePersonalized(data: PersonalizedResponseData, page: Int): Boolean = true
+
+    override suspend fun saveUserLikeFirstPage(uid: Long, data: UserLikeResponseData): Boolean = true
+
+    override suspend fun purgeHotThread() {}
+
+    override suspend fun purgePersonalized() {}
+
+    override suspend fun updateHotThreadLike(tabCode: String, threadId: Long, like: Like) {}
+
+    override suspend fun updatePersonalizedLike(threadId: Long, like: Like) {}
+
+    override suspend fun updateUserLike(uid: Long, threadId: Long, like: Like) {}
+
+    override suspend fun dislikePersonalized(threadId: Long) {}
 }
