@@ -1,6 +1,7 @@
 package com.huanchengfly.tieba.post.ui.page.subposts
 
 import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
@@ -41,6 +42,7 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -206,6 +208,7 @@ private fun SubPostsContent(
 //    }
 
     StateScreen(
+        modifier = Modifier.background(MaterialTheme.colorScheme.surface),
         isEmpty = uiState.subPosts.isEmpty(),
         isLoading = uiState.isRefreshing,
         error = uiState.error,
@@ -305,7 +308,8 @@ private fun SubPostsContent(
                         }
                     }.takeIf { canReply }
                 )
-            }
+            },
+            backgroundColor = Color.Transparent,
         ) { padding ->
             val contentPadding = padding.fixedTopBarPadding()
 

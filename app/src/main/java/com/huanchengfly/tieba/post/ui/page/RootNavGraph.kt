@@ -2,25 +2,16 @@ package com.huanchengfly.tieba.post.ui.page
 
 import androidx.compose.animation.AnimatedContentScope
 import androidx.compose.animation.AnimatedContentTransitionScope
-import androidx.compose.animation.EnterExitState
 import androidx.compose.animation.EnterTransition
 import androidx.compose.animation.ExitTransition
 import androidx.compose.animation.SharedTransitionLayout
+import androidx.compose.animation.SharedTransitionScope
 import androidx.compose.animation.SizeTransform
-import androidx.compose.animation.core.FastOutSlowInEasing
-import androidx.compose.animation.core.TweenSpec
-import androidx.compose.animation.core.tween
 import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
-import androidx.compose.animation.scaleIn
-import androidx.compose.animation.scaleOut
-import androidx.compose.foundation.layout.Box
+import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.remember
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.input.pointer.PointerEventPass
-import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.window.DialogProperties
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavBackStackEntry
@@ -39,9 +30,12 @@ import androidx.navigation.get
 import androidx.navigation.navDeepLink
 import androidx.navigation.navigation
 import androidx.navigation.toRoute
+import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
+import com.huanchengfly.tieba.post.theme.isTranslucent
 import com.huanchengfly.tieba.post.ui.common.LocalAnimatedVisibilityScope
 import com.huanchengfly.tieba.post.ui.common.LocalSharedTransitionScope
+import com.huanchengfly.tieba.post.ui.common.NavTransitions
 import com.huanchengfly.tieba.post.ui.page.Destination.Companion.navTypeOf
 import com.huanchengfly.tieba.post.ui.page.dialogs.CopyTextDialogPage
 import com.huanchengfly.tieba.post.ui.page.forum.ForumPage
@@ -70,8 +64,6 @@ import com.huanchengfly.tieba.post.ui.page.user.UserProfilePage
 import com.huanchengfly.tieba.post.ui.page.webview.WebViewPage
 import com.huanchengfly.tieba.post.ui.page.welcome.WelcomeScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.LocalVideoPreviewState
-import kotlinx.coroutines.currentCoroutineContext
-import kotlinx.coroutines.isActive
 import kotlin.reflect.KClass
 import kotlin.reflect.KType
 import kotlin.reflect.typeOf
@@ -82,58 +74,37 @@ const val TB_LITE_DOMAIN = "tblite"
 fun RootNavGraph(
     // bottomSheetNavigator: BottomSheetNavigator,
     navController: NavHostController,
+    reduceMotion: Boolean,
     settingsRepo: SettingsRepository,
     startDestination: Destination = Destination.Main
 ) {
+    val navTransitions = if (!reduceMotion || MaterialTheme.colorScheme.isTranslucent) {
+        NavTransitions.DefaultTransitions
+    } else {
+        NavTransitions.SlideTransitions
+    }
     SharedTransitionLayout {
-        CompositionLocalProvider(LocalSharedTransitionScope provides this) {
-            // ModalBottomSheetLayout(
-            //     bottomSheetNavigator = bottomSheetNavigator,
-            //     dragHandle = null
-            // ) {
-                NavHost(
-                    navController = navController,
-                    graph = remember {
-                        buildRootNavGraph(navController, settingsRepo, startDestination)
-                    },
-                    enterTransition = {
-                        scaleIn(
-                            animationSpec = DefaultAnimationSpec,
-                            initialScale = 0.9f
-                        ) + DefaultFadeIn
-                    },
-                    exitTransition = {
-                        scaleOut(
-                            animationSpec = DefaultAnimationSpec,
-                            targetScale = 1.1f
-                        ) + DefaultFadeOut
-                    },
-                    popEnterTransition = {
-                        scaleIn(
-                            animationSpec = DefaultAnimationSpec,
-                            initialScale = 1.1f
-                        ) + DefaultFadeIn
-                    },
-                    popExitTransition = {
-                        scaleOut(
-                            animationSpec = DefaultAnimationSpec,
-                            targetScale = 0.9f
-                        ) + DefaultFadeOut
-                    },
-                )
-            // }
-        }
+        NavHost(
+            navController = navController,
+            graph = remember {
+                buildRootNavGraph(navController, settingsRepo, startDestination)
+            },
+            enterTransition = { navTransitions.enterTransition },
+            exitTransition = { navTransitions.exitTransition },
+            popEnterTransition = { navTransitions.popEnterTransition },
+            popExitTransition = { navTransitions.popExitTransition },
+        )
     }
 }
 
-private fun buildRootNavGraph(
+private fun SharedTransitionScope.buildRootNavGraph(
     navController: NavHostController,
     settingsRepo: SettingsRepository,
-    startDestination: Destination
+    startDestination: Destination,
 ): NavGraph {
     return navController.createGraph(startDestination) {
         animatedComposable<Destination.Main>(
-            popEnterTransition = { DefaultFadeIn },
+            popEnterTransition = { fadeIn(animationSpec = NavTransitions.defaultAnimationSpec()) }
         ) {
             MainPage(navController)
         }
@@ -269,15 +240,6 @@ private fun buildRootNavGraph(
     }
 }
 
-private val DefaultAnimationSpec: TweenSpec<Float> =
-    tween(durationMillis = 300, easing = FastOutSlowInEasing)
-
-private val DefaultFadeIn: EnterTransition =
-    fadeIn(animationSpec = tween(durationMillis = 300))
-
-private val DefaultFadeOut: ExitTransition =
-    fadeOut(animationSpec = tween(durationMillis = 200))
-
 /**
  * Add the [Composable] to the [NavGraphBuilder]
  *
@@ -292,6 +254,7 @@ private val DefaultFadeOut: ExitTransition =
  * @param sizeTransform callback to determine the destination's sizeTransform.
  * @param content composable for the destination
  */
+context(sharedTransitionScope: SharedTransitionScope?)
 private inline fun <reified T : Any> NavGraphBuilder.animatedComposable(
     typeMap: Map<KType, @JvmSuppressWildcards NavType<*>> = emptyMap(),
     deepLinks: List<NavDeepLink> = emptyList(),
@@ -323,14 +286,15 @@ private inline fun <reified T : Any> NavGraphBuilder.animatedComposable(
             T::class,
             typeMap
         ) { backStackEntry ->
-            CompositionLocalProvider(LocalAnimatedVisibilityScope provides this) {
-                Box(
-                    modifier = Modifier.blockPointerEvents(
-                        transition.targetState == EnterExitState.PostExit
-                    )
+            if (sharedTransitionScope != null && !LocalUISettings.current.reduceMotion) {
+                CompositionLocalProvider(
+                    LocalAnimatedVisibilityScope provides this@ComposeNavigatorDestinationBuilder,
+                    LocalSharedTransitionScope provides sharedTransitionScope,
                 ) {
                     content(backStackEntry)
                 }
+            } else {
+                content(backStackEntry)
             }
         }
         .apply {
@@ -343,19 +307,3 @@ private inline fun <reified T : Any> NavGraphBuilder.animatedComposable(
         }
     )
 }
-
-private fun Modifier.blockPointerEvents(enabled: Boolean): Modifier =
-    if (enabled) {
-        pointerInput(Unit) {
-            val context = currentCoroutineContext()
-            awaitPointerEventScope {
-                while (context.isActive) {
-                    awaitPointerEvent(PointerEventPass.Initial)
-                        .changes
-                        .forEach { it.consume() }
-                }
-            }
-        }
-    } else {
-        this
-    }

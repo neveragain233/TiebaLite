@@ -12,6 +12,7 @@ import androidx.compose.material.icons.automirrored.outlined.LabelImportant
 import androidx.compose.material.icons.automirrored.outlined.LabelOff
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.outlined.Apps
+import androidx.compose.material.icons.outlined.AutoAwesomeMotion
 import androidx.compose.material.icons.outlined.BlurOn
 import androidx.compose.material.icons.outlined.ColorLens
 import androidx.compose.material.icons.outlined.Contrast
@@ -68,6 +69,12 @@ fun UISettingsPage(
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
                 reduceEffectPreference()
             }
+
+            toggleablePreference(
+                property = UISettings::reduceMotion,
+                title = R.string.title_reduce_motion,
+                leadingIcon = Icons.Outlined.AutoAwesomeMotion,
+            )
         }
 
         group(title = R.string.settings_group_dark_mode) {

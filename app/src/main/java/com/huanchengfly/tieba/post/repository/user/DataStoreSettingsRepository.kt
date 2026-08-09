@@ -39,6 +39,7 @@ import com.huanchengfly.tieba.post.ui.models.settings.ThemeSettings
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.models.settings.WaterType
 import com.huanchengfly.tieba.post.ui.models.settings.randomSignTime
+import com.huanchengfly.tieba.post.utils.DeviceUtils
 import com.huanchengfly.tieba.post.utils.HmTime
 import com.huanchengfly.tieba.post.utils.ImageUtil
 import com.huanchengfly.tieba.post.utils.JobQueue
@@ -252,7 +253,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             darkPreference = DarkPreference.entries[darkPrefOrdinal],
             darkenImage = it[booleanPreferencesKey(KEY_DARKEN_IMAGE_ON_NIGHT)] ?: true,
             hideExplore = it[booleanPreferencesKey(KEY_HIDE_EXPLORE)] == true,
-            reduceEffect = it[booleanPreferencesKey(KEY_REDUCE_EFFECT)] ?: (Build.VERSION.SDK_INT < Build.VERSION_CODES.S),
+            reduceEffect = it[booleanPreferencesKey(KEY_REDUCE_EFFECT)] ?: (DeviceUtils.PRODUCT_FIRST_API_LEVEL < Build.VERSION_CODES.S),
+            reduceMotion = it[booleanPreferencesKey(KEY_REDUCE_MOTION)] ?: (DeviceUtils.PRODUCT_FIRST_API_LEVEL < Build.VERSION_CODES.S),
             setupFinished = it[booleanPreferencesKey(KEY_SETUP_FINISHED)] == true,
             homeForumList = it[booleanPreferencesKey(KEY_HOME_SINGLE_FORUM_LIST)] == true,
             showHistoryInHome = it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] ?: true,
@@ -269,6 +271,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_DARKEN_IMAGE_ON_NIGHT)] = ui.darkenImage
         it[booleanPreferencesKey(KEY_HIDE_EXPLORE)] = ui.hideExplore
         it[booleanPreferencesKey(KEY_REDUCE_EFFECT)] = ui.reduceEffect
+        it[booleanPreferencesKey(KEY_REDUCE_MOTION)] = ui.reduceMotion
         it[booleanPreferencesKey(KEY_SETUP_FINISHED)] = ui.setupFinished
         it[booleanPreferencesKey(KEY_HOME_SINGLE_FORUM_LIST)] = ui.homeForumList
         it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] = ui.showHistoryInHome
@@ -291,6 +294,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_HIDE_EXPLORE = "ui_hide_explore"
     private const val KEY_SETUP_FINISHED = "ui_setup"
     private const val KEY_REDUCE_EFFECT = "ui_reduce_effect"
+    private const val KEY_REDUCE_MOTION = "ui_reduce_motion"
     private const val KEY_HOME_SINGLE_FORUM_LIST = "ui_forum_list_in_home"
     private const val KEY_HOME_PAGE_SHOW_HISTORY = "ui_history_in_home"
 }

@@ -1,5 +1,6 @@
 package com.huanchengfly.tieba.post.utils
 
+import android.annotation.SuppressLint
 import android.content.Context
 import android.content.Context.VIBRATOR_MANAGER_SERVICE
 import android.content.Context.VIBRATOR_SERVICE
@@ -10,6 +11,7 @@ import android.os.VibrationEffect
 import android.os.Vibrator
 import android.os.VibratorManager
 import androidx.annotation.GuardedBy
+import com.huanchengfly.tieba.post.arch.unsafeLazy
 import java.io.File
 import java.io.IOException
 import java.util.Locale
@@ -22,6 +24,10 @@ object DeviceUtils {
     var coreNum = -1
     private const val CPU_MAX_INFO_FORMAT = "/sys/devices/system/cpu/cpu%d/cpufreq/cpuinfo_max_freq"
     private const val MEM_INFO_FILE = "/proc/meminfo"
+
+    val PRODUCT_FIRST_API_LEVEL: Int by unsafeLazy {
+        getIntSystemProperty("ro.product.first_api_level", default = Build.VERSION.SDK_INT)
+    }
 
     val Context.vibrator: Vibrator by VibratorSingletonDelegate()
 
@@ -43,6 +49,18 @@ object DeviceUtils {
                 roundUpRom(totalSDCardSize) * 4.1613E-4f +
                 (round(cpuCores) * cpuAverageFrequency) * 0.01155649f +
                 0.0231852f
+    }
+
+    @SuppressLint("PrivateApi")
+    fun getIntSystemProperty(key: String, default: Int): Int {
+        try {
+            val systemPropertiesClass = Class.forName("android.os.SystemProperties")
+            val getIntMethod = systemPropertiesClass.getMethod("getInt", String::class.java, Int::class.javaPrimitiveType)
+            return getIntMethod.invoke(null, key, default) as Int
+        } catch (e: Throwable) {
+            e.printStackTrace()
+        }
+        return default
     }
 
     fun getTotalSDCardSize(): Float {

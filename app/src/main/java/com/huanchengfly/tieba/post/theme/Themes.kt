@@ -28,6 +28,7 @@ val DefaultDarkColors = ExtendedColorScheme(BlueColorScheme.darkColor, darkTheme
 @Composable
 fun TiebaLiteTheme(
     colorSchemeExt: ExtendedColorScheme = if (isSystemInDarkTheme()) DefaultDarkColors else DefaultColors,
+    motionScheme: MotionScheme = MotionScheme.expressive(),
     shapes: Shapes = MaterialTheme.shapes,
     typography: Typography = MaterialTheme.typography,
     content: @Composable () -> Unit
@@ -38,7 +39,7 @@ fun TiebaLiteTheme(
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorSchemeExt.colorScheme,
-            motionScheme = MotionScheme.expressive(),
+            motionScheme = motionScheme,
             shapes = shapes,
             typography = typography,
             content = content

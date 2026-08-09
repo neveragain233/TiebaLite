@@ -1,12 +1,8 @@
 package com.huanchengfly.tieba.post.ui.page.user
 
-import androidx.compose.animation.BoundsTransform
-import androidx.compose.animation.core.Spring
-import androidx.compose.animation.core.VisibilityThreshold
-import androidx.compose.animation.core.spring
 import androidx.compose.runtime.Immutable
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.geometry.Rect
+import com.huanchengfly.tieba.post.ui.common.DefaultTextBoundsTransform
 import com.huanchengfly.tieba.post.ui.common.localSharedBounds
 import java.util.Objects
 
@@ -58,7 +54,7 @@ fun Modifier.sharedUserNickname(
     extraKey: Any? = null
 ) = this.localSharedBounds(
     key = UserNicknameSharedBoundsKey(nickname, extraKey = extraKey),
-    boundsTransform = NameBoundsTransform,
+    boundsTransform = DefaultTextBoundsTransform,
 )
 
 fun Modifier.sharedUsername(
@@ -66,10 +62,5 @@ fun Modifier.sharedUsername(
     extraKey: Any? = null
 ) = this.localSharedBounds(
     key = UsernameSharedBoundsKey(username, extraKey = extraKey),
-    boundsTransform = NameBoundsTransform,
+    boundsTransform = DefaultTextBoundsTransform,
 )
-
-private val NameBoundsTransform = BoundsTransform { _, _ -> DefaultTextSpring }
-
-private val DefaultTextSpring =
-    spring(stiffness = Spring.StiffnessLow, visibilityThreshold = Rect.VisibilityThreshold)

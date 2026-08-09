@@ -11,7 +11,7 @@ import androidx.compose.animation.SharedTransitionScope.ResizeMode
 import androidx.compose.animation.SharedTransitionScope.ResizeMode.Companion.scaleToBounds
 import androidx.compose.animation.SharedTransitionScope.SharedContentState
 import androidx.compose.animation.core.AnimationConstants
-import androidx.compose.animation.core.Spring.StiffnessMediumLow
+import androidx.compose.animation.core.Spring
 import androidx.compose.animation.core.VisibilityThreshold
 import androidx.compose.animation.core.spring
 import androidx.compose.animation.core.tween
@@ -29,6 +29,7 @@ import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.LayoutDirection
+import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 
 val LocalSharedTransitionScope = staticCompositionLocalOf<SharedTransitionScope?> { null }
 
@@ -95,9 +96,9 @@ fun Modifier.animateEnterExit(
     enter: EnterTransition = defaultVerticalEnterTransition(),
     exit: ExitTransition = defaultVerticalExitTransition(),
 ): Modifier {
-    return this then with(sharedTransitionScope ?: return Modifier) {
-        with(animatedVisibilityScope ?: return Modifier) {
-            Modifier
+    return with(sharedTransitionScope ?: return this) {
+        with(animatedVisibilityScope ?: return this@animateEnterExit) {
+            this@animateEnterExit
                 .renderInSharedTransitionScopeOverlay(zIndexInOverlay)
                 .animateEnterExit(enter, exit)
         }
@@ -134,7 +135,12 @@ private val ParentClip: OverlayClip =
         }
     }
 
-private val DefaultBoundsTransform = BoundsTransform { _, _ -> spring(
-    stiffness = StiffnessMediumLow,
+val DefaultBoundsTransform = BoundsTransform { _, _ -> spring(
+    stiffness = Spring.StiffnessMediumLow,
+    visibilityThreshold = Rect.VisibilityThreshold
+) }
+
+val DefaultTextBoundsTransform = BoundsTransform { _, _ -> spring(
+    stiffness = Spring.StiffnessLow,
     visibilityThreshold = Rect.VisibilityThreshold
 ) }

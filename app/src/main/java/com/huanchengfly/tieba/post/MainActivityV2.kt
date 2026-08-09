@@ -8,6 +8,7 @@ import android.os.Build
 import android.os.Bundle
 import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
+import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,6 +17,7 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
@@ -52,7 +54,7 @@ import com.huanchengfly.tieba.post.theme.ExtendedColorScheme
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.common.LocalPbInlineContentCache
 import com.huanchengfly.tieba.post.ui.common.PbInlineContentCache.Companion.rememberPbInlineContentCache
-import com.huanchengfly.tieba.post.ui.common.theme.compose.animateBackground
+import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.page.Destination
@@ -165,11 +167,12 @@ class MainActivityV2 : BaseComposeActivity() {
         // val bottomSheetNavigator = rememberBottomSheetNavigator(skipPartiallyExpanded = true)
         val navController = rememberNavController(/* bottomSheetNavigator */)
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val uiSettings = uiState.uiSettings ?: return // Initializing ...
 
-        TiebaExtendedTheme(colorsExt = uiState.themeColor) {
+        TiebaExtendedTheme(colorsExt = uiState.themeColor, reduceMotion = uiSettings.reduceMotion) {
             TiebaLiteLocalProvider(
                 habit = uiState.habitSettings ?: return@TiebaExtendedTheme, // Initializing ...
-                uiSettings = uiState.uiSettings ?: return@TiebaExtendedTheme
+                uiSettings = uiSettings
             ) {
                 val setupFinished = if (welcomeScreen == null) {
                     uiState.uiSettings!!.setupFinished
@@ -198,6 +201,7 @@ class MainActivityV2 : BaseComposeActivity() {
                 RootNavGraph(
                     // bottomSheetNavigator = bottomSheetNavigator,
                     navController = navController,
+                    reduceMotion = uiSettings.reduceMotion,
                     settingsRepo = viewModel.settingsRepository,
                     startDestination = if (setupFinished) Destination.Main else Destination.Welcome
                 )
@@ -206,20 +210,23 @@ class MainActivityV2 : BaseComposeActivity() {
     }
 
     @Composable
-    private fun TiebaExtendedTheme(colorsExt: ExtendedColorScheme, content: @Composable () -> Unit) {
+    private fun TiebaExtendedTheme(
+        colorsExt: ExtendedColorScheme,
+        reduceMotion: Boolean,
+        content: @Composable () -> Unit
+    ) {
         val backgroundImage by viewModel.translucentThemeBackground.collectAsStateWithLifecycle()
+        val motionScheme = if (!reduceMotion) MotionScheme.expressive() else MotionScheme.standard()
 
-        Box(modifier = Modifier.fillMaxSize()) {
+        Box(
+            modifier = Modifier
+                .fillMaxSize()
+                .onCase(backgroundImage == null) { background(colorsExt.colorScheme.background) }
+        ) {
             if (backgroundImage != null) {
                 TranslucentThemeBackground(Modifier.matchParentSize(), file = backgroundImage)
-            } else {
-                Box(
-                    modifier = Modifier
-                        .matchParentSize()
-                        .animateBackground(color = colorsExt.colorScheme.background)
-                )
             }
-            TiebaLiteTheme(colorSchemeExt = colorsExt, content = content)
+            TiebaLiteTheme(colorSchemeExt = colorsExt, motionScheme, content = content)
         }
     }
 

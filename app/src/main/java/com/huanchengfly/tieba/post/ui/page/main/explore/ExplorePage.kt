@@ -247,11 +247,12 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
         bottomBarAtop = navigationSuiteType.isFloatingNavigationBar,
         floatingActionButton = {
             if (isFloatingNavBarCompat) return@MyScaffold
-            // FAB visibility: scrolling forward, pager not scrolling, current page not refreshing
+            // FAB visibility: scrolling forward, pager !scrolling, list !scrolling, not refreshing
             val visible by remember {
                 derivedStateOf {
                     !transition.isRunning && scrollOrientationConnection.isScrollingForward &&
-                    !pagerState.isScrolling && !fabHideStates[pagerState.currentPage]
+                            !pagerState.isScrolling && !listStates[pagerState.currentPage].isScrollInProgress &&
+                            !fabHideStates[pagerState.currentPage]
                 }
             }
             DefaultBackToTopFAB(visible = visible) {
