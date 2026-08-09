@@ -117,14 +117,11 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.TipScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.TopAppBarPaged
 import com.huanchengfly.tieba.post.ui.widgets.compose.color
-import com.huanchengfly.tieba.post.ui.widgets.compose.defaultHazeStyle
-import com.huanchengfly.tieba.post.ui.widgets.compose.defaultInputScale
 import com.huanchengfly.tieba.post.ui.widgets.compose.placeholder
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import com.huanchengfly.tieba.post.utils.LocalAccount
 import com.huanchengfly.tieba.post.utils.TiebaUtil
-import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.hazeSource
 import kotlin.random.Random
 
@@ -402,8 +399,7 @@ fun AnimatedVisibilityScope.HomePage(
     onOpenExplore: () -> Unit = {},
 ) {
     val loggedIn = LocalAccount.current != null
-    val hazeState: HazeState? = LocalHazeState.current
-    val hazeInputScale = defaultInputScale()
+    val hazeState = LocalHazeState.current
     val sharedTransitionScope = LocalSharedTransitionScope.current
     val context = LocalContext.current
     val navigator = LocalNavController.current
@@ -434,8 +430,6 @@ fun AnimatedVisibilityScope.HomePage(
                         sharedTransitionScope = sharedTransitionScope,
                         rootAnimatedVisibilityScope = LocalAnimatedVisibilityScope.current,
                         hazeState = hazeState,
-                        style = defaultHazeStyle(),
-                        inputScale = hazeInputScale,
                         blurEnabled = { gridState.canScrollBackward || scrollBehavior.isOverlapping }
                     ),
                 title = { Text(text = stringResource(R.string.title_main)) },
@@ -514,7 +508,6 @@ fun AnimatedVisibilityScope.HomePage(
             isEmpty = isEmpty,
             isError = uiState.error != null,
             isLoading = uiState.isLoading,
-            modifier = Modifier.fillMaxSize(),
             onReload = viewModel::onRefresh.takeIf { loggedIn },
             emptyScreen = {
                 EmptyScreen(onExploreClicked = onOpenExplore)
@@ -542,7 +535,7 @@ fun AnimatedVisibilityScope.HomePage(
                     columns = gridCells,
                     modifier = Modifier
                         .fillMaxSize()
-                        .onNotNull(hazeState) { hazeSource(state = it) }
+                        .onNotNull(hazeState) { hazeSource(state = it.state) }
                         .nestedScroll(scrollBehavior.nestedScrollConnection),
                     state = gridState,
                     contentPadding = contentPaddings,

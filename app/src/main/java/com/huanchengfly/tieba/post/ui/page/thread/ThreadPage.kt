@@ -96,7 +96,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
-import androidx.compose.ui.util.trace
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.LocalHabitSettings
@@ -122,6 +121,7 @@ import com.huanchengfly.tieba.post.ui.common.defaultVerticalEnterTransition
 import com.huanchengfly.tieba.post.ui.common.defaultVerticalExitTransition
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
+import com.huanchengfly.tieba.post.ui.common.theme.compose.withNonNull
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.LikeZero
 import com.huanchengfly.tieba.post.ui.models.PostData
@@ -151,8 +151,6 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.SwipeToDismissSnackbarHost
 import com.huanchengfly.tieba.post.ui.widgets.compose.VerticalGrid
 import com.huanchengfly.tieba.post.ui.widgets.compose.collapsedFraction
-import com.huanchengfly.tieba.post.ui.widgets.compose.defaultHazeStyle
-import com.huanchengfly.tieba.post.ui.widgets.compose.defaultInputScale
 import com.huanchengfly.tieba.post.ui.widgets.compose.dialogs.AnyPopDialogProperties
 import com.huanchengfly.tieba.post.ui.widgets.compose.dialogs.DirectionState
 import com.huanchengfly.tieba.post.ui.widgets.compose.fixedTopBarPadding
@@ -163,8 +161,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.useStickyHeaderWorkaround
 import com.huanchengfly.tieba.post.utils.StringUtil.getShortNumString
 import com.huanchengfly.tieba.post.utils.TiebaUtil
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
+import com.huanchengfly.tieba.post.utils.trace
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -413,6 +410,7 @@ fun ThreadPage(
     }
 
     StateScreen(
+        modifier = Modifier.background(MaterialTheme.colorScheme.surface),
         isEmpty =  isEmpty,
         isLoading = state.isRefreshing,
         error = state.error,
@@ -491,8 +489,9 @@ fun ThreadPage(
             bottomHazeBlock = { blurEnabled = false },
             snackbarHostState = snackbarHostState,
             snackbarHost = { SwipeToDismissSnackbarHost(hostState = snackbarHostState) },
+            backgroundColor = Color.Transparent,
         ) { padding ->
-            val hazeState: HazeState? = LocalHazeState.current
+            val hazeState = LocalHazeState.current
             // Ignore Scaffold padding top changes if workaround enabled
             val contentPadding = padding.fixedTopBarPadding()
 
@@ -500,7 +499,7 @@ fun ThreadPage(
                 ProvideNavigator(navigator = navigator) {
                     ThreadContent(
                         modifier = Modifier
-                            .hazeSource(hazeState)
+                            .hazeSource(hazeState?.state)
                             .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
                             .nestedScroll(toolbarScrollBehavior),
                         viewModel = viewModel,
@@ -570,9 +569,7 @@ fun ThreadPage(
                                 start = padding.calculateStartPadding(LocalLayoutDirection.current),
                                 end = padding.calculateEndPadding(LocalLayoutDirection.current),
                             )
-                            .onNotNull(hazeState) {
-                                hazeEffect(state = it, style = defaultHazeStyle())
-                            }
+                            .withNonNull(hazeState) { Modifier.defaultHazeEffect() }
                             .background(TiebaLiteTheme.extendedColorScheme.sheetContainerColor)
                             .padding(top = 16.dp)
                             .windowInsetsPadding(BottomSheetDefaults.windowInsets)
@@ -880,10 +877,7 @@ private fun ThreadFloatingToolbar(
                     this.shape = CircleShape
                     this.clip = true
                 }
-                .onNotNull(LocalHazeState.current) {
-                    val hazeInputScale = defaultInputScale()
-                    hazeEffect(it, defaultHazeStyle()) { inputScale = hazeInputScale }
-                }
+                .withNonNull(LocalHazeState.current) { Modifier.defaultHazeEffect() }
                 .background(color = toolbarContainerColor, shape = CircleShape)
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,

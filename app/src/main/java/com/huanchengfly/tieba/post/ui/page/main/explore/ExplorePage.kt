@@ -48,6 +48,7 @@ import com.huanchengfly.tieba.post.ui.common.LocalAnimatedVisibilityScope
 import com.huanchengfly.tieba.post.ui.common.LocalSharedTransitionScope
 import com.huanchengfly.tieba.post.ui.common.animateEnterExit
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
+import com.huanchengfly.tieba.post.ui.common.theme.compose.withNonNull
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.ThreadItem
 import com.huanchengfly.tieba.post.ui.page.Destination
@@ -75,17 +76,11 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.DefaultBackToTopFAB
 import com.huanchengfly.tieba.post.ui.widgets.compose.FancyAnimatedIndicatorWithModifier
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalHazeState
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
+import com.huanchengfly.tieba.post.ui.widgets.compose.TbHazeState
 import com.huanchengfly.tieba.post.ui.widgets.compose.TopAppBarPaged
-import com.huanchengfly.tieba.post.ui.widgets.compose.defaultHazeStyle
-import com.huanchengfly.tieba.post.ui.widgets.compose.defaultInputScale
 import com.huanchengfly.tieba.post.ui.widgets.compose.hazeSource
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberPagerListStates
 import com.huanchengfly.tieba.post.utils.BooleanBitSet
-import dev.chrisbanes.haze.HazeEffectScope
-import dev.chrisbanes.haze.HazeInputScale
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.HazeStyle
-import dev.chrisbanes.haze.hazeEffect
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -187,8 +182,7 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
     val navigationSuiteType = calculateMainNavigationSuiteType()
     // Hide FAB on FloatingNavigationBarCompact
     val isFloatingNavBarCompat = navigationSuiteType === MainNavigationSuiteType.FloatingNavigationBarCompact
-    val hazeState: HazeState? = LocalHazeState.current
-    val hazeInputScale = defaultInputScale()
+    val hazeState = LocalHazeState.current
     val sharedTransitionScope = LocalSharedTransitionScope.current
 
     val pages = remember(loggedIn) {
@@ -227,8 +221,6 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
                         sharedTransitionScope = sharedTransitionScope,
                         rootAnimatedVisibilityScope = LocalAnimatedVisibilityScope.current,
                         hazeState = hazeState,
-                        style = defaultHazeStyle(),
-                        inputScale = hazeInputScale,
                         blurEnabled = { !fabHideStates[pagerState.currentPage] || pagerState.isScrolling }
                     ),
                 title = { Text(text = stringResource(R.string.title_explore)) },
@@ -269,7 +261,7 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
         floatingActionButtonPosition = if (isFloatingNavBarCompat) FabPosition.EndOverlay else FabPosition.End,
     ) { contentPadding ->
         Container(
-            modifier = Modifier.onNotNull(hazeState) { hazeSource(state = it) }
+            modifier = Modifier.onNotNull(hazeState) { hazeSource(state = it.state) }
         ) {
             HorizontalPager(
                 state = pagerState,
@@ -309,10 +301,7 @@ context(mainAnimatedContentScope: AnimatedVisibilityScope)
 fun Modifier.topAppBarBlurEffect(
     sharedTransitionScope: SharedTransitionScope?,
     rootAnimatedVisibilityScope: AnimatedVisibilityScope?,
-    hazeState: HazeState?,
-    style: HazeStyle = HazeStyle.Unspecified,
-    inputScale: HazeInputScale = HazeInputScale.None,
-    block: (HazeEffectScope.() -> Unit)? = null,
+    hazeState: TbHazeState?,
     blurEnabled: () -> Boolean,
 ): Modifier = this then Modifier
     .onNotNull(rootAnimatedVisibilityScope, sharedTransitionScope) { (rootAnimatedVisibilityScope, sharedTransitionScope) ->
@@ -322,12 +311,10 @@ fun Modifier.topAppBarBlurEffect(
             sharedTransitionScope = sharedTransitionScope
         )
     }
-    .onNotNull(hazeState) {
-        hazeEffect(state = it, style = style) {
+    .withNonNull(hazeState) {
+        Modifier.defaultHazeEffect {
             // Disable background blur when MainNavHost transition is running
             this.blurEnabled = !mainAnimatedContentScope.transition.isRunning && blurEnabled()
-            this.inputScale = inputScale
-            if (block != null) block()
         }
     }
 

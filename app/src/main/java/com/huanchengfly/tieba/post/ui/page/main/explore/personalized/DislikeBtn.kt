@@ -40,18 +40,15 @@ import androidx.compose.ui.unit.DpOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.round
 import com.huanchengfly.tieba.post.R
-import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
+import com.huanchengfly.tieba.post.ui.common.theme.compose.withNonNull
 import com.huanchengfly.tieba.post.ui.models.explore.Dislike
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalHazeState
 import com.huanchengfly.tieba.post.ui.widgets.compose.MenuScope
 import com.huanchengfly.tieba.post.ui.widgets.compose.MenuState
 import com.huanchengfly.tieba.post.ui.widgets.compose.VerticalGrid
-import com.huanchengfly.tieba.post.ui.widgets.compose.defaultHazeStyle
-import com.huanchengfly.tieba.post.ui.widgets.compose.defaultInputScale
 import com.huanchengfly.tieba.post.ui.widgets.compose.hazeSource
 import com.huanchengfly.tieba.post.ui.widgets.compose.items
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberMenuState
-import dev.chrisbanes.haze.hazeEffect
 import kotlinx.coroutines.flow.filterIsInstance
 
 @Composable
@@ -62,7 +59,6 @@ fun Dislike(
     onDislikeSelected: (Dislike) -> Unit,
     onDislikeClicked: () -> Unit
 ) {
-    val hazeState = LocalHazeState.current
     val menuState = rememberMenuState()
 
     DislikeMenu(
@@ -117,15 +113,6 @@ fun Dislike(
                 }
             }
         },
-        modifier = Modifier
-            .onNotNull(hazeState) {
-                val hazeInputScale = defaultInputScale()
-                hazeSource(state = it, zIndex = 1f)
-                    .hazeEffect(state = it, style = defaultHazeStyle()) {
-                        inputScale = hazeInputScale
-                    }
-                    .background(color = MaterialTheme.colorScheme.background.copy(alpha = 0.74f))
-             },
         menuState = menuState,
         menuShape = MaterialTheme.shapes.small,
         onDismiss = onDismiss
@@ -151,6 +138,7 @@ private fun DislikeMenu(
     onDismiss: (() -> Unit)? = null,
     content: @Composable () -> Unit,
 ) {
+    val hazeState = LocalHazeState.current
     val interactionSource = remember { MutableInteractionSource() }
     LaunchedEffect(interactionSource) {
         interactionSource.interactions
@@ -170,6 +158,7 @@ private fun DislikeMenu(
             ),
     ) {
         content()
+        if (!menuState.expanded) return@Box
 
         Box(
             modifier = Modifier.offset { menuState.offset.round() }
@@ -180,7 +169,11 @@ private fun DislikeMenu(
                     menuState.dismiss()
                     onDismiss?.invoke()
                 },
-                modifier = modifier,
+                modifier = modifier.withNonNull(hazeState) {
+                    Modifier.hazeSource(state, zIndex = 1f)
+                        .defaultHazeEffect()
+                        .background(color = MaterialTheme.colorScheme.background.copy(alpha = 0.74f))
+                },
                 offset = DpOffset.Zero,
                 shape = menuShape,
                 containerColor = MaterialTheme.colorScheme.background,

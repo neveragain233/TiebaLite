@@ -24,8 +24,8 @@ import com.huanchengfly.tieba.post.ui.page.main.home.HomePage
 import com.huanchengfly.tieba.post.ui.page.main.notifications.NotificationsPage
 import com.huanchengfly.tieba.post.ui.page.main.user.UserPage
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalHazeState
+import com.huanchengfly.tieba.post.ui.widgets.compose.TbHazeState
 import com.huanchengfly.tieba.post.utils.LocalAccount
-import dev.chrisbanes.haze.HazeState
 import kotlinx.serialization.Serializable
 import kotlin.reflect.KType
 
@@ -48,7 +48,7 @@ sealed interface MainDestination {
 fun NavGraphBuilder.mainNavGraph(
     navController: NavController,
     nestedNavController: NavController,
-    hazeState: HazeState? = null,
+    hazeState: TbHazeState? = null,
     parentAnimatedVisibilityScope: AnimatedVisibilityScope? = null,
     parentSharedTransitionScope: SharedTransitionScope? = null,
 ) {
@@ -97,7 +97,7 @@ fun NavGraphBuilder.mainNavGraph(
 private inline fun <reified T : Any> NavGraphBuilder.animatedMainComposable(
     typeMap: Map<KType, @JvmSuppressWildcards NavType<*>> = emptyMap(),
     deepLinks: List<NavDeepLink> = emptyList(),
-    hazeState: HazeState?,
+    hazeState: TbHazeState?,
     navController: NavController,
     parentAnimatedVisibilityScope: AnimatedVisibilityScope?,
     parentSharedTransitionScope: SharedTransitionScope?,

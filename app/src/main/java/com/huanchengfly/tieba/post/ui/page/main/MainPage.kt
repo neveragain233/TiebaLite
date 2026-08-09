@@ -116,6 +116,7 @@ import com.huanchengfly.tieba.post.ui.common.defaultVerticalEnterTransition
 import com.huanchengfly.tieba.post.ui.common.defaultVerticalExitTransition
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
+import com.huanchengfly.tieba.post.ui.common.theme.compose.withNonNull
 import com.huanchengfly.tieba.post.ui.models.settings.NavigationLabel
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.main.MainNavigationSuiteType.Companion.isFloatingNavigationBar
@@ -127,14 +128,12 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.NavigationBarHeight
 import com.huanchengfly.tieba.post.ui.widgets.compose.NavigationSuiteScaffoldLayout
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.TallNavigationBarHeight
-import com.huanchengfly.tieba.post.ui.widgets.compose.defaultHazeStyle
-import com.huanchengfly.tieba.post.ui.widgets.compose.defaultInputScale
+import com.huanchengfly.tieba.post.ui.widgets.compose.TbHazeState
 import com.huanchengfly.tieba.post.ui.widgets.compose.isNavigationBar
 import com.huanchengfly.tieba.post.ui.widgets.compose.navigationSuiteScaffoldConsumeWindowInsets
+import com.huanchengfly.tieba.post.ui.widgets.compose.rememberTbHazeState
 import com.huanchengfly.tieba.post.utils.DeviceUtils.vibrateOneShot
 import com.huanchengfly.tieba.post.utils.LocalAccount
-import dev.chrisbanes.haze.HazeState
-import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 import kotlinx.collections.immutable.toImmutableList
 import kotlinx.coroutines.CoroutineScope
@@ -167,14 +166,16 @@ val bottomNavigationPlaceholder: @Composable () -> Unit = {
             modifier = Modifier
                 .windowInsetsPadding(WindowInsets.navigationBars)
                 .height(
-                    when(navigationSuiteType) {
+                    when (navigationSuiteType) {
                         MainNavigationSuiteType.ShortNavigationBarCompact -> NavigationBarHeight
                         MainNavigationSuiteType.FloatingNavigationBar -> {
                             TallNavigationBarHeight + floatingNavigationBarCompactScreenOffset
                         }
+
                         MainNavigationSuiteType.FloatingNavigationBarCompact -> {
                             NavigationBarHeight + floatingNavigationBarCompactScreenOffset
                         }
+
                         else -> TallNavigationBarHeight
                     }
                 )
@@ -229,7 +230,7 @@ fun MainPage(
     }
 
     val blurEffect = !uiSettings.reduceEffect && !MaterialTheme.colorScheme.isTranslucent
-    val hazeState = if (blurEffect) remember { HazeState() } else null
+    val hazeState = if (blurEffect) rememberTbHazeState() else null
     val navigationSuiteColors = mainNavigationSuiteColors(uiSettings.bottomNavFloating, blurEffect)
 
     val currentDestination by nestedNavController.currentMainDestinationAsState(destinations)
@@ -299,7 +300,7 @@ fun MainPage(
             navController = nestedNavController,
             startDestination = startDestination,
             modifier = Modifier.onNotNull(hazeState) {
-                hazeSource(state = it, zIndex = 1f)
+                hazeSource(state = it.state, zIndex = 1f)
             },
             enterTransition = enterTransition,
             exitTransition = exitTransition,
@@ -361,7 +362,7 @@ private fun MainNavigationSuite(
 private fun MainNavigationSuiteScaffold(
     navigationItems: @Composable () -> Unit,
     modifier: Modifier = Modifier,
-    hazeState: HazeState? = null,
+    hazeState: TbHazeState? = null,
     mainNavSuiteType: MainNavigationSuiteType = calculateMainNavigationSuiteType(),
     navigationBarAtop: Boolean = true,
     navigationSuiteColors: NavigationSuiteColors = NavigationSuiteDefaults.colors(),
@@ -387,11 +388,9 @@ private fun MainNavigationSuiteScaffold(
             MainNavigationSuite(
                 mainNavigationSuiteType = mainNavSuiteType,
                 modifier = Modifier
-                    .onNotNull(hazeState) {
-                        val hazeInputScale = defaultInputScale()
-                        hazeEffect(state = it, style = defaultHazeStyle()) {
+                    .withNonNull(hazeState) {
+                        Modifier.defaultHazeEffect {
                             blurEnabled = animatedVisibilityScope?.transition?.isRunning != true
-                            inputScale = hazeInputScale
                         }
                     }
                     .onNotNull(colorsOnTransition) {
