@@ -79,6 +79,10 @@ import androidx.media3.ui.compose.material3.indicator.PositionAndDurationText
 import androidx.media3.ui.compose.modifiers.resizeWithContentScale
 import androidx.media3.ui.compose.state.rememberPresentationState
 import androidx.window.core.layout.WindowSizeClass.Companion.HEIGHT_DP_EXPANDED_LOWER_BOUND
+import coil3.compose.AsyncImage
+import coil3.request.ImageRequest
+import coil3.request.crossfade
+import coil3.request.error
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.components.media.MediaCache
@@ -89,7 +93,7 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
-import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
+import com.huanchengfly.tieba.post.ui.widgets.compose.DefaultErrorResource
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.buttons.ContentScaleButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.buttons.LabeledProgressSlider
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.buttons.MediaFormatsButton
@@ -475,8 +479,12 @@ fun VideoThumbnail(
         contentAlignment = Alignment.Center
     ) {
         if (thumbnailUrl != null) {
-            NetworkImage(
-                imageUrl = thumbnailUrl,
+            AsyncImage(
+                model = ImageRequest.Builder(LocalContext.current)
+                    .data(thumbnailUrl)
+                    .crossfade(false)
+                    .error(DefaultErrorResource)
+                    .build(),
                 contentDescription = null,
                 modifier = Modifier.matchParentSize(),
                 contentScale = contentScale

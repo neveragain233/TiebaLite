@@ -293,6 +293,7 @@ fun ForumInfoChip(
             .clickable(onClick = onClick)
             .padding(4.dp),
         verticalAlignment = Alignment.CenterVertically,
+        horizontalArrangement = Arrangement.spacedBy(ButtonDefaults.IconSpacing),
     ) {
         avatarUrl?.let {
             Avatar(
@@ -301,7 +302,6 @@ fun ForumInfoChip(
                 shape = MaterialTheme.shapes.extraSmall
             )
         }
-        Spacer(modifier = Modifier.width(width = ButtonDefaults.IconSpacing))
         Text(
             text = stringResource(id = R.string.title_forum_name, forumName),
             color = MaterialTheme.colorScheme.onSecondaryContainer,

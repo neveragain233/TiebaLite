@@ -167,12 +167,12 @@ class MainActivityV2 : BaseComposeActivity() {
         // val bottomSheetNavigator = rememberBottomSheetNavigator(skipPartiallyExpanded = true)
         val navController = rememberNavController(/* bottomSheetNavigator */)
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
-        val uiSettings = uiState.uiSettings ?: return // Initializing ...
+        val reduceMotion = uiState.uiSettings?.reduceMotion == true
 
-        TiebaExtendedTheme(colorsExt = uiState.themeColor, reduceMotion = uiSettings.reduceMotion) {
+        TiebaExtendedTheme(colorsExt = uiState.themeColor, reduceMotion) {
             TiebaLiteLocalProvider(
                 habit = uiState.habitSettings ?: return@TiebaExtendedTheme, // Initializing ...
-                uiSettings = uiSettings
+                uiSettings = uiState.uiSettings ?: return@TiebaExtendedTheme,
             ) {
                 val setupFinished = if (welcomeScreen == null) {
                     uiState.uiSettings!!.setupFinished
@@ -201,7 +201,7 @@ class MainActivityV2 : BaseComposeActivity() {
                 RootNavGraph(
                     // bottomSheetNavigator = bottomSheetNavigator,
                     navController = navController,
-                    reduceMotion = uiSettings.reduceMotion,
+                    reduceMotion = reduceMotion,
                     settingsRepo = viewModel.settingsRepository,
                     startDestination = if (setupFinished) Destination.Main else Destination.Welcome
                 )

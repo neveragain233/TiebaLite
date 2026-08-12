@@ -385,7 +385,7 @@ private fun <T> BlockListScaffold(
                             shapes = ListItemDefaults.segmentedShapes(i, count = items.size),
                             modifier = Modifier
                                 .minimumInteractiveComponentSize()
-                                .animateItem(),
+                                .animateItem(fadeInSpec = null, fadeOutSpec = null),
                             trailingContent = {
                                 if (selectMode) {
                                     Checkbox(selected, onCheckedChange = null, interactionSource = interactionSource)
