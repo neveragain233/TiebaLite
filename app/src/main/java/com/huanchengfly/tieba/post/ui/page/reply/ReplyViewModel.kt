@@ -326,17 +326,20 @@ class ReplyViewModel @Inject constructor(
     }
 
     override fun onCleared() {
-        super.onCleared()
         emoticonContentRunner.cancelCurrent()
-        val draft = userDraft?.toString()?.trim()
-        if (!draft.isNullOrEmpty() && draft.isNotBlank()) {
-            AppBackgroundScope.launch {
-                runCatching {
+        if (isTopicThread) return
+        val draft = userDraft?.toString()?.trim() ?: return
+        AppBackgroundScope.launch {
+            runCatching {
+                if (draft.isNotEmpty() && draft.isNotBlank()) {
                     draftDao.upsert(Draft(threadId, postId ?: 0, subPostId ?: 0, draft))
+                } else {
+                    // User clear the content manually
+                    draftDao.deleteByIds(threadId, postId ?: 0, subPostId ?: 0)
                 }
-                .onFailure { e ->
-                    Log.e(TAG, "onCleared: Save draft failed: ${e.message}, content: $draft")
-                }
+            }
+            .onFailure { e ->
+                Log.e(TAG, "onCleared: Update draft failed: ${e.message}, len: ${draft.length}")
             }
         }
     }
