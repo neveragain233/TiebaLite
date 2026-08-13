@@ -60,9 +60,11 @@ import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextFieldDefaults
 import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
@@ -73,6 +75,7 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
 import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.layout.ContentScale
@@ -81,6 +84,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.AnnotatedString
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.input.KeyboardCapitalization
 import androidx.compose.ui.text.rememberTextMeasurer
@@ -144,6 +148,11 @@ enum class ReplyType {
     NONE, //回贴
     TOPIC_THREAD, //发主题贴
 }
+
+private const val ThreadTitleMaxLength = 31
+
+private val threadTitleTextStyle: TextStyle
+    @ReadOnlyComposable @Composable get() = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp)
 
 @Composable
 fun ReplyPageBottomSheet(
@@ -223,7 +232,7 @@ private fun ReplyPageContent(
 
     var inputLength by remember { mutableIntStateOf(0) }
     var editTextView by remember { mutableStateOf<UndoableEditText?>(null) }
-    var threadTitle by remember { mutableStateOf("") }
+    val (threadTitle, setThreadTitle) = remember { mutableStateOf("") }
 
     viewModel.onEvent<CommonUiEvent.Toast> {
         Toast.makeText(context, it.message, it.length).show()
@@ -330,32 +339,12 @@ private fun ReplyPageContent(
                 style = MaterialTheme.typography.labelMedium,
             )
         }
-        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+
         if (isTopicThread) {
-            BaseTextField(
-                value = threadTitle,
-                onValueChange = { if (it.length <= 31) threadTitle = it },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp),
-                singleLine = true,
-                textStyle = MaterialTheme.typography.titleMedium.copy(
-                    fontWeight = FontWeight.Bold,
-                    fontSize = 15.sp,
-                ),
-                keyboardOptions = KeyboardOptions(
-                    capitalization = KeyboardCapitalization.Sentences,
-                ),
-                placeholder = {
-                    Text(
-                        text = stringResource(id = R.string.hint_thread_title),
-                        style = MaterialTheme.typography.titleMedium.copy(fontSize = 15.sp),
-                        color = MaterialTheme.colorScheme.onSurfaceVariant,
-                    )
-                },
-            )
-            HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
+            ThreadTitleTextField(value = threadTitle, onValueChange = setThreadTitle)
         }
+
+        HorizontalDivider(modifier = Modifier.padding(horizontal = 16.dp))
         Box(
             modifier = Modifier
                 .wrapContentHeight()
@@ -513,6 +502,37 @@ private fun ReplyPageContent(
     } else {
         ReplyWarningDialog(vm = viewModel, onBack = onBack)
     }
+}
+
+@Composable
+private fun ThreadTitleTextField(
+    value: String,
+    onValueChange: (String) -> Unit,
+    modifier: Modifier = Modifier,
+    textStyle: TextStyle = threadTitleTextStyle
+) {
+    BaseTextField(
+        value = value,
+        onValueChange = {
+            if (it.length <= ThreadTitleMaxLength) onValueChange(it)
+        },
+        modifier = modifier
+            .fillMaxWidth()
+            .padding(start = 16.dp, top = Dp.Hairline, end = 16.dp, bottom = 8.dp),
+        singleLine = true,
+        textStyle = textStyle,
+        keyboardOptions = KeyboardOptions(
+            capitalization = KeyboardCapitalization.Sentences,
+        ),
+        placeholder = {
+            Text(
+                text = stringResource(id = R.string.hint_thread_title),
+                fontWeight = FontWeight.Normal,
+                style = textStyle,
+            )
+        },
+        colors = TextFieldDefaults.colors(unfocusedContainerColor = Color.Transparent)
+    )
 }
 
 @Composable
