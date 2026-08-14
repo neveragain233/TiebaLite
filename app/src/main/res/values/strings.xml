@@ -178,6 +178,7 @@
     <string name="tip_primary_color">主题色</string>
     <string name="title_color_picker_primary">选择主题色</string>
     <string name="title_dialog_unfollow_forum">确定要取消关注%s吧吗？</string>
+    <string name="title_dialog_unfollow_user">确定要取消关注%s吗？</string>
     <string name="menu_save_audio">保存语音</string>
     <string name="title_hot_message_list">话题榜</string>
     <string name="toast_photo_saved">图片保存在 %1$s</string>
@@ -587,8 +588,6 @@
     <string name="toast_backup_done">备份完成</string>
     <string name="toast_ban_interact_failed">更新拉黑配置失败 %1$s</string>
     <string name="toast_block_rule_updated">本地屏蔽规则已更新</string>
-    <string name="toast_follow_list_unfollow_success">已取消关注</string>
-    <string name="toast_follow_list_follow_success">关注成功</string>
     <string name="toast_preview_image_too_large">无法预览超大图</string>
     <string name="toast_video_downloaded">视频保存在 %1$s</string>
     <string name="welcome_intro">欢迎使用贴吧 Lite</string>

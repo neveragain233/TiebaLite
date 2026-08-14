@@ -348,8 +348,10 @@ private fun SubPostsContent(
                     }
                 } else {
                     stickyHeader(contentType = HeaderContentType) {
+                        val appbarState = topAppBarScrollBehavior.state
+                        val colors = TiebaLiteTheme.topAppBarColors
                         SubPostsHeader(
-                            modifier = Modifier.stickyHeaderBackground(topAppBarScrollBehavior.state, lazyListState),
+                            modifier = Modifier.stickyHeaderBackground(appbarState, colors, lazyListState),
                             postNum = uiState.page.postCount
                         )
                     }

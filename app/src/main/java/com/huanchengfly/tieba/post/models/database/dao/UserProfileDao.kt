@@ -31,6 +31,9 @@ interface UserProfileDao {
     @Query("UPDATE user SET last_visit = :timestamp WHERE uid = :uid")
     suspend fun updateLastVisit(uid: Long, timestamp: Long)
 
+    @Query("UPDATE user SET last_update = :timestamp WHERE uid = :uid")
+    suspend fun updateLastUpdate(uid: Long, timestamp: Long)
+
     /**
      * Observes list of user profiles.
      */

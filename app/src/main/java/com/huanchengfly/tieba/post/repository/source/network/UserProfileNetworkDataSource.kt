@@ -4,6 +4,7 @@ import android.text.TextUtils
 import com.huanchengfly.tieba.post.api.TiebaApi
 import com.huanchengfly.tieba.post.api.models.CommonResponse
 import com.huanchengfly.tieba.post.api.models.FollowBean
+import com.huanchengfly.tieba.post.api.models.FollowListBean
 import com.huanchengfly.tieba.post.api.models.InitNickNameBean
 import com.huanchengfly.tieba.post.api.models.LoginBean
 import com.huanchengfly.tieba.post.api.models.PermissionListBean
@@ -62,6 +63,18 @@ object UserProfileNetworkDataSource {
             .run {
                 if (data_?.user == null) throw TiebaException("Null user data")
                 data_.user to data_.anti_stat
+            }
+    }
+
+    suspend fun loadUserFollowList(uid: Long, page: Int): FollowListBean {
+        require(uid > 0) { "Invalid user ID: $uid." }
+        require(page > 0) { "Invalid page: $page" }
+
+        return TiebaApi.getInstance()
+            .followListFlow(page, uid)
+            .firstOrThrow()
+            .apply {
+                if (errorCode != 0) throw TiebaApiException(CommonResponse(errorCode, errorMsg.orEmpty()))
             }
     }
 

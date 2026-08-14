@@ -1,248 +1,229 @@
 package com.huanchengfly.tieba.post.ui.page.user.followlist
 
+import android.content.Context
+import android.util.Log
 import androidx.compose.runtime.Immutable
-import com.huanchengfly.tieba.post.App
-import com.huanchengfly.tieba.post.R
-import com.huanchengfly.tieba.post.api.TiebaApi
-import com.huanchengfly.tieba.post.api.models.CommonResponse
-import com.huanchengfly.tieba.post.api.models.FollowBean
-import com.huanchengfly.tieba.post.api.models.FollowListBean
+import androidx.lifecycle.SavedStateHandle
+import androidx.navigation.toRoute
+import com.huanchengfly.tieba.post.api.models.FollowListBean.FollowUserBean
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
-import com.huanchengfly.tieba.post.arch.BaseViewModel
+import com.huanchengfly.tieba.post.arch.BaseStateViewModel
 import com.huanchengfly.tieba.post.arch.CommonUiEvent
-import com.huanchengfly.tieba.post.arch.ImmutableHolder
-import com.huanchengfly.tieba.post.arch.PartialChange
-import com.huanchengfly.tieba.post.arch.PartialChangeProducer
 import com.huanchengfly.tieba.post.arch.UiEvent
-import com.huanchengfly.tieba.post.arch.UiIntent
 import com.huanchengfly.tieba.post.arch.UiState
-import com.huanchengfly.tieba.post.arch.wrapImmutable
+import com.huanchengfly.tieba.post.arch.stateInViewModel
+import com.huanchengfly.tieba.post.repository.UserProfileRepository
+import com.huanchengfly.tieba.post.ui.models.user.ConcernType
+import com.huanchengfly.tieba.post.ui.models.user.FollowUser
+import com.huanchengfly.tieba.post.ui.page.Destination
+import com.huanchengfly.tieba.post.ui.page.user.followlist.FollowListViewModel.Companion.FollowListFilter
+import com.huanchengfly.tieba.post.utils.StringUtil
+import com.huanchengfly.tieba.post.utils.extension.set
 import dagger.hilt.android.lifecycle.HiltViewModel
-import kotlinx.collections.immutable.ImmutableList
-import kotlinx.collections.immutable.persistentListOf
-import kotlinx.collections.immutable.toImmutableList
-import kotlinx.coroutines.ExperimentalCoroutinesApi
-import kotlinx.coroutines.flow.Flow
-import kotlinx.coroutines.flow.catch
-import kotlinx.coroutines.flow.filterIsInstance
-import kotlinx.coroutines.flow.flatMapConcat
+import dagger.hilt.android.qualifiers.ApplicationContext
+import kotlinx.coroutines.CoroutineExceptionHandler
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.distinctUntilChangedBy
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
-import kotlinx.coroutines.flow.merge
-import kotlinx.coroutines.flow.onStart
+import kotlinx.coroutines.flow.update
+import kotlinx.coroutines.withContext
+import java.util.Objects
 import javax.inject.Inject
 
-@HiltViewModel
-class FollowListViewModel @Inject constructor() :
-    BaseViewModel<FollowListUiIntent, FollowListPartialChange, FollowListUiState, UiEvent>() {
-    override fun createInitialState(): FollowListUiState = FollowListUiState()
+sealed interface FollowListUiEvent : UiEvent {
+    data class FollowFailed(val message: String) : FollowListUiEvent
 
-    override fun createPartialChangeProducer(): PartialChangeProducer<FollowListUiIntent, FollowListPartialChange, FollowListUiState> =
-        FollowListPartialChangeProducer
-
-    override fun dispatchEvent(partialChange: FollowListPartialChange): UiEvent? =
-        when (partialChange) {
-            is FollowListPartialChange.Unfollow.Success -> CommonUiEvent.Toast(
-                App.INSTANCE.getString(R.string.toast_follow_list_unfollow_success)
-            )
-
-            is FollowListPartialChange.Follow.Success -> CommonUiEvent.Toast(
-                App.INSTANCE.getString(R.string.toast_follow_list_follow_success)
-            )
-
-            is FollowListPartialChange.Unfollow.Failure -> CommonUiEvent.Toast(
-                App.INSTANCE.getString(
-                    R.string.toast_unlike_failed,
-                    partialChange.error.getErrorMessage()
-                )
-            )
-
-            else -> null
-        }
-
-    private object FollowListPartialChangeProducer :
-        PartialChangeProducer<FollowListUiIntent, FollowListPartialChange, FollowListUiState> {
-        @OptIn(ExperimentalCoroutinesApi::class)
-        override fun toPartialChangeFlow(intentFlow: Flow<FollowListUiIntent>): Flow<FollowListPartialChange> =
-            merge(
-                intentFlow.filterIsInstance<FollowListUiIntent.Refresh>()
-                    .flatMapConcat { it.toRefreshPartialChangeFlow() },
-                intentFlow.filterIsInstance<FollowListUiIntent.LoadMore>()
-                    .flatMapConcat { it.toLoadMorePartialChangeFlow() },
-                intentFlow.filterIsInstance<FollowListUiIntent.Unfollow>()
-                    .flatMapConcat { it.toUnfollowPartialChangeFlow() },
-                intentFlow.filterIsInstance<FollowListUiIntent.Follow>()
-                    .flatMapConcat { it.toFollowPartialChangeFlow() },
-            )
-
-        private fun FollowListUiIntent.Refresh.toRefreshPartialChangeFlow(): Flow<FollowListPartialChange.Refresh> =
-            TiebaApi.getInstance().followListFlow(uid = uid)
-                .map<FollowListBean, FollowListPartialChange.Refresh> {
-                    FollowListPartialChange.Refresh.Success(
-                        page = 1,
-                        hasMore = it.hasMore == 1,
-                        totalFollowNum = it.totalFollowNum,
-                        tipsText = it.tipsText,
-                        users = it.followList,
-                    )
-                }
-                .onStart { emit(FollowListPartialChange.Refresh.Start) }
-                .catch { emit(FollowListPartialChange.Refresh.Failure(it)) }
-
-        private fun FollowListUiIntent.LoadMore.toLoadMorePartialChangeFlow(): Flow<FollowListPartialChange.LoadMore> =
-            TiebaApi.getInstance().followListFlow(page + 1, uid)
-                .map<FollowListBean, FollowListPartialChange.LoadMore> {
-                    FollowListPartialChange.LoadMore.Success(
-                        page = it.pageNum,
-                        hasMore = it.hasMore == 1,
-                        users = it.followList,
-                    )
-                }
-                .onStart { emit(FollowListPartialChange.LoadMore.Start) }
-                .catch { emit(FollowListPartialChange.LoadMore.Failure(it)) }
-
-        private fun FollowListUiIntent.Unfollow.toUnfollowPartialChangeFlow(): Flow<FollowListPartialChange.Unfollow> =
-            TiebaApi.getInstance().unfollowFlow(portrait, tbs)
-                .map<CommonResponse, FollowListPartialChange.Unfollow> {
-                    FollowListPartialChange.Unfollow.Success(userId)
-                }
-                .onStart { emit(FollowListPartialChange.Unfollow.Start) }
-                .catch { emit(FollowListPartialChange.Unfollow.Failure(it)) }
-
-        private fun FollowListUiIntent.Follow.toFollowPartialChangeFlow(): Flow<FollowListPartialChange.Follow> =
-            TiebaApi.getInstance().followFlow(portrait, tbs)
-                .map<FollowBean, FollowListPartialChange.Follow> {
-                    FollowListPartialChange.Follow.Success(userId)
-                }
-                .onStart { emit(FollowListPartialChange.Follow.Start) }
-                .catch { emit(FollowListPartialChange.Follow.Failure(it)) }
-    }
-}
-
-sealed interface FollowListUiIntent : UiIntent {
-    data class Refresh(val uid: Long? = null) : FollowListUiIntent
-    data class LoadMore(val page: Int, val uid: Long? = null) : FollowListUiIntent
-    data class Unfollow(
-        val userId: Long,
-        val portrait: String,
-        val tbs: String,
-    ) : FollowListUiIntent
-    data class Follow(
-        val userId: Long,
-        val portrait: String,
-        val tbs: String,
-    ) : FollowListUiIntent
-}
-
-sealed interface FollowListPartialChange : PartialChange<FollowListUiState> {
-    sealed class Refresh : FollowListPartialChange {
-        override fun reduce(oldState: FollowListUiState): FollowListUiState = when (this) {
-            is Start -> oldState.copy(isRefreshing = true)
-
-            is Success -> oldState.copy(
-                isRefreshing = false,
-                error = null,
-                currentPage = page,
-                hasMore = hasMore,
-                totalFollowNum = totalFollowNum,
-                tipsText = tipsText,
-                users = users.toImmutableList(),
-                unfollowedIds = emptySet(),
-            )
-
-            is Failure -> oldState.copy(
-                isRefreshing = false,
-                error = error.wrapImmutable(),
-            )
-        }
-
-        data object Start : Refresh()
-
-        data class Success(
-            val page: Int,
-            val hasMore: Boolean,
-            val totalFollowNum: Int,
-            val tipsText: String?,
-            val users: List<FollowListBean.FollowUserBean>,
-        ) : Refresh()
-
-        data class Failure(val error: Throwable) : Refresh()
-    }
-
-    sealed class LoadMore : FollowListPartialChange {
-        override fun reduce(oldState: FollowListUiState): FollowListUiState = when (this) {
-            is Start -> oldState.copy(isLoadingMore = true)
-
-            is Success -> oldState.copy(
-                isLoadingMore = false,
-                error = null,
-                currentPage = page,
-                hasMore = hasMore,
-                users = (oldState.users + users).distinctBy { it.id }.toImmutableList(),
-            )
-
-            is Failure -> oldState.copy(
-                isLoadingMore = false,
-                error = error.wrapImmutable(),
-            )
-        }
-
-        data object Start : LoadMore()
-
-        data class Success(
-            val page: Int,
-            val hasMore: Boolean,
-            val users: List<FollowListBean.FollowUserBean>,
-        ) : LoadMore()
-
-        data class Failure(val error: Throwable) : LoadMore()
-    }
-
-    sealed class Unfollow : FollowListPartialChange {
-        override fun reduce(oldState: FollowListUiState): FollowListUiState = when (this) {
-            is Start -> oldState
-
-            is Success -> oldState.copy(
-                unfollowedIds = oldState.unfollowedIds + userId,
-            )
-
-            is Failure -> oldState
-        }
-
-        data object Start : Unfollow()
-
-        data class Success(val userId: Long) : Unfollow()
-
-        data class Failure(val error: Throwable) : Unfollow()
-    }
-
-    sealed class Follow : FollowListPartialChange {
-        override fun reduce(oldState: FollowListUiState): FollowListUiState = when (this) {
-            is Start -> oldState
-
-            is Success -> oldState.copy(
-                unfollowedIds = oldState.unfollowedIds - userId,
-            )
-
-            is Failure -> oldState
-        }
-
-        data object Start : Follow()
-
-        data class Success(val userId: Long) : Follow()
-
-        data class Failure(val error: Throwable) : Follow()
-    }
+    data class UnfollowFailed(val message: String) : FollowListUiEvent
 }
 
 @Immutable
 data class FollowListUiState(
+    val filter: FollowListFilter = FollowListFilter.All,
     val isRefreshing: Boolean = false,
     val isLoadingMore: Boolean = false,
-    val error: ImmutableHolder<Throwable>? = null,
+    val error: Throwable? = null,
     val currentPage: Int = 1,
     val hasMore: Boolean = false,
     val totalFollowNum: Int = 0,
     val tipsText: String? = null,
-    val users: ImmutableList<FollowListBean.FollowUserBean> = persistentListOf(),
-    val unfollowedIds: Set<Long> = emptySet(),
+    val users: List<FollowUser> = emptyList(),
 ) : UiState
+
+@HiltViewModel
+class FollowListViewModel @Inject constructor(
+    @param:ApplicationContext val context: Context,
+    private val userProfileRepo: UserProfileRepository,
+    savedStateHandle: SavedStateHandle
+) : BaseStateViewModel<FollowListUiState>() {
+
+    override val errorHandler = CoroutineExceptionHandler { _, e ->
+        Log.e(TAG, "onError: ", e)
+        _uiState.update { it.copy(isRefreshing = false, isLoadingMore = false, error = e) }
+    }
+
+    private val param = savedStateHandle.toRoute<Destination.UserFollowList>()
+    val uid: Long = param.uid
+
+    val filteredUsers: StateFlow<List<FollowUser>> = _uiState
+        .distinctUntilChangedBy { Objects.hash(it.filter, it.users) }
+        .map {
+            when (it.filter) {
+                FollowListFilter.All -> it.users
+                FollowListFilter.Mutual -> it.users.filter { u -> u.concernType == ConcernType.MUTUAL }
+            }
+        }
+        .flowOn(Dispatchers.Default)
+        .stateInViewModel(initialValue = emptyList())
+
+    override fun createInitialState(): FollowListUiState = FollowListUiState(isRefreshing = true)
+
+    init {
+        refreshInternal()
+    }
+
+    private fun refreshInternal() {
+        _uiState.set { createInitialState() }
+        launchInVM {
+            val result = userProfileRepo.loadUserFollowList(uid, page = 1)
+            val users = result.followList.mapToUiModel()
+            _uiState.set {
+                FollowListUiState(
+                    currentPage = 1,
+                    hasMore = result.hasMore == 1,
+                    totalFollowNum = result.totalFollowNum,
+                    tipsText = result.tipsText,
+                    users = users,
+                )
+            }
+        }
+    }
+
+    fun onRefresh() {
+        if (!currentState.isRefreshing) refreshInternal()
+    }
+
+    fun onLoadMore() {
+        val oldState = currentState
+        if (oldState.isLoadingMore || oldState.isRefreshing) return
+
+        _uiState.update { it.copy(isLoadingMore = true) }
+        launchInVM {
+            runCatching {
+                userProfileRepo.loadUserFollowList(uid, page = oldState.currentPage + 1)
+            }
+            .onFailure { e ->
+                _uiState.update { it.copy(isRefreshing = false, isLoadingMore = false, error = null) }
+                sendUiEvent(CommonUiEvent.ToastError(e))
+            }
+            .onSuccess { result ->
+                val followList = result.followList.mapToUiModel()
+                val users = withContext(Dispatchers.Default) {
+                    (oldState.users + followList).distinctBy { it.uid }
+                }
+                _uiState.update {
+                    it.copy(
+                        isLoadingMore = false,
+                        currentPage = result.pageNum,
+                        hasMore = result.hasMore == 1,
+                        users = users
+                    )
+                }
+            }
+        }
+    }
+
+    fun onFilterChanged(filter: FollowListFilter) = _uiState.update { it.copy(filter = filter) }
+
+    private suspend fun <T> updateConcertTypeInternal(
+        user: FollowUser,
+        newConcernType: Int,
+        block: suspend () -> T,
+    ): Result<T> {
+        val start = System.currentTimeMillis()
+        val oldConcernType = user.concernType
+        _uiState.update {
+            it.copy(users = it.users.updateConcernType(uid = user.uid, type = ConcernType.UPDATING))
+        }
+        return runCatching { block() }
+            .onFailure { e ->
+                Log.w(TAG, "onUpdateConcertTypeInternal", e)
+                _uiState.update {
+                    it.copy(users = it.users.updateConcernType(uid = user.uid, type = oldConcernType))
+                }
+            }
+            .onSuccess {
+                _uiState.update {
+                    it.copy(users = it.users.updateConcernType(uid = user.uid, type = newConcernType))
+                }
+                val cost = System.currentTimeMillis() - start
+                Log.i(TAG, "onUpdateConcertTypeInternal: Type $oldConcernType -> $newConcernType, cost ${cost}ms")
+            }
+    }
+
+    fun onFollowClicked(user: FollowUser) = launchInVM {
+        val newConcernType = if (user.concernType == ConcernType.FANS) ConcernType.MUTUAL else ConcernType.FOLLOWING
+        updateConcertTypeInternal(user, newConcernType) {
+            userProfileRepo.requestFollowUser(uid = user.uid, portrait = user.portrait)
+        }
+        .onFailure { e ->
+            sendUiEvent(FollowListUiEvent.FollowFailed(message = e.getErrorMessage()))
+        }
+        .onSuccess {
+            _uiState.update { it.copy(totalFollowNum = it.totalFollowNum + 1) }
+        }
+    }
+
+    fun onUnfollowClicked(user: FollowUser) = launchInVM {
+        val newConcernType = if (user.concernType == ConcernType.MUTUAL) ConcernType.FANS else ConcernType.NONE
+        updateConcertTypeInternal(user, newConcernType) {
+            userProfileRepo.requestUnfollowUser(uid = user.uid, portrait = user.portrait)
+        }
+        .onFailure { e ->
+            sendUiEvent(FollowListUiEvent.UnfollowFailed(message = e.getErrorMessage()))
+        }
+        .onSuccess {
+            _uiState.update { it.copy(totalFollowNum = it.totalFollowNum - 1) }
+        }
+    }
+
+    companion object {
+        private const val TAG = "FollowListViewModel"
+
+        enum class FollowListFilter { All, Mutual }
+
+        private suspend fun List<FollowUserBean>.mapToUiModel(): List<FollowUser> = if (isNotEmpty()) {
+            withContext(Dispatchers.Default) {
+                map {
+                    FollowUser(
+                        uid = it.id,
+                        avatar = StringUtil.getAvatarUrl(it.portrait),
+                        displayName = StringUtil.getUserNameString(
+                            showBoth = true,
+                            username = it.name.orEmpty(),
+                            nickname = it.nameShow
+                        ),
+                        portrait = it.portrait!!,
+                        intro = it.intro?.takeUnless { intro -> intro.isEmpty() || intro.isBlank() },
+                        concernType = it.hasConcerned,
+                    )
+                }
+            }
+        } else {
+            emptyList()
+        }
+
+        /**
+         * Update [ConcernType] of target [FollowUser] in this list
+         * */
+        private suspend fun List<FollowUser>.updateConcernType(
+            uid: Long,
+            @ConcernType type: Int
+        ): List<FollowUser> = withContext(Dispatchers.Default) {
+            map {
+                if (it.uid != uid) it else it.copy(concernType = type)
+            }
+        }
+    }
+}

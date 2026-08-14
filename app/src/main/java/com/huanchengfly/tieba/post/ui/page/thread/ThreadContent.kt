@@ -357,8 +357,10 @@ fun StateScreenScope.ThreadContent(
             if (state.thread != null) {
                 if (useStickyHeader) {
                     stickyHeader(key = Type.Header.key, contentType = Type.Header) {
+                        val appbarState = topAppBarScrollBehavior.state
+                        val colors = TiebaLiteTheme.topAppBarColors
                         ThreadHeader(
-                            modifier = Modifier.stickyHeaderBackground(topAppBarScrollBehavior.state, lazyListState),
+                            modifier = Modifier.stickyHeaderBackground(appbarState, colors, lazyListState),
                             uiState = state,
                             viewModel = viewModel
                         )

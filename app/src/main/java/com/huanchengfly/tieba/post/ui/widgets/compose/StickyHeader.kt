@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.lazy.LazyListItemInfo
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarState
 import androidx.compose.runtime.Composable
@@ -16,7 +17,6 @@ import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.composed
 import androidx.compose.ui.draw.drawWithCache
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -24,7 +24,6 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.util.fastFirstOrNull
 import com.huanchengfly.tieba.post.LocalHabitSettings
 import com.huanchengfly.tieba.post.copy
-import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.theme.isTranslucent
 import kotlinx.coroutines.delay
 
@@ -72,15 +71,18 @@ fun PaddingValues.fixedTopBarPadding(topBarHeight: Dp = TopAppBarDefaults.TopApp
 /**
  * Workaround to apply TopAppBar background changes on StickyHeader.
  * */
-fun Modifier.stickyHeaderBackground(appBarState: TopAppBarState, listState: LazyListState) = composed {
-    val topAppBarColors = TiebaLiteTheme.topAppBarColors
-    drawWithCache {
+fun Modifier.stickyHeaderBackground(
+    appBarState: TopAppBarState,
+    colors: TopAppBarColors,
+    listState: LazyListState,
+): Modifier {
+    return this.drawWithCache {
         onDrawBehind {
             // double check, LazyListState#scrollToItem might cause buggy TopAppbarState
             val color = if (appBarState.overlappedFraction > 0.01f && listState.firstVisibleItemIndex > 0) {
-                topAppBarColors.scrolledContainerColor
+                colors.scrolledContainerColor
             } else {
-                topAppBarColors.containerColor
+                colors.containerColor
             }
             drawRect(color)
         }

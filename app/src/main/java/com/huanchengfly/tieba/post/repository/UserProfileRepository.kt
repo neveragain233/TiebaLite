@@ -5,6 +5,7 @@ import android.util.Log
 import com.huanchengfly.tieba.post.App.Companion.AppBackgroundScope
 import com.huanchengfly.tieba.post.api.booleanToInt
 import com.huanchengfly.tieba.post.api.models.FollowBean
+import com.huanchengfly.tieba.post.api.models.FollowListBean
 import com.huanchengfly.tieba.post.api.models.PermissionListBean
 import com.huanchengfly.tieba.post.api.models.protos.Anti
 import com.huanchengfly.tieba.post.api.models.protos.PostInfoList
@@ -123,10 +124,29 @@ class UserProfileRepository @Inject constructor(
         }.await()
     }
 
+    suspend fun loadUserFollowList(uid: Long, page: Int = 1): FollowListBean {
+        val start = System.currentTimeMillis()
+        val result = networkDataSource.loadUserFollowList(uid, page)
+        val cost = System.currentTimeMillis() - start
+        Log.i(TAG, "onloadUserFollowList: Done, cost ${cost}ms for page $page, size: ${result.followList.size}")
+        return result
+    }
+
+    suspend fun requestFollowUser(uid: Long, portrait: String): FollowBean.Info {
+        val result = networkDataSource.requestFollowUser(portrait, tbs = requireTBS())
+        userProfileDao.updateLastUpdate(uid, timestamp = 0) // Invalidate user cache
+        return result
+    }
+
     suspend fun requestFollowUser(profile: UserProfile): FollowBean.Info {
         val result = networkDataSource.requestFollowUser(portrait = profile.portrait, tbs = requireTBS())
         userProfileDao.updateFollowState(uid = profile.uid, following = true, fans = profile.fans + 1)
         return result
+    }
+
+    suspend fun requestUnfollowUser(uid: Long, portrait: String) {
+        networkDataSource.requestUnfollowUser(portrait, tbs = requireTBS())
+        userProfileDao.updateLastUpdate(uid, timestamp = 0) // Invalidate user cache
     }
 
     suspend fun requestUnfollowUser(profile: UserProfile) {

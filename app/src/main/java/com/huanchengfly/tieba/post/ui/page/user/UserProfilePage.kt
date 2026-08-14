@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
@@ -114,6 +115,7 @@ import com.huanchengfly.tieba.post.ui.common.LocalSharedTransitionScope
 import com.huanchengfly.tieba.post.ui.common.animateEnterExit
 import com.huanchengfly.tieba.post.ui.common.theme.compose.block
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
+import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isLooseWindowWidth
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowHeightCompact
@@ -155,7 +157,6 @@ import com.huanchengfly.tieba.post.utils.LocalAccount
 import com.huanchengfly.tieba.post.utils.StringUtil
 import com.huanchengfly.tieba.post.utils.StringUtil.getShortNumString
 import com.huanchengfly.tieba.post.utils.TiebaUtil
-import kotlinx.collections.immutable.persistentListOf
 import kotlinx.coroutines.launch
 import kotlin.math.abs
 
@@ -297,6 +298,9 @@ fun UserProfilePage(
         val onAppealClicked: (() -> Unit)? = {
             navigator.navigate(Destination.WebView("https://c.tieba.baidu.com/mo/q/userappeal"))
         }.takeIf { isSelf }
+        val onNavigateFollowList: () -> Unit = {
+            navigator.navigate(Destination.UserFollowList(uid))
+        }
 
         val permList = uiState.permList
         val permissionDialogState = rememberDialogState()
@@ -383,6 +387,7 @@ fun UserProfilePage(
                     block = blockState,
                     onBlackListClicked = viewModel::onUserBlacklisted,
                     onWhiteListClicked = viewModel::onUserWhitelisted,
+                    onNavigateFollowList = onNavigateFollowList,
                     onSetUserBlack = if (permList != null) permissionDialogState::show else null,
                     onBack = onBack,
                     scrollBehavior = scrollBehavior,
@@ -416,7 +421,8 @@ fun UserProfilePage(
                                 profile = userProfile,
                                 block = blockState,
                                 transitionKey = transitionKey,
-                                landscape = true
+                                landscape = true,
+                                onNavigateFollowList = onNavigateFollowList,
                             )
 
                             Spacer(modifier = Modifier.height(8.dp))
@@ -450,6 +456,7 @@ private fun UserProfileTopAppBar(
     onRefreshClicked: () -> Unit = {},
     onBlackListClicked: () -> Unit = {},
     onWhiteListClicked: () -> Unit = {},
+    onNavigateFollowList: () -> Unit = {},
     onSetUserBlack: (() -> Unit)? = null,
     onBack: () -> Unit = {},
     scrollBehavior: TopAppBarScrollBehavior,
@@ -521,7 +528,7 @@ private fun UserProfileTopAppBar(
                 Nickname(modifier = titleModifier, nickname, transitionKey, block)
             },
             subtitle = {
-                UserProfileDetail(titleModifier, profile, block, transitionKey, landscape = false)
+                UserProfileDetail(titleModifier, profile, block, transitionKey, landscape = false, onNavigateFollowList)
             },
             navigationIcon = navIcon,
             actions = actionsMenu,
@@ -716,17 +723,18 @@ private fun UserProfileDetail(
     profile: UserProfile,
     block: UserBlockState = UserBlockState.None,
     transitionKey: String? = null,
-    landscape: Boolean
+    landscape: Boolean,
+    onNavigateFollowList: () -> Unit = {},
 ) {
     val isWindowHeightCompact = isWindowHeightCompact()
     val context = LocalContext.current
 
-    val userStats = remember(profile) {
-        persistentListOf(
-            context.getString(R.string.text_stat_follow) to profile.follow.getShortNumString(), // 关注
-            context.getString(R.string.text_stat_fans) to profile.fans.getShortNumString(),     // 粉丝
-            context.getString(R.string.text_stat_agrees) to profile.agree.getShortNumString(),  // 赞
-            context.getString(R.string.text_stat_tbage) to context.getString(R.string.text_profile_tb_age, profile.tbAge), // 吧龄
+    val userStats = remember {
+        listOf(
+            R.string.text_stat_follow to profile.follow.getShortNumString(), // 关注
+            R.string.text_stat_fans to profile.fans.getShortNumString(),     // 粉丝
+            R.string.text_stat_agrees to profile.agree.getShortNumString(),  // 赞
+            R.string.text_stat_tbage to context.getString(R.string.text_profile_tb_age, profile.tbAge), // 吧龄
         )
     }
 
@@ -773,8 +781,14 @@ private fun UserProfileDetail(
                         .clipToBounds()
                         .horizontalScroll(rememberScrollState())
                 ) {
-                    userStats.fastForEachIndexed { i, (title, number) ->
-                        StatText(title = title, num = number)
+                    userStats.fastForEachIndexed { i, (titleRes, number) ->
+                        StatText(
+                            modifier = Modifier.onCase(titleRes == R.string.text_stat_follow) {
+                                clickable(onClick = onNavigateFollowList)
+                            },
+                            title = stringResource(id = titleRes),
+                            num = number,
+                        )
                         if (i != userStats.lastIndex) {
                             VerticalDivider()
                         }
