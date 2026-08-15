@@ -9,6 +9,7 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.horizontalScroll
 import androidx.compose.foundation.interaction.MutableInteractionSource
@@ -999,7 +1000,7 @@ private fun StateScreenScope.LoadingScreen(
     }
 
     Column(
-        modifier = modifier.fillMaxSize()
+        modifier = modifier.fillMaxSize().background(MaterialTheme.colorScheme.background)
     ) {
         if (!landscapeLayout) {
             val titleModifier = Modifier.padding(start = 2.dp)

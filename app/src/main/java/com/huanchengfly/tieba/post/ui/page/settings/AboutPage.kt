@@ -131,7 +131,7 @@ fun AboutPage(
                         horizontalAlignment = Alignment.CenterHorizontally,
                     ) {
                         Text(text = "${BuildConfig.VERSION_NAME} (${BuildConfig.VERSION_CODE})")
-                        Text(text = "${BuildConfig.BUILD_TYPE}#${BuildConfig.BUILD_GIT}")
+                        Text(text = "${BuildConfig.BUILD_TYPE.uppercase()}#${BuildConfig.BUILD_GIT}")
                         Text(text = buildTime)
                     }
                 }

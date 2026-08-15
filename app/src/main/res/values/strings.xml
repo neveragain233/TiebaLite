@@ -89,7 +89,6 @@
     <string name="tips_message_at">有 %1$d 人提到了你</string>
     <string name="my_info_night">夜间</string>
     <string name="title_theme">主题选择</string>
-    <string name="title_unfollow">取消关注</string>
     <string name="tip_no_intro">这个人很懒，什么都没有写</string>
     <string name="toast_unlike_success">取消关注成功</string>
     <string name="toast_unlike_failed">取消关注失败 %1$s</string>

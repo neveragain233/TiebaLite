@@ -378,7 +378,7 @@ fun ForumPage(
                             }
 
                             if (loggedIn && forumData.liked) {
-                                TextMenuItem(text = R.string.title_unfollow, onClick = unlikeDialogState::show)
+                                TextMenuItem(text = R.string.button_unfollow, onClick = unlikeDialogState::show)
                             }
 
                             if (loggedIn && !forumSignFollowVisibility) {

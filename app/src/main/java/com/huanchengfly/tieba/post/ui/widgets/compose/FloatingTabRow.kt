@@ -33,7 +33,7 @@ import androidx.compose.ui.unit.dp
 @Composable
 fun FloatingTabRow(
     modifier: Modifier = Modifier,
-    color: Color = MaterialTheme.colorScheme.surfaceContainerHigh,
+    color: Color = MaterialTheme.colorScheme.surfaceBright,
     elevation: Dp = 6.dp,
     content: @Composable RowScope.() -> Unit
 ) {
