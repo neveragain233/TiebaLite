@@ -1,7 +1,6 @@
 package com.huanchengfly.tieba.post.ui.page.webview
 
 import android.annotation.SuppressLint
-import android.content.Intent
 import android.webkit.WebSettings
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.layout.Box
@@ -35,6 +34,7 @@ import androidx.compose.ui.unit.Dp
 import androidx.core.net.toUri
 import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.components.TbWebChromeClient
 import com.huanchengfly.tieba.post.components.TbWebViewClient
 import com.huanchengfly.tieba.post.components.TiebaWebView
@@ -42,6 +42,7 @@ import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.theme.createTopAppBarColors
 import com.huanchengfly.tieba.post.theme.isTranslucent
+import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.widgets.compose.AccompanistWebViewClient
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.ClickMenu
@@ -177,9 +178,10 @@ fun WebViewPage(initialUrl: String, customClient: Boolean, navigator: NavControl
                         }
 
                         TextMenuItem(text = R.string.title_open_in_browser) {
-                            runCatching {
-                                context.startActivity(Intent(Intent.ACTION_VIEW, webview.url!!.toUri()))
-                            }
+                            TiebaUtil.openInBrowser(context, webview.url)
+                                .onFailure {
+                                    context.toastShort(R.string.toast_exception, it.getErrorMessage())
+                                }
                         }
 
                         TextMenuItem(text = R.string.title_refresh, onClick = webViewNavigator::reload)

@@ -4,6 +4,7 @@ import android.content.ClipData
 import android.content.ClipDescription
 import android.content.ClipboardManager
 import android.content.Context
+import android.content.Intent
 import android.os.Build
 import android.os.PersistableBundle
 import androidx.core.net.toUri
@@ -19,6 +20,7 @@ import com.huanchengfly.tieba.post.components.dialogs.LoadingDialog
 import com.huanchengfly.tieba.post.di.RepositoryEntryPoint
 import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.page.Destination
+import com.huanchengfly.tieba.post.ui.page.webview.isTiebaHost
 import com.huanchengfly.tieba.post.utils.extension.toShareIntent
 import com.huanchengfly.tieba.post.workers.OKSignWorker
 import dagger.hilt.android.EntryPointAccessors
@@ -73,6 +75,19 @@ object TiebaUtil {
             .let { runCatching { context.startActivity(it) } }
 
         ClipBoardLinkDetector.onCopyTiebaLink(link)
+    }
+
+    fun openInBrowser(context: Context, url: String?): Result<Unit> = runCatching {
+        require(!url.isNullOrEmpty()) { "Empty URL!"}
+        val uri = url.toUri()
+        require(uri.scheme!!.startsWith("http")) { "Invalid URI scheme in $url" }
+        val isTiebaLink = isTiebaHost(uri.host!!)
+        val intent = if (isTiebaLink) {
+            uri.toShareIntent(context, "text/plain")
+        } else {
+            Intent(Intent.ACTION_VIEW, uri)
+        }
+        context.startActivity(intent)
     }
 
     suspend fun reportPost(
