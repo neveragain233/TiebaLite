@@ -1,5 +1,6 @@
 package com.huanchengfly.tieba.post.ui.page.user.followlist
 
+import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -16,10 +17,10 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.TipsAndUpdates
 import androidx.compose.material.icons.rounded.VerticalAlignTop
-import androidx.compose.material.icons.sharp.FilterList
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemElevation
@@ -30,7 +31,6 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
-import androidx.compose.material3.minimumInteractiveComponentSize
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -45,15 +45,18 @@ import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.fastForEach
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.arch.CommonUiEvent
-import com.huanchengfly.tieba.post.arch.collectPartialAsState
 import com.huanchengfly.tieba.post.arch.collectUiEventWithLifecycle
+import com.huanchengfly.tieba.post.plus
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
+import com.huanchengfly.tieba.post.ui.icons.PartnerHeart
+import com.huanchengfly.tieba.post.ui.icons.PersonHeart
 import com.huanchengfly.tieba.post.ui.models.user.ConcernType
 import com.huanchengfly.tieba.post.ui.models.user.FollowUser
 import com.huanchengfly.tieba.post.ui.page.Destination
@@ -63,23 +66,23 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.ClickMenu
 import com.huanchengfly.tieba.post.ui.widgets.compose.ConfirmDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogState
+import com.huanchengfly.tieba.post.ui.widgets.compose.FloatingTab
+import com.huanchengfly.tieba.post.ui.widgets.compose.FloatingTabRow
 import com.huanchengfly.tieba.post.ui.widgets.compose.MoreMenuItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.SwipeUpLazyLoadColumn
-import com.huanchengfly.tieba.post.ui.widgets.compose.preference.Options
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.SegmentedListItemColors
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberSnackbarHostState
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.stickyHeaderBackground
 import com.huanchengfly.tieba.post.utils.LocalAccount
-import kotlinx.collections.immutable.toPersistentMap
 import kotlin.random.Random
 
 private val FollowListFilter.contentDescription: Int
     get() = when (this) {
-        FollowListFilter.All -> R.string.filter_follow_all
+        FollowListFilter.All -> R.string.title_concern
         FollowListFilter.Mutual -> R.string.filter_follow_mutual
     }
 
@@ -97,11 +100,6 @@ fun FollowListPage(
     val lazyListState = rememberLazyListState()
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val snackbarHostState = rememberSnackbarHostState()
-
-    val filter by viewModel.uiState.collectPartialAsState(
-        prop1 = FollowListUiState::filter,
-        initial = FollowListFilter.All
-    )
 
     viewModel.uiEvent.collectUiEventWithLifecycle {
         val uiMessage = when (it) {
@@ -132,21 +130,19 @@ fun FollowListPage(
                 title = {
                     Text(text = stringResource(id = R.string.title_follow_list))
                 },
-                subtitle = {
-                    Text(text = stringResource(id = filter.contentDescription))
-                },
                 navigationIcon = { BackNavigationIcon(onBackPressed = navigator::navigateUp) },
                 actions = {
-                    if (showActions) {
-                        FilterActionButton(filter, onFilterChange = viewModel::onFilterChanged)
-                    }
                     ClickMenu(
                         menuContent = {
                             TextIconMenuItem(
                                 text = stringResource(R.string.btn_refresh),
-                                icon = Icons.Rounded.Refresh,
-                                onClick = viewModel::onRefresh
-                            )
+                                icon = Icons.Rounded.Refresh
+                            ) {
+                                lazyListState.requestScrollToItem(0)
+                                scrollBehavior.state.contentOffset = 0f
+                                viewModel.onRefresh()
+                            }
+
                             TextIconMenuItem(
                                 text = stringResource(R.string.btn_back_to_top),
                                 icon = Icons.Rounded.VerticalAlignTop,
@@ -167,6 +163,7 @@ fun FollowListPage(
         backgroundColor = MaterialTheme.colorScheme.background,
     ) { contentPaddings ->
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val filter = uiState.filter
         val filteredUsers by viewModel.filteredUsers.collectAsStateWithLifecycle()
 
         StateScreen(
@@ -181,7 +178,11 @@ fun FollowListPage(
                 tipsText = uiState.tipsText,
                 totalFollowNum = uiState.totalFollowNum,
                 modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-                contentPadding = contentPaddings,
+                contentPadding = if (showActions) {
+                    contentPaddings + PaddingValues(bottom = 72.dp) // Bottom padding for FollowListFilter
+                } else {
+                    contentPaddings + PaddingValues(bottom = 16.dp)
+                },
                 state = lazyListState,
                 scrollBehavior = scrollBehavior,
                 isLoading = {
@@ -201,36 +202,48 @@ fun FollowListPage(
                     }
                 }.takeIf { showActions }
             )
+
+            if (showActions) {
+                Box(modifier = Modifier.fillMaxSize(), contentAlignment = Alignment.BottomCenter) {
+                    FollowListFilter(
+                        modifier = Modifier.padding(contentPaddings),
+                        filter = filter,
+                        onFilterChange = viewModel::onFilterChanged,
+                    )
+                }
+            }
         }
     }
 }
 
 @Composable
-private fun FilterActionButton(
+private fun FollowListFilter(
     filter: FollowListFilter,
     onFilterChange: (FollowListFilter) -> Unit,
     modifier: Modifier = Modifier,
 ) {
-    ClickMenu(
-        menuContent = {
-            ListPickerMenuItems(
-                items = remember<Options<FollowListFilter>> {
-                    FollowListFilter.entries.associateWith { it.contentDescription }.toPersistentMap()
-                },
-                picked = filter,
-                onItemPicked = onFilterChange
-            )
-        },
-        modifier = modifier,
-        triggerShape = CircleShape,
+    val filters = remember {
+        listOf(
+            FollowListFilter.All to Icons.Rounded.PersonHeart,
+            FollowListFilter.Mutual to Icons.Rounded.PartnerHeart,
+        )
+    }
+    FloatingTabRow(
+        modifier = modifier.padding(bottom = FloatingToolbarDefaults.ScreenOffset / 2),
+        color = MaterialTheme.colorScheme.surfaceBright,
     ) {
-        Box(
-            modifier = Modifier.minimumInteractiveComponentSize(),
-            contentAlignment = Alignment.Center,
-        ) {
-            Icon(
-                imageVector = Icons.Sharp.FilterList,
-                contentDescription = stringResource(id = filter.contentDescription),
+        filters.fastForEach { (it, icon) ->
+            FloatingTab(
+                selected = filter === it,
+                onClick = {
+                    if (filter != it) onFilterChange(it)
+                },
+                icon = {
+                    AnimatedVisibility(visible = filter === it) {
+                        Icon(imageVector = icon, contentDescription = null)
+                    }
+                },
+                content = { Text(text = stringResource(id = it.contentDescription)) }
             )
         }
     }
