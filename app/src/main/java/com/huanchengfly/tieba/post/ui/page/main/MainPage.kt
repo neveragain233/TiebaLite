@@ -55,6 +55,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaul
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffold
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldState
+import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteScaffoldValue
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
@@ -76,7 +77,11 @@ import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
+import androidx.compose.ui.input.nestedscroll.NestedScrollSource
+import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Devices
@@ -233,10 +238,35 @@ fun MainPage(
     val hazeState = if (blurEffect) rememberTbHazeState() else null
     val navigationSuiteColors = mainNavigationSuiteColors(uiSettings.bottomNavFloating, blurEffect)
 
+    val scrollHideEnabled = uiSettings.bottomNavFloating && uiSettings.bottomNavHideOnScroll
+    val bottomNavScrollConnection = remember(scrollHideEnabled) {
+        if (!scrollHideEnabled) null
+        else object : NestedScrollConnection {
+            private val threshold = 15f
+
+            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+                val dy = available.y
+                if (dy < -threshold && scaffoldState.currentValue != NavigationSuiteScaffoldValue.Hidden) {
+                    scaffoldState.currentValue = NavigationSuiteScaffoldValue.Hidden
+                } else if (dy > threshold && scaffoldState.currentValue == NavigationSuiteScaffoldValue.Hidden) {
+                    scaffoldState.currentValue = NavigationSuiteScaffoldValue.Idle
+                }
+                return Offset.Zero
+            }
+        }
+    }
+
+    LaunchedEffect(scrollHideEnabled) {
+        if (!scrollHideEnabled && scaffoldState.currentValue == NavigationSuiteScaffoldValue.Hidden) {
+            scaffoldState.currentValue = NavigationSuiteScaffoldValue.Idle
+        }
+    }
+
     val currentDestination by nestedNavController.currentMainDestinationAsState(destinations)
     MainNavigationSuiteScaffold(
         state = scaffoldState,
         hazeState = hazeState.takeIf { navigationSuiteType.isNavigationBar },
+        scrollConnection = bottomNavScrollConnection,
         navigationItems = {
             val messageCount by vm.messageCountFlow.collectAsStateWithLifecycle()
 
@@ -244,6 +274,9 @@ fun MainPage(
                 items = destinations,
                 isSelected = { dest -> dest === currentDestination },
                 onSelect = { dest ->
+                    if (scaffoldState.currentValue == NavigationSuiteScaffoldValue.Hidden) {
+                        scaffoldState.currentValue = NavigationSuiteScaffoldValue.Idle
+                    }
                     nestedNavController.navigate(route = dest) {
                         launchSingleTop = true
                         restoreState = true
@@ -254,6 +287,9 @@ fun MainPage(
                     if (dest == MainDestination.Notification) vm.onNavigateNotification()
                 },
                 onReSelect = { dest ->
+                    if (scaffoldState.currentValue == NavigationSuiteScaffoldValue.Hidden) {
+                        scaffoldState.currentValue = NavigationSuiteScaffoldValue.Idle
+                    }
                     coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(dest))
                 },
                 mainNavigationSuiteType = navigationSuiteType,
@@ -368,6 +404,7 @@ private fun MainNavigationSuiteScaffold(
     navigationSuiteColors: NavigationSuiteColors = NavigationSuiteDefaults.colors(),
     navigationVerticalArrangement: Arrangement.Vertical = NavigationSuiteDefaults.verticalArrangement,
     state: NavigationSuiteScaffoldState = rememberNavigationSuiteScaffoldState(),
+    scrollConnection: NestedScrollConnection? = null,
     primaryActionContent: @Composable (() -> Unit) = {},
     primaryActionContentHorizontalAlignment: Alignment.Horizontal =
         NavigationSuiteScaffoldDefaults.primaryActionContentAlignment,
@@ -414,11 +451,13 @@ private fun MainNavigationSuiteScaffold(
         primaryActionContentHorizontalAlignment = primaryActionContentHorizontalAlignment,
         content = {
             Box(
-                Modifier.navigationSuiteScaffoldConsumeWindowInsets(
-                    navigationSuiteType,
-                    navigationBarAtop,
-                    state,
-                ),
+                Modifier
+                    .onNotNull(scrollConnection) { nestedScroll(it) }
+                    .navigationSuiteScaffoldConsumeWindowInsets(
+                        navigationSuiteType,
+                        navigationBarAtop,
+                        state,
+                    ),
             ) {
                 content()
             }

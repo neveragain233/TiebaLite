@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.FontDownload
 import androidx.compose.material.icons.outlined.House
 import androidx.compose.material.icons.outlined.Houseboat
 import androidx.compose.material.icons.outlined.NightsStay
+import androidx.compose.material.icons.outlined.SwipeVertical
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.material.icons.outlined.WatchLater
@@ -149,6 +150,14 @@ fun UISettingsPage(
                 } else  {
                     Icons.Outlined.House
                 }
+            )
+
+            toggleablePreference(
+                property = UISettings::bottomNavHideOnScroll,
+                title = R.string.settings_nav_hide_on_scroll,
+                summary = R.string.summary_nav_hide_on_scroll,
+                enabled = currentPreference.bottomNavFloating,
+                leadingIcon = Icons.Outlined.SwipeVertical,
             )
 
             listPref(
