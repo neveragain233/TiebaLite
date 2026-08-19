@@ -6,5 +6,8 @@
 
         <!-- Misc stuff -->
         <cache-path name="misc" path="misc" />
+
+        <!-- Update APK -->
+        <external-files-path name="updateApk" path="downloads/apk/" />
     </paths>
 </resource>
