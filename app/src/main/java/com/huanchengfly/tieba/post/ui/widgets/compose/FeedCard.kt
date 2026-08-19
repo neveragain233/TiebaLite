@@ -466,7 +466,7 @@ fun ThreadMedia(
 }
 
 @Composable
-private fun LongPicChip(modifier: Modifier = Modifier) {
+internal fun LongPicChip(modifier: Modifier = Modifier) {
     Box(
         modifier = modifier
             .background(

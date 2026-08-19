@@ -66,6 +66,7 @@ import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.models.protos.PollOption
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
+import com.huanchengfly.tieba.post.ui.common.PostContentRenders
 import com.huanchengfly.tieba.post.ui.widgets.compose.PbContentText
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
@@ -700,7 +701,7 @@ fun PostCard(
                             )
                         }
 
-                        post.contentRenders.fastForEach { it.Render() }
+                        PostContentRenders(contentRenders = post.contentRenders)
                     }
 
                     if (post.subPosts == null || post.subPostNumber <= 0 || immersiveMode) return@Card

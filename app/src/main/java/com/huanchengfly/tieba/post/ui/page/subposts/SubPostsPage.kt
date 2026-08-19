@@ -63,6 +63,7 @@ import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.common.FadedVisibility
 import com.huanchengfly.tieba.post.ui.common.LocalAnimatedVisibilityScope
+import com.huanchengfly.tieba.post.ui.common.PostContentRenders
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.PostData
 import com.huanchengfly.tieba.post.ui.models.SubPostItemData
@@ -77,6 +78,7 @@ import com.huanchengfly.tieba.post.ui.page.ProvideNavigator
 import com.huanchengfly.tieba.post.ui.page.thread.PostCard
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadLikeUiEvent
 import com.huanchengfly.tieba.post.ui.utils.rememberScrollOrientationConnection
+import com.huanchengfly.tieba.post.ui.utils.getPhotoViewData
 import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockTip
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockableContent
@@ -360,6 +362,10 @@ private fun SubPostsContent(
                 items(items = uiState.subPosts, key = { subPost -> subPost.id }) { item ->
                     SubPostItem(
                         item = item,
+                        forumId = forumId,
+                        forumName = forumName.orEmpty(),
+                        threadId = threadId,
+                        postId = postId,
                         onUserClick = {
                             navigator.navigateDebounced(
                                 route = UserProfile(user = it, transitionKey = item.id.toString())
@@ -457,6 +463,10 @@ private fun SubpostsFAB(
 @Composable
 private fun SubPostItem(
     item: SubPostItemData,
+    forumId: Long,
+    forumName: String,
+    threadId: Long,
+    postId: Long,
     onUserClick: (UserData) -> Unit = {},
     onAgree: (SubPostItemData) -> Unit = {},
     onMenuReplyClick: ((SubPostItemData) -> Unit)?,
@@ -518,7 +528,19 @@ private fun SubPostItem(
                     .fillMaxWidth()
                     .padding(start = 44.dp, top = 8.dp)
             ) {
-                item.content!!.fastForEach { it.Render() }
+                PostContentRenders(
+                    contentRenders = item.content!!,
+                    photoViewDataProvider = { pics, index ->
+                        pics[index].photoViewData ?: getPhotoViewData(
+                            forumId = forumId,
+                            forumName = forumName,
+                            threadId = threadId,
+                            postId = postId,
+                            pics = pics,
+                            index = index,
+                        )
+                    },
+                )
             }
         }
     }

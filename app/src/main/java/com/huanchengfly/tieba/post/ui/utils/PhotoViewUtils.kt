@@ -39,6 +39,64 @@ fun getPhotoViewData(
     )
 }
 
+/**
+ * 构建帖子全部图片的图集数据, 用于正文/楼层多图网格点击进入查看器.
+ */
+fun getPhotoViewData(
+    post: Post,
+    pics: List<PicContentRender>,
+    index: Int,
+    seeLz: Boolean = false
+): PhotoViewData? {
+    if (post.from_forum == null) return null
+    return getPhotoViewData(
+        forumId = post.from_forum.id,
+        forumName = post.from_forum.name,
+        threadId = post.tid,
+        postId = post.id,
+        pics = pics,
+        index = index,
+        seeLz = seeLz,
+    )
+}
+
+/**
+ * 构建图集数据, 供 SubPostsPage 等没有 Proto Post 上下文的场景使用.
+ */
+fun getPhotoViewData(
+    forumId: Long,
+    forumName: String,
+    threadId: Long,
+    postId: Long,
+    pics: List<PicContentRender>,
+    index: Int,
+    seeLz: Boolean = false,
+): PhotoViewData {
+    val content = pics[index]
+    return PhotoViewData(
+        data = LoadPicPageData(
+            forumId = forumId,
+            forumName = forumName,
+            threadId = threadId,
+            postId = postId,
+            seeLz = seeLz,
+            objType = "pb",
+            picId = content.picId,
+            picIndex = index + 1,
+            originUrl = content.originUrl,
+        ),
+        picItems = pics.mapIndexed { picIndex, pic ->
+            PicItem(
+                picId = pic.picId,
+                picIndex = picIndex + 1,
+                originUrl = pic.originUrl,
+                postId = postId,
+            )
+        }.toImmutableList(),
+        index = index,
+    )
+}
+
 fun getPhotoViewData(
     medias: List<Media>,
     forumId: Long,

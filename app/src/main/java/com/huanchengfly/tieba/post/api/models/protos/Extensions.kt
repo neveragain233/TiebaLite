@@ -279,12 +279,17 @@ fun List<PbContent>.buildRenders(imageLoadType: Int): ImmutableList<PbContentRen
 
 @WorkerThread
 fun Post.buildContentRenders(imageLoadType: Int): List<PbContentRender> {
-    return content.buildRenders(imageLoadType)
-        .map {
-            if (it is PicContentRender) {
-                it.copy(photoViewData = getPhotoViewData(post = this, it))
-            } else it
+    val renders = content.buildRenders(imageLoadType)
+    // 帖子全部图片, 用于构建整贴图集, 多图网格点击可直接浏览全部图片
+    val pics = renders.filterIsInstance<PicContentRender>()
+    var picIndex = 0
+    return renders.map { render ->
+        if (render is PicContentRender) {
+            render.copy(photoViewData = getPhotoViewData(post = this, pics = pics, index = picIndex++))
+        } else {
+            render
         }
+    }
 }
 
 fun VideoInfo.aspectRatio(): Float = thumbnailWidth.toFloat() / thumbnailHeight
