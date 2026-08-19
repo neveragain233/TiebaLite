@@ -122,6 +122,7 @@ import com.huanchengfly.tieba.post.ui.common.LocalSharedTransitionScope
 import com.huanchengfly.tieba.post.ui.common.animateEnterExit
 import com.huanchengfly.tieba.post.ui.common.defaultVerticalEnterTransition
 import com.huanchengfly.tieba.post.ui.common.defaultVerticalExitTransition
+import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.common.theme.compose.withNonNull
@@ -226,7 +227,10 @@ fun MainPage(
     val scaffoldState = rememberNavigationSuiteScaffoldState()
     val uiSettings = LocalUISettings.current
     val windowAdaptiveInfo = LocalWindowAdaptiveInfo.current
-    val navigationSuiteType = calculateMainNavigationSuiteType()
+    val mainNavState = LocalMainNavState.current
+    // 非紧凑窗口下主导航由应用级常驻侧栏承担, MainPage 自身不再渲染导航套件
+    val navigationSuiteType =
+        if (isWindowWidthCompact()) calculateMainNavigationSuiteType() else MainNavigationSuiteType.None
 
     val loggedIn = LocalAccount.current != null
     val destinations = remember(loggedIn, uiSettings.hideExplore) {
@@ -244,6 +248,26 @@ fun MainPage(
 
     val currentDestinationState = nestedNavController.currentMainDestinationAsState(destinations)
     val currentDestination by currentDestinationState
+
+    // 侧栏点击: 切换嵌套导航到目标 tab
+    LaunchedEffect(mainNavState.requestedTab) {
+        mainNavState.requestedTab?.let { dest ->
+            mainNavState.requestedTab = null
+            nestedNavController.navigate(route = dest) {
+                launchSingleTop = true
+                restoreState = true
+                popUpTo(route = startDestination) {
+                    saveState = true
+                }
+            }
+            if (dest == MainDestination.Notification) vm.onNavigateNotification()
+        }
+    }
+
+    // 向侧栏上报当前 tab, 用于高亮
+    LaunchedEffect(currentDestination) {
+        mainNavState.currentTab = currentDestination
+    }
 
     val scrollHideEnabled = navigationSuiteType.isFloatingNavigationBar && uiSettings.bottomNavHideOnScroll
     val scrollHideThreshold = with(LocalDensity.current) { 24.dp.toPx() }

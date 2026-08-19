@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Surface
@@ -28,9 +29,11 @@ import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -41,6 +44,8 @@ import androidx.lifecycle.lifecycleScope
 import androidx.navigation.NavController
 import androidx.navigation.NavDeepLinkRequest
 import androidx.navigation.NavOptions
+import androidx.navigation.NavDestination.Companion.hasRoute
+import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import com.huanchengfly.tieba.post.MacrobenchmarkConstant.EXTRA_REDUCE_EFFECT
 import com.huanchengfly.tieba.post.MacrobenchmarkConstant.EXTRA_WELCOME_SETUP
@@ -55,9 +60,14 @@ import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.common.LocalPbInlineContentCache
 import com.huanchengfly.tieba.post.ui.common.PbInlineContentCache.Companion.rememberPbInlineContentCache
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
+import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.page.Destination
+import com.huanchengfly.tieba.post.ui.page.main.AppLevelNavigationRail
+import com.huanchengfly.tieba.post.ui.page.main.AppLevelRailWidth
+import com.huanchengfly.tieba.post.ui.page.main.LocalMainNavState
+import com.huanchengfly.tieba.post.ui.page.main.MainNavState
 import com.huanchengfly.tieba.post.ui.page.RootNavGraph
 import com.huanchengfly.tieba.post.ui.page.TB_LITE_DOMAIN
 import com.huanchengfly.tieba.post.ui.page.settings.theme.TranslucentThemeBackground
@@ -198,13 +208,43 @@ class MainActivityV2 : BaseComposeActivity() {
                     intent.data = null
                 }
 
-                RootNavGraph(
-                    // bottomSheetNavigator = bottomSheetNavigator,
-                    navController = navController,
-                    reduceMotion = reduceMotion,
-                    settingsRepo = viewModel.settingsRepository,
-                    startDestination = if (setupFinished) Destination.Main else Destination.Welcome
-                )
+                val mainNavState = remember { MainNavState() }
+                val isCompact = isWindowWidthCompact()
+                val currentRootEntry by navController.currentBackStackEntryAsState()
+                val showAppLevelRail =
+                    !isCompact && currentRootEntry?.destination?.hasRoute<Destination.Welcome>() != true
+
+                CompositionLocalProvider(LocalMainNavState provides mainNavState) {
+                    Box(modifier = Modifier.fillMaxSize()) {
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .padding(start = if (showAppLevelRail) AppLevelRailWidth else 0.dp)
+                        ) {
+                            RootNavGraph(
+                                // bottomSheetNavigator = bottomSheetNavigator,
+                                navController = navController,
+                                reduceMotion = reduceMotion,
+                                settingsRepo = viewModel.settingsRepository,
+                                startDestination = if (setupFinished) Destination.Main else Destination.Welcome
+                            )
+                        }
+                        if (showAppLevelRail) {
+                            AppLevelNavigationRail(
+                                modifier = Modifier
+                                    .align(Alignment.CenterStart)
+                                    .width(AppLevelRailWidth),
+                                onSelect = { _ ->
+                                    navController.navigate(Destination.Main) {
+                                        popUpTo<Destination.Main>()
+                                        launchSingleTop = true
+                                    }
+                                },
+                                onLoginClick = { navController.navigate(Destination.Login) },
+                            )
+                        }
+                    }
+                }
             }
         }
     }
