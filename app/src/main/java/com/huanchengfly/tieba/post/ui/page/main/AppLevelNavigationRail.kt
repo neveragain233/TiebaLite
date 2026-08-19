@@ -40,6 +40,8 @@ fun AppLevelNavigationRail(
     )
 
     NavigationRail(modifier = modifier.fillMaxHeight()) {
+        // 顶部占位使图标组垂直居中, 与根页面 Rail 一致
+        Spacer(modifier = Modifier.weight(1f))
         destinations.forEach { destination ->
             val selected = destination === mainNavState.currentTab
             NavigationRailItem(

@@ -229,8 +229,11 @@ fun MainPage(
     val windowAdaptiveInfo = LocalWindowAdaptiveInfo.current
     val mainNavState = LocalMainNavState.current
     // 非紧凑窗口下主导航由应用级常驻侧栏承担, MainPage 自身不再渲染导航套件
-    val navigationSuiteType =
-        if (isWindowWidthCompact()) calculateMainNavigationSuiteType() else MainNavigationSuiteType.None
+    val navigationSuiteType = when {
+        !isWindowWidthCompact() -> MainNavigationSuiteType.None
+        mainNavState.paneDetailOpen -> MainNavigationSuiteType.None
+        else -> calculateMainNavigationSuiteType()
+    }
 
     val loggedIn = LocalAccount.current != null
     val destinations = remember(loggedIn, uiSettings.hideExplore) {

@@ -16,6 +16,9 @@ class MainNavState {
 
     /** 侧栏请求切换的 tab, MainPage 消费后清空 */
     var requestedTab by mutableStateOf<MainDestination?>(null)
+
+    /** 双栏面板的详情是否处于打开状态, 折叠后用于隐藏底栏避免遮挡 */
+    var paneDetailOpen by mutableStateOf(false)
 }
 
 val LocalMainNavState = staticCompositionLocalOf<MainNavState> { error("No MainNavState provided!") }

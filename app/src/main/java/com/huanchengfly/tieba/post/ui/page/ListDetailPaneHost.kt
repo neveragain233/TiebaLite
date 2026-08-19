@@ -11,6 +11,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -36,6 +37,7 @@ import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadPage
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadViewModel
+import com.huanchengfly.tieba.post.ui.page.main.LocalMainNavState
 import androidx.window.core.layout.WindowSizeClass
 import kotlinx.serialization.Serializable
 
@@ -80,6 +82,15 @@ fun ListDetailPaneHost(
     var detailExpanded by rememberSaveable { mutableStateOf(false) }
     // 大屏下是否处于分屏布局: 已有选中帖子, 或设置了进入即分屏
     val showSplit = !isCompact && (isDetailShowing || startSplit)
+
+    // 折叠到紧凑宽度后, 面板详情全屏展示时通知 MainPage 隐藏底栏, 避免遮挡回复框
+    val mainNavState = LocalMainNavState.current
+    LaunchedEffect(isDetailShowing) {
+        mainNavState.paneDetailOpen = isDetailShowing
+    }
+    DisposableEffect(Unit) {
+        onDispose { mainNavState.paneDetailOpen = false }
+    }
 
     // 从详情进入新吧时预置当前帖子: 仅首次组合且详情尚未恢复时执行
     LaunchedEffect(Unit) {
