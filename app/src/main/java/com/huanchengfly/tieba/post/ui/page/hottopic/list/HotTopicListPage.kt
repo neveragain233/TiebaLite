@@ -48,6 +48,7 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.BebasFamily
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.main.explore.hot.TopicTag
 import com.huanchengfly.tieba.post.ui.utils.rememberScrollOrientationConnection
+import com.huanchengfly.tieba.post.ui.utils.backToTopFabPosition
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlurScaffold
 import com.huanchengfly.tieba.post.ui.widgets.compose.CenterAlignedTopAppBar
@@ -172,6 +173,7 @@ private fun HotTopicList(
                     scrollBehavior = scrollBehavior
                 )
             },
+            floatingActionButtonPosition = backToTopFabPosition(),
             floatingActionButton = {
                 val fabVisible by remember {
                     derivedStateOf { lazyListState.canScrollBackward && scrollOrientationConnection.isScrollingForward }

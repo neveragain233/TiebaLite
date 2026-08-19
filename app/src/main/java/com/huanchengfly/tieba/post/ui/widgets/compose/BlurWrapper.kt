@@ -28,11 +28,13 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.unit.dp
+import com.huanchengfly.tieba.post.LocalRealWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.theme.ExtendedColorScheme
 import com.huanchengfly.tieba.post.theme.LocalExtendedColorScheme
 import com.huanchengfly.tieba.post.theme.isTranslucent
 import com.huanchengfly.tieba.post.ui.common.theme.compose.withNonNull
+import com.huanchengfly.tieba.post.ui.utils.calculateNavigationType
 import com.huanchengfly.tieba.post.utils.DisplayUtil.GESTURE_3BUTTON
 import com.huanchengfly.tieba.post.utils.DisplayUtil.GESTURE_DEFAULT
 import com.huanchengfly.tieba.post.utils.DisplayUtil.GESTURE_NONE
@@ -90,27 +92,31 @@ fun rememberTbHazeState(): TbHazeState {
  * Placeholder to make [Scaffold] consume [WindowInsets.Companion.navigationBars]
  * */
 val BlurNavigationBarPlaceHolder: @Composable () -> Unit = {
-    val navBarInsets = WindowInsets.navigationBars
-    when(navBarInsets.gestureType(LocalDensity.current)) {
-        // 全面屏手势: 透明背景
-        GESTURE_DEFAULT -> Spacer(modifier = Modifier.windowInsetsBottomHeight(navBarInsets))
+    // 内屏沉浸式: 不预留底部占位, 页面背景延伸至手势条区域
+    val isCompactWindow = calculateNavigationType(LocalRealWindowAdaptiveInfo.current).isNavigationBar
+    if (isCompactWindow) {
+        val navBarInsets = WindowInsets.navigationBars
+        when(navBarInsets.gestureType(LocalDensity.current)) {
+            // 全面屏手势: 透明背景
+            GESTURE_DEFAULT -> Spacer(modifier = Modifier.windowInsetsBottomHeight(navBarInsets))
 
-        // 三大金刚: 背景和模糊滤镜
-        GESTURE_3BUTTON ->  {
-            val trackedColorScheme by ThemeUtil.colorState
-            Spacer(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .windowInsetsBottomHeight(insets = navBarInsets)
-                    .withNonNull(LocalHazeState.current) {
-                        Modifier.hazeEffect(state, style = hazeStyle)
-                    }
-                    .background(color = trackedColorScheme.navigationContainer)
-            )
+            // 三大金刚: 背景和模糊滤镜
+            GESTURE_3BUTTON ->  {
+                val trackedColorScheme by ThemeUtil.colorState
+                Spacer(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .windowInsetsBottomHeight(insets = navBarInsets)
+                        .withNonNull(LocalHazeState.current) {
+                            Modifier.hazeEffect(state, style = hazeStyle)
+                        }
+                        .background(color = trackedColorScheme.navigationContainer)
+                )
+            }
+
+            // 实体按键:
+            GESTURE_NONE -> { /* Empty */ }
         }
-
-        // 实体按键:
-        GESTURE_NONE -> { /* Empty */ }
     }
 }
 

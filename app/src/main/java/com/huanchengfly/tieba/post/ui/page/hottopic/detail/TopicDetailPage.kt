@@ -50,6 +50,7 @@ import com.huanchengfly.tieba.post.ui.page.main.explore.createThreadClickListene
 import com.huanchengfly.tieba.post.ui.page.main.explore.personalized.ThreadBlockedTip
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadLikeUiEvent
 import com.huanchengfly.tieba.post.ui.utils.rememberScrollOrientationConnection
+import com.huanchengfly.tieba.post.ui.utils.backToTopFabPosition
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockableContent
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlurScaffold
@@ -119,7 +120,8 @@ fun TopicDetailPage(
                     scrollBehavior = scrollBehavior
                 )
             },
-            floatingActionButton = {
+        floatingActionButtonPosition = backToTopFabPosition(),
+        floatingActionButton = {
                 val fabVisible by remember {
                     derivedStateOf { lazyListState.canScrollBackward && scrollOrientationConnection.isScrollingForward }
                 }

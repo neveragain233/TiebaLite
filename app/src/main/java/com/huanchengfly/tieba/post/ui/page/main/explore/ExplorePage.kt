@@ -71,6 +71,7 @@ import com.huanchengfly.tieba.post.ui.page.thread.ThreadLikeUiEvent
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadResult
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadResultKey
 import com.huanchengfly.tieba.post.ui.utils.rememberScrollOrientationConnection
+import com.huanchengfly.tieba.post.ui.utils.backToTopFabPosition
 import com.huanchengfly.tieba.post.ui.widgets.compose.AccountNavIconIfCompact
 import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.Container
@@ -263,7 +264,7 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
                     coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
                 }
             },
-            floatingActionButtonPosition = if (isFloatingNavBarCompat) FabPosition.EndOverlay else FabPosition.End,
+            floatingActionButtonPosition = if (isFloatingNavBarCompat) FabPosition.EndOverlay else backToTopFabPosition(),
         ) { contentPadding ->
             Container(
                 modifier = Modifier.onNotNull(hazeState) { hazeSource(state = it.state) }

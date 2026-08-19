@@ -194,9 +194,8 @@ val bottomNavigationPlaceholder: @Composable () -> Unit = {
                     }
                 )
         )
-    } else {
-        Spacer(modifier = Modifier.windowInsetsBottomHeight(WindowInsets.navigationBars))
     }
+    // 内屏沉浸式: 不预留底部占位, 页面背景延伸至手势条区域
 }
 
 /**

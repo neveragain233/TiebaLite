@@ -1,6 +1,7 @@
 package com.huanchengfly.tieba.post.arch
 
 import android.content.res.Configuration
+import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
@@ -35,6 +36,11 @@ abstract class BaseComposeActivity : BaseActivity() {
                 LaunchedEffect(colorScheme) {
                     windowInsetsController.setAppearanceLightStatusBars(ThemeUtil.isStatusBarFontDark(colorScheme))
                     windowInsetsController.setAppearanceLightNavigationBars(window, colorScheme)
+                    // 关闭导航条对比度遮罩, 让内容真正沉浸到手势条区域,
+                    // 避免浅色主题下出现白色半透明条
+                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+                        window.isNavigationBarContrastEnforced = false
+                    }
                 }
             }
             Content()

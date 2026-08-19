@@ -72,6 +72,7 @@ import com.huanchengfly.tieba.post.models.database.ForumHistory
 import com.huanchengfly.tieba.post.models.database.History
 import com.huanchengfly.tieba.post.models.database.ThreadHistory
 import com.huanchengfly.tieba.post.navigateDebounced
+import com.huanchengfly.tieba.post.ui.utils.backToTopFabPosition
 import com.huanchengfly.tieba.post.plus
 import com.huanchengfly.tieba.post.repository.UserHistory
 import com.huanchengfly.tieba.post.theme.ProvideContentColorTextStyle
@@ -243,6 +244,7 @@ fun HistoryPage(
             )
         },
         snackbarHostState = snackbarHostState,
+        floatingActionButtonPosition = backToTopFabPosition(),
         floatingActionButton = {
             val visible by remember {
                 derivedStateOf { !pagerState.isScrolling && listStates[pagerState.currentPage].canScrollBackward }

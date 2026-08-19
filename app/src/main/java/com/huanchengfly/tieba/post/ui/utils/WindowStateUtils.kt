@@ -1,10 +1,14 @@
 package com.huanchengfly.tieba.post.ui.utils
 
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.ReadOnlyComposable
 import androidx.window.core.layout.WindowSizeClass
+import com.huanchengfly.tieba.post.LocalRealWindowAdaptiveInfo
 
 /**
  * Content inside Navigation Rail/Drawer can also be positioned at top, bottom or center for
@@ -38,5 +42,19 @@ fun calculateNavigationType(adaptiveInfo: WindowAdaptiveInfo): NavigationSuiteTy
         }
 
         else -> NavigationSuiteType.NavigationBar
+    }
+}
+
+/**
+ * 回顶 FAB 的位置: 内屏(>=600dp)放在左下贴近常驻侧栏, 手机保持右下.
+ */
+@Composable
+@ReadOnlyComposable
+fun backToTopFabPosition(): FabPosition {
+    val adaptiveInfo = LocalRealWindowAdaptiveInfo.current
+    return if (adaptiveInfo.windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND)) {
+        FabPosition.Start
+    } else {
+        FabPosition.End
     }
 }

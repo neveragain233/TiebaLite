@@ -42,6 +42,7 @@ import com.huanchengfly.tieba.post.ui.page.main.bottomNavigationPlaceholder
 import com.huanchengfly.tieba.post.ui.page.main.calculateMainNavigationSuiteType
 import com.huanchengfly.tieba.post.ui.page.main.notifications.list.NotificationsListPage
 import com.huanchengfly.tieba.post.ui.page.main.notifications.list.NotificationsType
+import com.huanchengfly.tieba.post.ui.utils.backToTopFabPosition
 import com.huanchengfly.tieba.post.ui.widgets.compose.AccountNavIconIfCompact
 import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
@@ -124,7 +125,7 @@ fun NotificationsPage(
                     coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Notification))
                 }
             },
-            floatingActionButtonPosition = FabPosition.End,
+        floatingActionButtonPosition = backToTopFabPosition(),
         ) { contentPadding ->
             ProvideNavigator(navigator = navigator) {
                 HorizontalPager(
