@@ -49,6 +49,7 @@ import androidx.compose.material3.ShortNavigationBarItemDefaults
 import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.TopAppBarState
+import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuite
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteColors
 import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteDefaults
@@ -110,6 +111,7 @@ import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.rememberNavController
 import androidx.window.embedding.SplitAttributes.LayoutDirection
 import com.huanchengfly.tieba.post.LocalUISettings
+import com.huanchengfly.tieba.post.LocalRealWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.arch.GlobalEvent
@@ -170,7 +172,9 @@ val MainDestination.iconRes: Int
     }
 
 val bottomNavigationPlaceholder: @Composable () -> Unit = {
-    val navigationSuiteType = calculateMainNavigationSuiteType()
+    // 使用真实窗口信息: 面板内 LocalWindowAdaptiveInfo 被覆盖为紧凑宽度,
+    // 会导致内屏上误判为底部导航而预留过高占位
+    val navigationSuiteType = calculateMainNavigationSuiteType(LocalRealWindowAdaptiveInfo.current)
     if (navigationSuiteType.isNavigationBar) {
         Spacer(
             modifier = Modifier
@@ -897,6 +901,18 @@ fun calculateMainNavigationSuiteType(): MainNavigationSuiteType {
     val uiSettings = LocalUISettings.current
     return MainNavigationSuiteType.fromNavigationSuiteType(
         type = calculateNavigationType(LocalWindowAdaptiveInfo.current),
+        floating = uiSettings.bottomNavFloating,
+        noLabel = uiSettings.bottomNavLabel == NavigationLabel.NONE
+    )
+}
+
+/** 使用指定的窗口自适应信息计算主导航形态, 供面板内按真实窗口判断时使用. */
+@ReadOnlyComposable
+@Composable
+fun calculateMainNavigationSuiteType(adaptiveInfo: WindowAdaptiveInfo): MainNavigationSuiteType {
+    val uiSettings = LocalUISettings.current
+    return MainNavigationSuiteType.fromNavigationSuiteType(
+        type = calculateNavigationType(adaptiveInfo),
         floating = uiSettings.bottomNavFloating,
         noLabel = uiSettings.bottomNavLabel == NavigationLabel.NONE
     )

@@ -15,6 +15,7 @@ import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import com.huanchengfly.tieba.post.LocalRealWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.theme.colorscheme.BlueColorScheme
 import com.huanchengfly.tieba.post.utils.ColorUtils
@@ -33,9 +34,11 @@ fun TiebaLiteTheme(
     typography: Typography = MaterialTheme.typography,
     content: @Composable () -> Unit
 ) {
+    val windowAdaptiveInfo = currentWindowAdaptiveInfo()
     CompositionLocalProvider(
         LocalExtendedColorScheme provides colorSchemeExt,
-        LocalWindowAdaptiveInfo provides currentWindowAdaptiveInfo(),
+        LocalWindowAdaptiveInfo provides windowAdaptiveInfo,
+        LocalRealWindowAdaptiveInfo provides windowAdaptiveInfo,
     ) {
         MaterialExpressiveTheme(
             colorScheme = colorSchemeExt.colorScheme,

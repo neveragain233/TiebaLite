@@ -96,6 +96,12 @@ import kotlinx.coroutines.launch
 
 val LocalWindowAdaptiveInfo = staticCompositionLocalOf<WindowAdaptiveInfo> { error("No WindowAdaptiveInfo provided!") }
 
+/**
+ * 真实窗口的自适应信息, 不受双栏面板内紧凑宽度覆盖影响.
+ * 用于底部导航占位等需要按窗口而非面板布局的判断.
+ */
+val LocalRealWindowAdaptiveInfo = staticCompositionLocalOf<WindowAdaptiveInfo> { error("No WindowAdaptiveInfo provided!") }
+
 val LocalHabitSettings = compositionLocalOf<HabitSettings> { error("No HabitSettings provided!") }
 
 val LocalUISettings = compositionLocalOf { UISettings() }
