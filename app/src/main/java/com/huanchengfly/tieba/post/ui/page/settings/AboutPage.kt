@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.rounded.CallSplit
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -49,6 +50,7 @@ import java.util.Date
 import java.util.Locale
 
 private const val URL_PROJECT_GITHUB = "https://github.com/0ranko0P/TiebaLite"
+private const val URL_PROJECT_FORK_GITHUB = "https://github.com/neveragain233/TiebaLite"
 
 @Composable
 fun AboutPage(
@@ -56,6 +58,7 @@ fun AboutPage(
     onBackClicked: () -> Unit = {},
     onDisclaimerClicked: () -> Unit = {},
     onHomePageClicked: () -> Unit = {},
+    onUpstreamClicked: () -> Unit = {},
     onLicenseClicked: () -> Unit = {},
 ) {
     val context = LocalContext.current
@@ -155,9 +158,16 @@ fun AboutPage(
 
             preference(
                 title = context.getString(R.string.about_source_code),
-                summary = URL_PROJECT_GITHUB,
+                summary = URL_PROJECT_FORK_GITHUB,
                 icon = GitHubInvertocat,
                 onClick = onHomePageClicked,
+            )
+
+            preference(
+                title = context.getString(R.string.about_upstream),
+                summary = URL_PROJECT_GITHUB,
+                icon = Icons.AutoMirrored.Rounded.CallSplit,
+                onClick = onUpstreamClicked,
             )
 
             preference(
@@ -182,7 +192,8 @@ fun AboutPage(onBack: () -> Unit) {
     AboutPage(
         onBackClicked = onBack,
         onDisclaimerClicked = disclaimerDialogState::show,
-        onHomePageClicked = { launchCustomTab(URL_PROJECT_GITHUB) },
+        onHomePageClicked = { launchCustomTab(URL_PROJECT_FORK_GITHUB) },
+        onUpstreamClicked = { launchCustomTab(URL_PROJECT_GITHUB) },
         onLicenseClicked = { launchCustomTab("${URL_PROJECT_GITHUB}/blob/main/LICENSE") },
     )
 

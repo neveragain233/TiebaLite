@@ -505,6 +505,7 @@
     <string name="text_scale_inside">等比缩放</string>
     <string name="about_license">开源许可证</string>
     <string name="about_source_code">开源代码</string>
+    <string name="about_upstream">上游项目</string>
     <string name="ban_chat">禁止TA私信</string>
     <string name="ban_follow">禁止TA关注我</string>
     <string name="ban_interact">禁止TA互动</string>
