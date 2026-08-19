@@ -242,6 +242,9 @@ fun MainPage(
     val hazeState = if (blurEffect) rememberTbHazeState() else null
     val navigationSuiteColors = mainNavigationSuiteColors(uiSettings.bottomNavFloating, blurEffect)
 
+    val currentDestinationState = nestedNavController.currentMainDestinationAsState(destinations)
+    val currentDestination by currentDestinationState
+
     val scrollHideEnabled = navigationSuiteType.isFloatingNavigationBar && uiSettings.bottomNavHideOnScroll
     val scrollHideThreshold = with(LocalDensity.current) { 24.dp.toPx() }
     val bottomNavScrollConnection = remember(scrollHideEnabled, scrollHideThreshold) {
@@ -249,10 +252,18 @@ fun MainPage(
         else object : NestedScrollConnection {
             private var scrollDelta = 0f
 
-            override fun onPreScroll(available: Offset, source: NestedScrollSource): Offset {
+            override fun onPostScroll(
+                consumed: Offset,
+                available: Offset,
+                source: NestedScrollSource
+            ): Offset {
                 if (source != NestedScrollSource.UserInput) return Offset.Zero
 
-                val dy = available.y
+                // 消息页保持底栏常驻，便于切换，不参与滑动隐藏
+                if (currentDestinationState.value == MainDestination.Notification) return Offset.Zero
+
+                // 只累计子级真正消费的滚动量，避免内容不足一屏时的拖拽手势触发隐藏
+                val dy = consumed.y
                 if (dy == 0f) return Offset.Zero
                 if (scrollDelta.sign != dy.sign) scrollDelta = 0f
                 scrollDelta += dy
@@ -273,13 +284,13 @@ fun MainPage(
         }
     }
 
-    LaunchedEffect(scrollHideEnabled) {
-        if (!scrollHideEnabled && scaffoldState.targetValue != NavigationSuiteScaffoldValue.Visible) {
+    LaunchedEffect(scrollHideEnabled, currentDestination) {
+        if ((!scrollHideEnabled || currentDestination == MainDestination.Notification) &&
+            scaffoldState.targetValue != NavigationSuiteScaffoldValue.Visible
+        ) {
             scaffoldState.show()
         }
     }
-
-    val currentDestination by nestedNavController.currentMainDestinationAsState(destinations)
     MainNavigationSuiteScaffold(
         state = scaffoldState,
         hazeState = hazeState.takeIf { navigationSuiteType.isNavigationBar },

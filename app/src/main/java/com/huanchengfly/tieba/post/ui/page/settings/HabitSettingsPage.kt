@@ -88,7 +88,7 @@ fun HabitSettingsPage(
             collectSeeLzPreference() // 收藏贴自动只看楼主
 
             toggleablePreference(
-                property = HabitSettings::collectedDesc,
+                property = HabitSettings::favoriteDesc,
                 title = R.string.settings_collect_thread_desc_sort,
                 leadingIcon = Icons.AutoMirrored.Rounded.Sort,
                 summaryOn = R.string.tip_collect_thread_desc_sort_on,
@@ -136,7 +136,7 @@ fun SettingsSegmentedPrefsScope<HabitSettings>.forumSortPreference() {
 
 fun SettingsSegmentedPrefsScope<HabitSettings>.collectSeeLzPreference() {
     toggleablePreference(
-        property = HabitSettings::collectedDesc,
+        property = HabitSettings::favoriteSeeLz,
         title = R.string.settings_collect_thread_see_lz,
         leadingIcon = Icons.Outlined.StarOutline,
         summaryOn = R.string.tip_collect_thread_see_lz_on,

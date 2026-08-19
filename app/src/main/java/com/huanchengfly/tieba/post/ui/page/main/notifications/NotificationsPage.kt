@@ -5,6 +5,7 @@ import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Search
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.PrimaryTabRow
 import androidx.compose.material3.Tab
@@ -12,6 +13,9 @@ import androidx.compose.material3.Text
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.derivedStateOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -22,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastForEachIndexed
 import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.arch.GlobalEvent
+import com.huanchengfly.tieba.post.arch.emitGlobalEvent
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.Destination.Search
@@ -38,6 +44,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.AccountNavIconIfCompact
 import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlurNavigationBarPlaceHolder
+import com.huanchengfly.tieba.post.ui.widgets.compose.DefaultBackToTopFAB
 import com.huanchengfly.tieba.post.ui.widgets.compose.FancyAnimatedIndicatorWithModifier
 import com.huanchengfly.tieba.post.ui.widgets.compose.MyScaffold
 import com.huanchengfly.tieba.post.ui.widgets.compose.TopAppBarPaged
@@ -105,6 +112,16 @@ fun NotificationsPage(
         },
         bottomBar = if (fromHome) bottomNavigationPlaceholder else BlurNavigationBarPlaceHolder,
         bottomBarAtop = calculateMainNavigationSuiteType().isFloatingNavigationBar,
+        floatingActionButton = {
+            // 未在顶部时回顶 FAB 常驻，与底栏隐藏状态无关
+            val visible by remember {
+                derivedStateOf { listStates[pagerState.currentPage].canScrollBackward }
+            }
+            DefaultBackToTopFAB(visible = visible) {
+                coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Notification))
+            }
+        },
+        floatingActionButtonPosition = FabPosition.End,
     ) { contentPadding ->
         ProvideNavigator(navigator = navigator) {
             HorizontalPager(
