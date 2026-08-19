@@ -433,7 +433,13 @@ fun ThreadPage(
                     title = {
                         state.forum?.let { forum ->
                             ForumTitleChip(forum = forum) {
-                                navigator.navigateDebounced(route = Forum(forumName = forum.second))
+                                navigator.navigateDebounced(
+                                    route = Forum(
+                                        forumName = forum.second,
+                                        initialThreadId = threadId,
+                                        initialPostId = postId,
+                                    )
+                                )
                             }
                         }
                     },

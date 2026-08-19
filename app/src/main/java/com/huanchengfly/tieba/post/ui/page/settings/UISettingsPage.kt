@@ -33,6 +33,7 @@ import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.repository.user.Settings
 import com.huanchengfly.tieba.post.ui.models.settings.DarkPreference
+import com.huanchengfly.tieba.post.ui.models.settings.ForumDetailMode
 import com.huanchengfly.tieba.post.ui.models.settings.NavigationLabel
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.page.settings.SettingsDestination.AppFont
@@ -187,6 +188,20 @@ fun UISettingsPage(
                 property = UISettings::hideExplore,
                 title = R.string.title_hide_explore,
                 leadingIcon = toyFansIcon.imageVector,
+            )
+        }
+
+        group(title = R.string.settings_group_dual_pane) {
+            listPref(
+                property = UISettings::forumDetailMode,
+                title = R.string.settings_forum_detail_mode,
+                leadingIcon = Icons.Outlined.ViewColumn,
+                options = persistentMapOf(
+                    ForumDetailMode.KEEP_DETAIL to R.string.forum_detail_mode_keep_detail,
+                    ForumDetailMode.AFTER_SELECTION to R.string.forum_detail_mode_after_selection,
+                    ForumDetailMode.IMMEDIATE_SPLIT to R.string.forum_detail_mode_immediate_split,
+                    ForumDetailMode.FULL_SCREEN to R.string.forum_detail_mode_full_screen,
+                ),
             )
         }
     }

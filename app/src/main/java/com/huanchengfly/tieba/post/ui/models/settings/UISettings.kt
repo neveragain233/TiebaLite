@@ -17,6 +17,25 @@ enum class NavigationLabel {
 }
 
 /**
+ * 吧内详情/双栏显示模式
+ *
+ * 单一枚举保证各模式互斥, 不会出现自相矛盾的组合.
+ */
+enum class ForumDetailMode {
+    /** 进入吧后列表全屏, 选帖后分屏; 从详情进入新吧时保持右侧详情 (默认) */
+    KEEP_DETAIL,
+
+    /** 进入吧后列表全屏, 选帖后分屏; 从详情进入新吧时重置为列表全屏 */
+    AFTER_SELECTION,
+
+    /** 进入吧即分屏, 右侧显示占位 */
+    IMMEDIATE_SPLIT,
+
+    /** 吧内全屏打开帖子, 不使用双栏 */
+    FULL_SCREEN,
+}
+
+/**
  * User UI Settings
  *
  * @param appIcon 应用图标
@@ -33,6 +52,7 @@ enum class NavigationLabel {
  * @param setupFinished 设置向导已完成
  * @param homeForumList 吧列表单列显示
  * @param showHistoryInHome 首页显示最近逛的吧
+ * @param forumDetailMode 吧内详情显示方式
  * */
 @Immutable
 data class UISettings(
@@ -50,4 +70,5 @@ data class UISettings(
     val setupFinished: Boolean = false,
     val homeForumList: Boolean = false,
     val showHistoryInHome: Boolean = true,
+    val forumDetailMode: ForumDetailMode = ForumDetailMode.KEEP_DETAIL,
 )

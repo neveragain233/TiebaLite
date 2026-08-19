@@ -29,6 +29,7 @@ import com.huanchengfly.tieba.post.theme.TiebaBlue
 import com.huanchengfly.tieba.post.ui.models.settings.BlockSettings
 import com.huanchengfly.tieba.post.ui.models.settings.ClientConfig
 import com.huanchengfly.tieba.post.ui.models.settings.DarkPreference
+import com.huanchengfly.tieba.post.ui.models.settings.ForumDetailMode
 import com.huanchengfly.tieba.post.ui.models.settings.ForumSortType
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
 import com.huanchengfly.tieba.post.ui.models.settings.NavigationLabel
@@ -243,6 +244,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         val appIconOrdinal = it[intPreferencesKey(KEY_APP_ICON)] ?: LauncherIcons.NEW_ICON.ordinal
         val bottomNavLabelOrdinal =
             it[intPreferencesKey(KEY_BOTTOM_NAV_LABEL)] ?: NavigationLabel.ALWAYS.ordinal
+        val forumDetailModeOrdinal =
+            it[intPreferencesKey(KEY_FORUM_DETAIL_MODE)] ?: ForumDetailMode.KEEP_DETAIL.ordinal
 
         UISettings(
             appIcon = LauncherIcons.entries[appIconOrdinal],
@@ -259,6 +262,9 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             setupFinished = it[booleanPreferencesKey(KEY_SETUP_FINISHED)] == true,
             homeForumList = it[booleanPreferencesKey(KEY_HOME_SINGLE_FORUM_LIST)] == true,
             showHistoryInHome = it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] ?: true,
+            forumDetailMode = ForumDetailMode.entries.getOrElse(forumDetailModeOrdinal) {
+                ForumDetailMode.KEEP_DETAIL
+            },
         )
     }
 
@@ -277,6 +283,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_SETUP_FINISHED)] = ui.setupFinished
         it[booleanPreferencesKey(KEY_HOME_SINGLE_FORUM_LIST)] = ui.homeForumList
         it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] = ui.showHistoryInHome
+        it[intPreferencesKey(KEY_FORUM_DETAIL_MODE)] = ui.forumDetailMode.ordinal
     }
 
     private const val KEY_APP_ICON = "app_icon"
@@ -300,6 +307,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_REDUCE_MOTION = "ui_reduce_motion"
     private const val KEY_HOME_SINGLE_FORUM_LIST = "ui_forum_list_in_home"
     private const val KEY_HOME_PAGE_SHOW_HISTORY = "ui_history_in_home"
+    private const val KEY_FORUM_DETAIL_MODE = "ui_forum_detail_mode"
 }
 
 private object BlockTransformer: PreferenceTransformer<BlockSettings> {

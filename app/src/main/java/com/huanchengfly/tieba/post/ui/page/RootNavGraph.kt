@@ -136,7 +136,14 @@ private fun SharedTransitionScope.buildRootNavGraph(
             deepLinks = listOf(navDeepLink<Destination.Forum>(basePath = "$TB_LITE_DOMAIN://forum"))
         ) { backStackEntry ->
             backStackEntry.toRoute<Destination.Forum>().run {
-                ForumDetailPanePage(forumName, avatarUrl = avatar, transitionKey, navigator = navController)
+                ForumDetailPanePage(
+                    forumName,
+                    avatarUrl = avatar,
+                    transitionKey,
+                    navigator = navController,
+                    initialThreadId = initialThreadId,
+                    initialPostId = initialPostId,
+                )
             }
         }
 

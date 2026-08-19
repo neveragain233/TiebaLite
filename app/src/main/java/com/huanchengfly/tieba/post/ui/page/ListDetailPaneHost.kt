@@ -11,6 +11,7 @@ import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
@@ -56,6 +57,9 @@ private data object ListDetailPanePlaceholder
  * 详情顶栏可展开/收起为全屏. 紧凑宽度下行为与旧版一致: 列表全屏,
  * 点击帖子通过根导航整页打开.
  *
+ * @param startSplit 进入时是否直接分屏(右侧显示占位), 用于「进入吧即分屏」模式
+ * @param initialThread 进入时预置的帖子, 用于「从详情进入新吧保持右侧详情」模式
+ *
  * 详情 NavHost 始终在同一个组合位置, 避免移动位置导致 setGraph 重建
  * 而清空嵌套返回栈, 保证折叠/展开切换时详情状态不丢.
  */
@@ -63,6 +67,8 @@ private data object ListDetailPanePlaceholder
 fun ListDetailPaneHost(
     navigator: NavController,
     modifier: Modifier = Modifier,
+    startSplit: Boolean = false,
+    initialThread: Destination.Thread? = null,
     listPane: @Composable (onOpenThread: (Destination.Thread) -> Unit) -> Unit,
 ) {
     val isCompact = isWindowWidthCompact()
@@ -70,6 +76,17 @@ fun ListDetailPaneHost(
     val detailEntry by detailNavController.currentBackStackEntryAsState()
     val isDetailShowing = detailEntry?.destination?.hasRoute<Destination.Thread>() == true
     var detailExpanded by rememberSaveable { mutableStateOf(false) }
+    // 大屏下是否处于分屏布局: 已有选中帖子, 或设置了进入即分屏
+    val showSplit = !isCompact && (isDetailShowing || startSplit)
+
+    // 从详情进入新吧时预置当前帖子: 仅首次组合且详情尚未恢复时执行
+    LaunchedEffect(Unit) {
+        if (!isCompact && !isDetailShowing && initialThread != null) {
+            detailNavController.navigate(initialThread) {
+                popUpTo<ListDetailPanePlaceholder>()
+            }
+        }
+    }
 
     // 面板内的内容按紧凑宽度排版: 避免双栏窄栏里图文仍走宽屏分支
     // (媒体只占 50% 宽), 高度类别保持真实窗口值.
@@ -134,8 +151,9 @@ fun ListDetailPaneHost(
             // 列表层
             when {
                 isCompact && isDetailShowing -> Unit
-                !isDetailShowing -> listPane(openThread)
-                detailExpanded -> Unit
+                isCompact -> listPane(openThread)
+                !showSplit -> listPane(openThread)
+                isDetailShowing && detailExpanded -> Unit
                 else -> {
                     // 分屏: 列表占左半
                     Box(
@@ -155,8 +173,9 @@ fun ListDetailPaneHost(
             }
             // 详情层: 固定组合位置, 仅切换尺寸与对齐
             val detailModifier = when {
-                !isDetailShowing -> Modifier.size(0.dp)
-                isCompact || detailExpanded -> Modifier.fillMaxSize()
+                isCompact && isDetailShowing -> Modifier.fillMaxSize()
+                !showSplit -> Modifier.size(0.dp)
+                isDetailShowing && detailExpanded -> Modifier.fillMaxSize()
                 else -> {
                     // 分屏: 详情占右半
                     Modifier
