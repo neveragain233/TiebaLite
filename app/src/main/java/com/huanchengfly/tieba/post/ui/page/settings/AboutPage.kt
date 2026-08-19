@@ -8,6 +8,7 @@ import android.widget.Toast
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -294,7 +295,8 @@ fun AboutPage(onBack: () -> Unit) {
             return
         }
         if (!UpdateManager.installApk(context, file)) {
-            Toast.makeText(context, R.string.update_install_failed, Toast.LENGTH_LONG).show()
+            Toast.makeText(context, R.string.update_install_open_failed, Toast.LENGTH_LONG).show()
+            return // 保留已下载状态，允许重试或改用浏览器下载
         }
         updateState = UpdateUiState.Idle
     }
@@ -386,8 +388,13 @@ fun AboutPage(onBack: () -> Unit) {
                 }
             },
             dismissButton = {
-                TextButton(onClick = { updateState = UpdateUiState.Idle }) {
-                    Text(stringResource(R.string.update_later))
+                Row {
+                    TextButton(onClick = { updateState = UpdateUiState.Idle }) {
+                        Text(stringResource(R.string.update_later))
+                    }
+                    TextButton(onClick = { launchCustomTab(state.info.apkUrl) }) {
+                        Text(stringResource(R.string.update_open_in_browser))
+                    }
                 }
             },
         )

@@ -519,7 +519,8 @@
     <string name="update_install">立即安装</string>
     <string name="update_later">稍后再说</string>
     <string name="update_install_permission_needed">请先允许安装未知来源应用</string>
-    <string name="update_install_failed">安装失败，请重试</string>
+    <string name="update_install_open_failed">无法打开安装界面，请重试或使用浏览器下载</string>
+    <string name="update_open_in_browser">在浏览器中打开</string>
     <string name="ban_chat">禁止TA私信</string>
     <string name="ban_follow">禁止TA关注我</string>
     <string name="ban_interact">禁止TA互动</string>

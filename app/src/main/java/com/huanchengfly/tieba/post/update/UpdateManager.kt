@@ -126,7 +126,7 @@ object UpdateManager {
         }
 
         return@withContext try {
-            trackDownload(downloadId, targetFile, onProgress)
+            trackDownload(downloadId, targetFile, info.apkSize, onProgress)
         } finally {
             if (!coroutineContext.isActive) {
                 DownloadUtil.downloadManager.remove(downloadId)
@@ -137,6 +137,7 @@ object UpdateManager {
     private suspend fun trackDownload(
         downloadId: Long,
         targetFile: File,
+        expectedSize: Long,
         onProgress: (Float) -> Unit,
     ): DownloadResult {
         while (true) {
@@ -144,8 +145,13 @@ object UpdateManager {
             val progress = queryDownload(downloadId)
             if (progress == null) return DownloadResult.Failure("无法获取下载状态")
             when (progress.status) {
-                DownloadManager.STATUS_SUCCESSFUL ->
+                DownloadManager.STATUS_SUCCESSFUL -> {
+                    // 校验下载文件完整性，避免损坏的 APK 导致安装时解析失败
+                    if (expectedSize > 0L && targetFile.length() != expectedSize) {
+                        return DownloadResult.Failure("下载文件校验失败，请重试")
+                    }
                     return DownloadResult.Success(targetFile)
+                }
 
                 DownloadManager.STATUS_FAILED ->
                     return DownloadResult.Failure("下载失败（错误码 ${progress.reason}）")
