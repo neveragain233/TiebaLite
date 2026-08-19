@@ -5,6 +5,7 @@ import androidx.compose.animation.graphics.res.animatedVectorResource
 import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxHeight
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.Icon
 import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
@@ -15,6 +16,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.ui.widgets.compose.AccountNavIcon
+import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.utils.LocalAccount
 
 /** 应用级常驻侧栏的宽度, 同时用于内容区的左侧留白. */
@@ -52,6 +54,7 @@ fun AppLevelNavigationRail(
                 },
                 icon = {
                     Icon(
+                        modifier = Modifier.size(Sizes.Tiny),
                         painter = rememberAnimatedVectorPainter(
                             animatedImageVector = AnimatedImageVector.animatedVectorResource(destination.iconRes),
                             atEnd = selected,
