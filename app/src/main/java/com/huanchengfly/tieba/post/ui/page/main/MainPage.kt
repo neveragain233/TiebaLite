@@ -382,8 +382,8 @@ fun MainPage(
 @Composable
 private fun MainNavigationSuite(
     mainNavigationSuiteType: MainNavigationSuiteType,
-    navigationItemCount: Int = MaxFloatingNavigationItems,
     modifier: Modifier = Modifier,
+    navigationItemCount: Int = MaxFloatingNavigationItems,
     colors: NavigationSuiteColors = NavigationSuiteDefaults.colors(),
     verticalArrangement: Arrangement.Vertical = NavigationSuiteDefaults.verticalArrangement,
     primaryActionContent: @Composable (() -> Unit) = {},
@@ -419,8 +419,8 @@ private fun MainNavigationSuite(
 @Composable
 private fun MainNavigationSuiteScaffold(
     navigationItems: @Composable () -> Unit,
-    navigationItemCount: Int = MaxFloatingNavigationItems,
     modifier: Modifier = Modifier,
+    navigationItemCount: Int = MaxFloatingNavigationItems,
     hazeState: TbHazeState? = null,
     mainNavSuiteType: MainNavigationSuiteType = calculateMainNavigationSuiteType(),
     navigationBarAtop: Boolean = true,
