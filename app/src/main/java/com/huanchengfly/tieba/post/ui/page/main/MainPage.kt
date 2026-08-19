@@ -291,6 +291,12 @@ fun MainPage(
             scaffoldState.show()
         }
     }
+    // 回顶操作（回顶 FAB、重复点击底栏等）时确保底栏重新弹出
+    onGlobalEvent<GlobalEvent.ScrollToTop>(coroutineScope) {
+        if (scaffoldState.targetValue != NavigationSuiteScaffoldValue.Visible) {
+            coroutineScope.launch { scaffoldState.show() }
+        }
+    }
     MainNavigationSuiteScaffold(
         state = scaffoldState,
         hazeState = hazeState.takeIf { navigationSuiteType.isNavigationBar },
