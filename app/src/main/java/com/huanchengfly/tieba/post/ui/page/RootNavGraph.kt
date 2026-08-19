@@ -38,7 +38,7 @@ import com.huanchengfly.tieba.post.ui.common.LocalSharedTransitionScope
 import com.huanchengfly.tieba.post.ui.common.NavTransitions
 import com.huanchengfly.tieba.post.ui.page.Destination.Companion.navTypeOf
 import com.huanchengfly.tieba.post.ui.page.dialogs.CopyTextDialogPage
-import com.huanchengfly.tieba.post.ui.page.forum.ForumPage
+import com.huanchengfly.tieba.post.ui.page.forum.ForumDetailPanePage
 import com.huanchengfly.tieba.post.ui.page.forum.detail.ForumDetailPage
 import com.huanchengfly.tieba.post.ui.page.forum.rule.ForumRuleDetailPage
 import com.huanchengfly.tieba.post.ui.page.forum.searchpost.ForumSearchPostPage
@@ -70,6 +70,11 @@ import kotlin.reflect.KType
 import kotlin.reflect.typeOf
 
 const val TB_LITE_DOMAIN = "tblite"
+
+/** 帖子路由的 NavType 映射, 根导航与贴吧双栏的嵌套导航共用. */
+internal val ThreadNavTypeMap = mapOf(
+    typeOf<ThreadFrom?>() to navTypeOf<ThreadFrom?>(isNullableAllowed = true)
+)
 
 @Composable
 fun RootNavGraph(
@@ -131,7 +136,7 @@ private fun SharedTransitionScope.buildRootNavGraph(
             deepLinks = listOf(navDeepLink<Destination.Forum>(basePath = "$TB_LITE_DOMAIN://forum"))
         ) { backStackEntry ->
             backStackEntry.toRoute<Destination.Forum>().run {
-                ForumPage(forumName, avatarUrl = avatar, transitionKey, navigator = navController)
+                ForumDetailPanePage(forumName, avatarUrl = avatar, transitionKey, navigator = navController)
             }
         }
 
@@ -151,9 +156,7 @@ private fun SharedTransitionScope.buildRootNavGraph(
             ForumSearchPostPage(params.forumName, navController)
         }
 
-        animatedComposable<Destination.Thread>(
-            typeMap = mapOf(typeOf<ThreadFrom?>() to navTypeOf<ThreadFrom?>(isNullableAllowed = true))
-        ) { backStackEntry ->
+        animatedComposable<Destination.Thread>(typeMap = ThreadNavTypeMap) { backStackEntry ->
             with(backStackEntry.toRoute<Destination.Thread>()) {
                 val vm: ThreadViewModel = hiltViewModel()
                 ThreadPage(threadId, postId, from, navController, vm)

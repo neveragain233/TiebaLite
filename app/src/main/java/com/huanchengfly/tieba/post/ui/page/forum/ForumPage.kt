@@ -186,6 +186,7 @@ fun ForumPage(
     transitionKey: String?,
     navigator: NavController,
     viewModel: ForumViewModel = hiltViewModel(),
+    onOpenThread: ((Destination.Thread) -> Unit)? = null,
 ) {
     val context = LocalContext.current
     val loggedIn = LocalAccount.current != null
@@ -273,8 +274,11 @@ fun ForumPage(
         )
     }
 
-    val threadClickListeners = remember(navigator) {
-        createThreadClickListeners(onNavigate = navigator::navigateDebounced)
+    val threadClickListeners = remember(navigator, onOpenThread) {
+        createThreadClickListeners(
+            onNavigate = navigator::navigateDebounced,
+            onOpenThread = onOpenThread,
+        )
     }
     val forumThreadPages = remember(threadClickListeners) {
         ForumType.entries.map { forumType ->

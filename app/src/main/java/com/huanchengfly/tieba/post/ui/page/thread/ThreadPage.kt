@@ -231,6 +231,7 @@ fun ThreadPage(
     extra: ThreadFrom? = null,
     navigator: NavController,
     viewModel: ThreadViewModel,
+    onBack: (() -> Unit)? = null,
 ) = trace(MacrobenchmarkConstant.TRACE_THREAD) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -386,7 +387,7 @@ fun ThreadPage(
                 // Show CollectionsUpdateDialog now
                 newMarkedCollectionPost = lastVisiblePost
             } else {
-                navigator.navigateUp()
+                if (onBack != null) onBack() else navigator.navigateUp()
             }
         }
     }

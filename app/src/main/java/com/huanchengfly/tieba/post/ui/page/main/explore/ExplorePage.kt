@@ -105,15 +105,18 @@ class ThreadClickListeners(
 )
 
 fun createThreadClickListeners(
-    onNavigate: (Destination, navOptions: NavOptions?, navigatorExtras: Navigator.Extras?) -> Unit
+    onNavigate: (Destination, navOptions: NavOptions?, navigatorExtras: Navigator.Extras?) -> Unit,
+    onOpenThread: ((Destination.Thread) -> Unit)? = null,
 ) = ThreadClickListeners(
     onClicked = { thread ->
         val (forumId, _, _) = thread.simpleForum
-        onNavigate(Destination.Thread(threadId = thread.id, forumId), null, null)
+        val route = Destination.Thread(threadId = thread.id, forumId)
+        if (onOpenThread != null) onOpenThread(route) else onNavigate(route, null, null)
     },
     onReplyClicked = { thread ->
         val (forumId, _, _) = thread.simpleForum
-        onNavigate(Destination.Thread(threadId = thread.id, forumId, scrollToReply = true), null, null)
+        val route = Destination.Thread(threadId = thread.id, forumId, scrollToReply = true)
+        if (onOpenThread != null) onOpenThread(route) else onNavigate(route, null, null)
     },
     onAuthorClicked = { thread ->
         val route = thread.run {
