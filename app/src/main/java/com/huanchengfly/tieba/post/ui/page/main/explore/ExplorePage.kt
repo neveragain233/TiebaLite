@@ -54,6 +54,8 @@ import com.huanchengfly.tieba.post.ui.models.ThreadItem
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.Destination.HotTopicList
 import com.huanchengfly.tieba.post.ui.page.Destination.Search
+import com.huanchengfly.tieba.post.ui.page.ListDetailPaneHost
+import com.huanchengfly.tieba.post.ui.page.LocalDetailPaneOpen
 import com.huanchengfly.tieba.post.ui.page.LocalNavController
 import com.huanchengfly.tieba.post.ui.page.consumeResult
 import com.huanchengfly.tieba.post.ui.page.main.MainDestination
@@ -215,83 +217,85 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
         listState = { listStates.getOrNull(pagerState.currentPage) }
     )
 
-    MyScaffold(
-        useMD2Layout = hazeState == null,
-        topBar = {
-            TopAppBarPaged(
-                modifier = Modifier
-                    .topAppBarBlurEffect(
-                        sharedTransitionScope = sharedTransitionScope,
-                        rootAnimatedVisibilityScope = LocalAnimatedVisibilityScope.current,
-                        hazeState = hazeState,
-                        blurEnabled = { !fabHideStates[pagerState.currentPage] || pagerState.isScrolling }
-                    ),
-                title = { Text(text = stringResource(R.string.title_explore)) },
-                navigationIcon = {
-                    AccountNavIconIfCompact(onLoginClicked = { navigator.navigate(Destination.Login) })
-                },
-                actions = {
-                    ActionItem(
-                        icon = Icons.Rounded.Search,
-                        contentDescription = R.string.title_search,
-                        onClick = { navigator.navigateDebounced(route = Search) }
-                    )
-                },
-                scrollBehavior = scrollBehavior,
-                canScrollBackward = { // No transition running && canScrollBackward
-                    sharedTransitionScope?.isTransitionActive != true && !transition.isRunning &&
-                            listStates[pagerState.currentPage].canScrollBackward
+    ListDetailPaneHost(navigator = navigator, modifier = Modifier.fillMaxSize()) { onOpenThread ->
+        MyScaffold(
+            useMD2Layout = hazeState == null,
+            topBar = {
+                TopAppBarPaged(
+                    modifier = Modifier
+                        .topAppBarBlurEffect(
+                            sharedTransitionScope = sharedTransitionScope,
+                            rootAnimatedVisibilityScope = LocalAnimatedVisibilityScope.current,
+                            hazeState = hazeState,
+                            blurEnabled = { !fabHideStates[pagerState.currentPage] || pagerState.isScrolling }
+                        ),
+                    title = { Text(text = stringResource(R.string.title_explore)) },
+                    navigationIcon = {
+                        AccountNavIconIfCompact(onLoginClicked = { navigator.navigate(Destination.Login) })
+                    },
+                    actions = {
+                        ActionItem(
+                            icon = Icons.Rounded.Search,
+                            contentDescription = R.string.title_search,
+                            onClick = { navigator.navigateDebounced(route = Search) }
+                        )
+                    },
+                    scrollBehavior = scrollBehavior,
+                    canScrollBackward = { // No transition running && canScrollBackward
+                        sharedTransitionScope?.isTransitionActive != true && !transition.isRunning &&
+                                listStates[pagerState.currentPage].canScrollBackward
+                    }
+                ) {
+                    ExplorePageTab(pagerState = pagerState, pages = pages)
                 }
+            },
+            bottomBar = bottomNavigationPlaceholder, // MainPage BottomNavBar placeholder
+            bottomBarAtop = navigationSuiteType.isFloatingNavigationBar,
+            floatingActionButton = {
+                if (isFloatingNavBarCompat) return@MyScaffold
+                // 未在顶部时回顶 FAB 常驻，不随滚动方向或底栏隐藏状态消失
+                val visible by remember {
+                    derivedStateOf {
+                        !transition.isRunning && !fabHideStates[pagerState.currentPage]
+                    }
+                }
+                DefaultBackToTopFAB(visible = visible) {
+                    coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
+                }
+            },
+            floatingActionButtonPosition = if (isFloatingNavBarCompat) FabPosition.EndOverlay else FabPosition.End,
+        ) { contentPadding ->
+            Container(
+                modifier = Modifier.onNotNull(hazeState) { hazeSource(state = it.state) }
             ) {
-                ExplorePageTab(pagerState = pagerState, pages = pages)
-            }
-        },
-        bottomBar = bottomNavigationPlaceholder, // MainPage BottomNavBar placeholder
-        bottomBarAtop = navigationSuiteType.isFloatingNavigationBar,
-        floatingActionButton = {
-            if (isFloatingNavBarCompat) return@MyScaffold
-            // 未在顶部时回顶 FAB 常驻，不随滚动方向或底栏隐藏状态消失
-            val visible by remember {
-                derivedStateOf {
-                    !transition.isRunning && !fabHideStates[pagerState.currentPage]
-                }
-            }
-            DefaultBackToTopFAB(visible = visible) {
-                coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
-            }
-        },
-        floatingActionButtonPosition = if (isFloatingNavBarCompat) FabPosition.EndOverlay else FabPosition.End,
-    ) { contentPadding ->
-        Container(
-            modifier = Modifier.onNotNull(hazeState) { hazeSource(state = it.state) }
-        ) {
-            HorizontalPager(
-                state = pagerState,
-                key = { pages[it].title },
-                modifier = Modifier
-                    .fillMaxSize()
-                    .nestedScroll(scrollOrientationConnection),
-                verticalAlignment = Alignment.Top,
-                flingBehavior = PagerDefaults.flingBehavior(pagerState, snapPositionalThreshold = 0.75f)
-            ) { index ->
-                // Attach ScrollBehavior connections
-                val modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
-                val onHideFab: (Boolean) -> Unit = { hideFab ->
-                    fabHideStates = fabHideStates.set(index, hideFab)
-                }
-                val listState = listStates[index]
-
-                when (pages[index]) {
-                    ExplorePageItem.Concern -> {
-                        ConcernPage(modifier, contentPadding, listState, navigator, onHideFab)
+                HorizontalPager(
+                    state = pagerState,
+                    key = { pages[it].title },
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .nestedScroll(scrollOrientationConnection),
+                    verticalAlignment = Alignment.Top,
+                    flingBehavior = PagerDefaults.flingBehavior(pagerState, snapPositionalThreshold = 0.75f)
+                ) { index ->
+                    // Attach ScrollBehavior connections
+                    val modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection)
+                    val onHideFab: (Boolean) -> Unit = { hideFab ->
+                        fabHideStates = fabHideStates.set(index, hideFab)
                     }
+                    val listState = listStates[index]
 
-                    ExplorePageItem.Personalized -> {
-                        PersonalizedPage(modifier, contentPadding, listState, navigator, onHideFab)
-                    }
+                    when (pages[index]) {
+                        ExplorePageItem.Concern -> {
+                            ConcernPage(modifier, contentPadding, listState, navigator, onHideFab, onOpenThread = onOpenThread)
+                        }
 
-                    ExplorePageItem.Hot -> {
-                        HotPage(modifier, contentPadding, listState, navigator, onHideFab)
+                        ExplorePageItem.Personalized -> {
+                            PersonalizedPage(modifier, contentPadding, listState, navigator, onHideFab, onOpenThread = onOpenThread)
+                        }
+
+                        ExplorePageItem.Hot -> {
+                            HotPage(modifier, contentPadding, listState, navigator, onHideFab, onOpenThread = onOpenThread)
+                        }
                     }
                 }
             }
@@ -339,7 +343,9 @@ inline fun <reified Route : Any> ConsumeThreadPageResult(
     navigator: NavController,
     crossinline onThreadResult: (threadId: Long, Like) -> Unit
 ) {
-    LaunchedEffect(Unit) {
+    // 双栏模式下列表始终存活, 依赖详情面板开合状态触发重新消费,
+    // 保证从详情返回列表后点赞/收藏状态即时刷新.
+    LaunchedEffect(LocalDetailPaneOpen.current) {
         navigator.consumeResult<Route, ThreadResult>(ThreadResultKey)?.run {
             onThreadResult(threadId, Like(liked, likes))
         }

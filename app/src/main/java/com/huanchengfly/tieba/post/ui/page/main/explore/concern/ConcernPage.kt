@@ -34,6 +34,7 @@ fun ConcernPage(
     navigator: NavController,
     onHideFab: (Boolean) -> Unit,
     viewModel: ConcernViewModel = hiltViewModel(),
+    onOpenThread: ((Destination.Thread) -> Unit)? = null,
 ) {
     val isRefreshing by viewModel.uiState.collectPartialAsState(
         prop1 = ConcernUiState::isRefreshing,
@@ -52,8 +53,11 @@ fun ConcernPage(
 
     LaunchedFabStateEffect(listState, onHideFab, isRefreshing, isError = error != null)
 
-    val threadClickListeners = remember(navigator) {
-        createThreadClickListeners(onNavigate = navigator::navigateDebounced)
+    val threadClickListeners = remember(navigator, onOpenThread) {
+        createThreadClickListeners(
+            onNavigate = navigator::navigateDebounced,
+            onOpenThread = onOpenThread,
+        )
     }
 
     ConsumeThreadPageResult<Destination.Main>(navigator, viewModel::onThreadResult)

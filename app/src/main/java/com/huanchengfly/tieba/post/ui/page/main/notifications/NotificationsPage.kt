@@ -1,6 +1,7 @@
 package com.huanchengfly.tieba.post.ui.page.main.notifications
 
 import androidx.compose.foundation.layout.ColumnScope
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.material.icons.Icons
@@ -31,6 +32,7 @@ import com.huanchengfly.tieba.post.arch.emitGlobalEvent
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.Destination.Search
+import com.huanchengfly.tieba.post.ui.page.ListDetailPaneHost
 import com.huanchengfly.tieba.post.ui.page.LocalNavController
 import com.huanchengfly.tieba.post.ui.page.ProvideNavigator
 import com.huanchengfly.tieba.post.ui.page.main.MainDestination
@@ -69,71 +71,74 @@ fun NotificationsPage(
         listState = { listStates.getOrNull(pagerState.currentPage) }
     )
 
-    MyScaffold(
-        useMD2Layout = true,
-        topBar = {
-            NotificationsToolBar(
-                navigator = navigator,
-                fromHome = fromHome,
-                scrollBehavior = scrollBehavior,
-                canScrollBackward = {
-                    listStates[pagerState.currentPage].canScrollBackward
-                }
-            ) {
-                PrimaryTabRow(
-                    selectedTabIndex = pagerState.currentPage,
-                    indicator = {
-                        FancyAnimatedIndicatorWithModifier(pagerState.currentPage)
-                    },
-                    containerColor = Color.Transparent // Use Toolbar color
+    ListDetailPaneHost(navigator = navigator, modifier = Modifier.fillMaxSize()) { onOpenThread ->
+        MyScaffold(
+            useMD2Layout = true,
+            topBar = {
+                NotificationsToolBar(
+                    navigator = navigator,
+                    fromHome = fromHome,
+                    scrollBehavior = scrollBehavior,
+                    canScrollBackward = {
+                        listStates[pagerState.currentPage].canScrollBackward
+                    }
                 ) {
-                    pages.fastForEachIndexed { index, type ->
-                        val text = when (type) {
-                            NotificationsType.ReplyMe -> R.string.title_reply_me
+                    PrimaryTabRow(
+                        selectedTabIndex = pagerState.currentPage,
+                        indicator = {
+                            FancyAnimatedIndicatorWithModifier(pagerState.currentPage)
+                        },
+                        containerColor = Color.Transparent // Use Toolbar color
+                    ) {
+                        pages.fastForEachIndexed { index, type ->
+                            val text = when (type) {
+                                NotificationsType.ReplyMe -> R.string.title_reply_me
 
-                            NotificationsType.AtMe -> R.string.title_at_me
+                                NotificationsType.AtMe -> R.string.title_at_me
+                            }
+
+                            Tab(
+                                text = {
+                                    Text(text = stringResource(id = text), letterSpacing = 0.75.sp)
+                                },
+                                selected = pagerState.currentPage == index,
+                                onClick = {
+                                    coroutineScope.launch {
+                                        pagerState.animateScrollToPage(index)
+                                    }
+                                },
+                                unselectedContentColor = MaterialTheme.colorScheme.onSurface
+                            )
                         }
-
-                        Tab(
-                            text = {
-                                Text(text = stringResource(id = text), letterSpacing = 0.75.sp)
-                            },
-                            selected = pagerState.currentPage == index,
-                            onClick = {
-                                coroutineScope.launch {
-                                    pagerState.animateScrollToPage(index)
-                                }
-                            },
-                            unselectedContentColor = MaterialTheme.colorScheme.onSurface
-                        )
                     }
                 }
-            }
-        },
-        bottomBar = if (fromHome) bottomNavigationPlaceholder else BlurNavigationBarPlaceHolder,
-        bottomBarAtop = calculateMainNavigationSuiteType().isFloatingNavigationBar,
-        floatingActionButton = {
-            // 未在顶部时回顶 FAB 常驻，与底栏隐藏状态无关
-            val visible by remember {
-                derivedStateOf { listStates[pagerState.currentPage].canScrollBackward }
-            }
-            DefaultBackToTopFAB(visible = visible) {
-                coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Notification))
-            }
-        },
-        floatingActionButtonPosition = FabPosition.End,
-    ) { contentPadding ->
-        ProvideNavigator(navigator = navigator) {
-            HorizontalPager(
-                state = pagerState,
-                key = { pages[it] }
-            ) {
-                NotificationsListPage(
-                    modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
-                    type = NotificationsType.entries[it],
-                    listState = listStates[pagerState.currentPage],
-                    contentPadding = contentPadding
-                )
+            },
+            bottomBar = if (fromHome) bottomNavigationPlaceholder else BlurNavigationBarPlaceHolder,
+            bottomBarAtop = calculateMainNavigationSuiteType().isFloatingNavigationBar,
+            floatingActionButton = {
+                // 未在顶部时回顶 FAB 常驻，与底栏隐藏状态无关
+                val visible by remember {
+                    derivedStateOf { listStates[pagerState.currentPage].canScrollBackward }
+                }
+                DefaultBackToTopFAB(visible = visible) {
+                    coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Notification))
+                }
+            },
+            floatingActionButtonPosition = FabPosition.End,
+        ) { contentPadding ->
+            ProvideNavigator(navigator = navigator) {
+                HorizontalPager(
+                    state = pagerState,
+                    key = { pages[it] }
+                ) {
+                    NotificationsListPage(
+                        modifier = Modifier.nestedScroll(scrollBehavior.nestedScrollConnection),
+                        type = NotificationsType.entries[it],
+                        listState = listStates[pagerState.currentPage],
+                        contentPadding = contentPadding,
+                        onOpenThread = onOpenThread,
+                    )
+                }
             }
         }
     }

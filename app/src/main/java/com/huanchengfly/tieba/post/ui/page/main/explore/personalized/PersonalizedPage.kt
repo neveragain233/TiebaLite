@@ -78,6 +78,7 @@ fun PersonalizedPage(
     navigator: NavController,
     onHideFab: (Boolean) -> Unit,
     viewModel: PersonalizedViewModel = hiltViewModel(),
+    onOpenThread: ((Destination.Thread) -> Unit)? = null,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
@@ -102,8 +103,11 @@ fun PersonalizedPage(
         }
     }
 
-    val threadClickListeners = remember(navigator) {
-        createThreadClickListeners(onNavigate = navigator::navigateDebounced)
+    val threadClickListeners = remember(navigator, onOpenThread) {
+        createThreadClickListeners(
+            onNavigate = navigator::navigateDebounced,
+            onOpenThread = onOpenThread,
+        )
     }
 
     ConsumeThreadPageResult<Destination.Main>(navigator, viewModel::onThreadResult)

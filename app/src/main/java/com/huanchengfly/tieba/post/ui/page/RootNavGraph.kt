@@ -183,7 +183,9 @@ private fun SharedTransitionScope.buildRootNavGraph(
         }
 
         composable<Destination.HotTopicDetail> {
-            TopicDetailPage(navigator = navController)
+            ListDetailPaneHost(navigator = navController) { onOpenThread ->
+                TopicDetailPage(navigator = navController, onOpenThread = onOpenThread)
+            }
         }
 
         composable<Destination.Login> {

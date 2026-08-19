@@ -56,7 +56,8 @@ fun NotificationsListPage(
         key = Objects.hash(type.name, LocalAccount.current?.uid).toString()
     ) {
         it.create(type)
-    }
+    },
+    onOpenThread: ((Destination.Thread) -> Unit)? = null,
 ) {
     LazyLoad(loaded = viewModel.initialized) {
         viewModel.send(NotificationsListUiIntent.Refresh)
@@ -91,7 +92,8 @@ fun NotificationsListPage(
                 if (uiState.hasMore && uiState.data.isNotEmpty()) {
                     viewModel.send(NotificationsListUiIntent.LoadMore(uiState.currentPage + 1))
                 }
-            }
+            },
+            onOpenThread = onOpenThread,
         )
     }
 }
@@ -106,6 +108,7 @@ private fun NotificationsListContent(
     uiState: NotificationsListUiState,
     onRefresh: () -> Unit,
     onLoadMore: () -> Unit,
+    onOpenThread: ((Destination.Thread) -> Unit)? = null,
 ) {
     val navigator = LocalNavController.current
     val context = LocalContext.current
@@ -150,7 +153,12 @@ private fun NotificationsListContent(
                                 } else {
                                     Destination.Thread(threadId = info.threadId, postId = info.postId)
                                 }
-                                navigator.navigateDebounced(route)
+                                val threadRoute = route as? Destination.Thread
+                                if (onOpenThread != null && threadRoute != null) {
+                                    onOpenThread(threadRoute)
+                                } else {
+                                    navigator.navigateDebounced(route)
+                                }
                             }
                             .padding(horizontal = 16.dp, vertical = 12.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
@@ -191,7 +199,12 @@ private fun NotificationsListContent(
                                     } else {
                                         Destination.Thread(info.threadId)
                                     }
-                                    navigator.navigateDebounced(route)
+                                    val threadRoute = route as? Destination.Thread
+                                    if (onOpenThread != null && threadRoute != null) {
+                                        onOpenThread(threadRoute)
+                                    } else {
+                                        navigator.navigateDebounced(route)
+                                    }
                                 }
                                 .background(MaterialTheme.colorScheme.secondaryContainer)
                                 .padding(8.dp),

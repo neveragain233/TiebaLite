@@ -78,7 +78,8 @@ fun HotPage(
     listState: LazyListState = rememberLazyListState(),
     navigator: NavController,
     onHideFab: (Boolean) -> Unit,
-    viewModel: HotViewModel = hiltViewModel()
+    viewModel: HotViewModel = hiltViewModel(),
+    onOpenThread: ((Destination.Thread) -> Unit)? = null,
 ) {
     val isRefreshing by viewModel.uiState.collectPartialAsState(
         prop1 = HotUiState::isRefreshing,
@@ -95,8 +96,11 @@ fun HotPage(
 
     LaunchedFabStateEffect(listState, onHideFab, isRefreshing, isError)
 
-    val threadClickListeners = remember(navigator) {
-        createThreadClickListeners(onNavigate = navigator::navigateDebounced)
+    val threadClickListeners = remember(navigator, onOpenThread) {
+        createThreadClickListeners(
+            onNavigate = navigator::navigateDebounced,
+            onOpenThread = onOpenThread,
+        )
     }
 
     ConsumeThreadPageResult<Destination.Main>(navigator, viewModel::onThreadResult)

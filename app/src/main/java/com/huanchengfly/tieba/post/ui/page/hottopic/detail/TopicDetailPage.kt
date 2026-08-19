@@ -67,7 +67,8 @@ import kotlinx.coroutines.launch
 @Composable
 fun TopicDetailPage(
     navigator: NavController,
-    viewModel: TopicDetailViewModel = hiltViewModel<TopicDetailViewModel>()
+    viewModel: TopicDetailViewModel = hiltViewModel<TopicDetailViewModel>(),
+    onOpenThread: ((Destination.Thread) -> Unit)? = null,
 ) {
     val lazyListState = rememberLazyListState()
     val coroutineScope = rememberCoroutineScope()
@@ -98,8 +99,11 @@ fun TopicDetailPage(
         val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
         val scrollOrientationConnection = rememberScrollOrientationConnection()
 
-        val threadClickListeners = remember(navigator) {
-            createThreadClickListeners(onNavigate = navigator::navigateDebounced)
+        val threadClickListeners = remember(navigator, onOpenThread) {
+            createThreadClickListeners(
+                onNavigate = navigator::navigateDebounced,
+                onOpenThread = onOpenThread,
+            )
         }
 
         val hideBlockedContent by viewModel.hideBlockedContent.collectAsStateWithLifecycle()
