@@ -8,10 +8,12 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
+import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.compositionLocalOf
@@ -28,10 +30,12 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadPage
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadViewModel
+import androidx.window.core.layout.WindowSizeClass
 import kotlinx.serialization.Serializable
 
 /**
@@ -66,6 +70,16 @@ fun ListDetailPaneHost(
     val detailEntry by detailNavController.currentBackStackEntryAsState()
     val isDetailShowing = detailEntry?.destination?.hasRoute<Destination.Thread>() == true
     var detailExpanded by rememberSaveable { mutableStateOf(false) }
+
+    // 面板内的内容按紧凑宽度排版: 避免双栏窄栏里图文仍走宽屏分支
+    // (媒体只占 50% 宽), 高度类别保持真实窗口值.
+    val windowAdaptiveInfo = LocalWindowAdaptiveInfo.current
+    val paneAdaptiveInfo = remember(windowAdaptiveInfo) {
+        WindowAdaptiveInfo(
+            windowSizeClass = WindowSizeClass(0, windowAdaptiveInfo.windowSizeClass.minHeightDp),
+            windowPosture = windowAdaptiveInfo.windowPosture,
+        )
+    }
 
     val openThread: (Destination.Thread) -> Unit = { thread ->
         if (isCompact) {
@@ -102,12 +116,9 @@ fun ListDetailPaneHost(
                             { detailExpanded = !detailExpanded }
                         },
                         onBack = {
-                            if (!isCompact && detailExpanded) {
-                                // 全屏详情先回分屏
-                                detailExpanded = false
-                            } else {
-                                detailNavController.popBackStack()
-                            }
+                            // 全屏或分屏下返回都直接关闭详情回列表全屏
+                            detailExpanded = false
+                            detailNavController.popBackStack()
                         },
                     )
                 }
@@ -115,7 +126,10 @@ fun ListDetailPaneHost(
         }
     }
 
-    CompositionLocalProvider(LocalDetailPaneOpen provides isDetailShowing) {
+    CompositionLocalProvider(
+        LocalWindowAdaptiveInfo provides paneAdaptiveInfo,
+        LocalDetailPaneOpen provides isDetailShowing,
+    ) {
         Box(modifier = modifier) {
             // 列表层
             when {
