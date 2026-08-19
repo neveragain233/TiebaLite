@@ -280,21 +280,29 @@ object FloatingNavigationBarOverride : ShortNavigationBarOverride {
     @Composable
     override fun ShortNavigationBarOverrideScope.ShortNavigationBar() {
         val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+        val itemCount = LocalMainNavigationItemCount.current
+        val widthFraction = (itemCount.toFloat() / MaxFloatingNavigationItems).coerceIn(0f, 1f)
         CompositionLocalProvider(LocalContentColor provides contentColor) {
-            Row(
+            Box(
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(horizontal = 16.dp)
-                    .floatingNavBarContainer(
-                        height = NavigationBarHeight,
-                        screenOffset = floatingNavigationBarCompactScreenOffset,
-                        isTransitionActive = { animatedVisibilityScope?.transition?.isRunning == true }
-                    )
-                    .padding(start = 24.dp, top = 6.dp, end = 24.dp, bottom = 4.dp),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center,
             ) {
-                content()
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(widthFraction)
+                        .floatingNavBarContainer(
+                            height = NavigationBarHeight,
+                            screenOffset = floatingNavigationBarCompactScreenOffset,
+                            isTransitionActive = { animatedVisibilityScope?.transition?.isRunning == true }
+                        )
+                        .padding(start = 24.dp, top = 6.dp, end = 24.dp, bottom = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    content()
+                }
             }
         }
     }
