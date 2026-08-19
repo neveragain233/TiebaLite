@@ -32,7 +32,8 @@ fun calculateNavigationType(adaptiveInfo: WindowAdaptiveInfo): NavigationSuiteTy
             NavigationSuiteType.NavigationDrawer
         }
 
-        windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_EXPANDED_LOWER_BOUND) -> {
+        // 内屏(medium, >=600dp)起使用左侧 Rail, 折叠屏展开后主导航常驻侧栏
+        windowSizeClass.isWidthAtLeastBreakpoint(WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND) -> {
             NavigationSuiteType.NavigationRail
         }
 

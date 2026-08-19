@@ -59,6 +59,7 @@ private data object ListDetailPanePlaceholder
  *
  * @param startSplit 进入时是否直接分屏(右侧显示占位), 用于「进入吧即分屏」模式
  * @param initialThread 进入时预置的帖子, 用于「从详情进入新吧保持右侧详情」模式
+ * @param detailForumName 当前面板所属的吧名, 详情顶栏吧名 chip 指向同吧时关闭详情
  *
  * 详情 NavHost 始终在同一个组合位置, 避免移动位置导致 setGraph 重建
  * 而清空嵌套返回栈, 保证折叠/展开切换时详情状态不丢.
@@ -69,6 +70,7 @@ fun ListDetailPaneHost(
     modifier: Modifier = Modifier,
     startSplit: Boolean = false,
     initialThread: Destination.Thread? = null,
+    detailForumName: String? = null,
     listPane: @Composable (onOpenThread: (Destination.Thread) -> Unit) -> Unit,
 ) {
     val isCompact = isWindowWidthCompact()
@@ -110,6 +112,16 @@ fun ListDetailPaneHost(
         }
     }
 
+    // 详情顶栏吧名 chip 的跳转: 目标吧就是当前面板时关闭详情回列表, 否则正常跳转
+    val openForum: (Destination.Forum) -> Unit = { forum ->
+        if (detailForumName != null && forum.forumName == detailForumName) {
+            detailExpanded = false
+            detailNavController.popBackStack()
+        } else {
+            navigator.navigateDebounced(forum)
+        }
+    }
+
     val detailPane: @Composable () -> Unit = {
         NavHost(
             navController = detailNavController,
@@ -129,6 +141,7 @@ fun ListDetailPaneHost(
                         navigator = navigator,
                         viewModel = vm,
                         detailPaneExpanded = detailExpanded,
+                        onOpenForum = openForum,
                         onToggleDetailPane = if (isCompact) null else {
                             { detailExpanded = !detailExpanded }
                         },
@@ -147,7 +160,7 @@ fun ListDetailPaneHost(
         LocalWindowAdaptiveInfo provides paneAdaptiveInfo,
         LocalDetailPaneOpen provides isDetailShowing,
     ) {
-        Box(modifier = modifier) {
+        Box(modifier = modifier.fillMaxSize()) {
             // 列表层
             when {
                 isCompact && isDetailShowing -> Unit

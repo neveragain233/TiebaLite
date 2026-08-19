@@ -130,6 +130,7 @@ import com.huanchengfly.tieba.post.ui.models.PostData
 import com.huanchengfly.tieba.post.ui.models.SimpleForum
 import com.huanchengfly.tieba.post.ui.models.UserData
 import com.huanchengfly.tieba.post.ui.page.Destination.Forum
+import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.ProvideNavigator
 import com.huanchengfly.tieba.post.ui.page.setResult
 import com.huanchengfly.tieba.post.ui.page.threadstore.ThreadStoreUiEvent
@@ -236,6 +237,7 @@ fun ThreadPage(
     onBack: (() -> Unit)? = null,
     detailPaneExpanded: Boolean = false,
     onToggleDetailPane: (() -> Unit)? = null,
+    onOpenForum: ((Destination.Forum) -> Unit)? = null,
 ) = trace(MacrobenchmarkConstant.TRACE_THREAD) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -433,13 +435,13 @@ fun ThreadPage(
                     title = {
                         state.forum?.let { forum ->
                             ForumTitleChip(forum = forum) {
-                                navigator.navigateDebounced(
-                                    route = Forum(
-                                        forumName = forum.second,
-                                        initialThreadId = threadId,
-                                        initialPostId = postId,
-                                    )
+                                val forumRoute = Forum(
+                                    forumName = forum.second,
+                                    initialThreadId = threadId,
+                                    initialPostId = postId,
                                 )
+                                if (onOpenForum != null) onOpenForum(forumRoute)
+                                else navigator.navigateDebounced(route = forumRoute)
                             }
                         }
                     },
