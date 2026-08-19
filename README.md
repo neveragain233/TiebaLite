@@ -20,14 +20,14 @@
 **本软件及源码仅供学习交流使用，严禁用于商业用途。**
 
 ## 下载
-* [Github Releases](https://github.com/0ranko0P/TiebaLite/releases)
-* 下载每夜版: [Github Actions](https://github.com/0ranko0P/TiebaLite/actions/workflows/build.yml)
+* [Github Releases](https://github.com/neveragain233/TiebaLite/releases)
+
 
 ## 构建
 
 1. 克隆仓库
 ```shell
-git clone https://github.com/0ranko0P/TiebaLite.git
+git clone https://github.com/neveragain233/TiebaLite.git
 cd TiebaLite
 ```
 
@@ -47,3 +47,4 @@ cd TiebaLite
 
 + [Starry-OvO/aiotieba: Asynchronous I/O Client for Baidu Tieba](https://github.com/Starry-OvO/aiotieba)
 + [n0099/tbclient.protobuf: 百度贴吧客户端 Protocol Buffers 定义文件合集](https://github.com/n0099/tbclient.protobuf)
++ [0ranko0P/TiebaLite: 极简的贴吧第三方客户端](https://github.com/0ranko0P/TiebaLite)
