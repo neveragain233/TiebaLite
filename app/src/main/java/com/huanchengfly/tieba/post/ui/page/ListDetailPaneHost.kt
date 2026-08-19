@@ -1,20 +1,23 @@
 package com.huanchengfly.tieba.post.ui.page
 
 import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.foundation.layout.widthIn
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
@@ -45,28 +48,31 @@ private data object ListDetailPanePlaceholder
 /**
  * 列表-详情双栏宿主, 供贴吧、信息流、通知等列表页面复用.
  *
- * 紧凑宽度下行为与旧版一致: 列表全屏, 点击帖子通过根导航整页打开.
- * 中宽及以上时左侧渲染 [listPane], 右侧通过嵌套 NavHost 渲染帖子详情;
- * 详情持有独立的返回栈, 返回键先关闭详情, 再返回列表.
+ * 未选中帖子时列表保持全屏; 选中帖子后进入分屏(左列表右详情);
+ * 详情顶栏可展开/收起为全屏. 紧凑宽度下行为与旧版一致: 列表全屏,
+ * 点击帖子通过根导航整页打开.
+ *
+ * 详情 NavHost 始终在同一个组合位置, 避免移动位置导致 setGraph 重建
+ * 而清空嵌套返回栈, 保证折叠/展开切换时详情状态不丢.
  */
 @Composable
 fun ListDetailPaneHost(
     navigator: NavController,
     modifier: Modifier = Modifier,
-    listPaneMaxWidth: Dp = 400.dp,
     listPane: @Composable (onOpenThread: (Destination.Thread) -> Unit) -> Unit,
 ) {
     val isCompact = isWindowWidthCompact()
     val detailNavController = rememberNavController()
     val detailEntry by detailNavController.currentBackStackEntryAsState()
     val isDetailShowing = detailEntry?.destination?.hasRoute<Destination.Thread>() == true
+    var detailExpanded by rememberSaveable { mutableStateOf(false) }
 
     val openThread: (Destination.Thread) -> Unit = { thread ->
         if (isCompact) {
             // 紧凑宽度: 与旧版一致, 整页打开帖子
             navigator.navigateDebounced(thread)
         } else {
-            // 双栏: 清掉旧的详情 entry, 保证每次选中帖子都是新的 ViewModel
+            // 清掉旧的详情 entry, 保证每次选中帖子都是新的 ViewModel
             detailNavController.navigate(thread) {
                 popUpTo<ListDetailPanePlaceholder>()
             }
@@ -91,7 +97,18 @@ fun ListDetailPaneHost(
                         extra = from,
                         navigator = navigator,
                         viewModel = vm,
-                        onBack = { detailNavController.popBackStack() },
+                        detailPaneExpanded = detailExpanded,
+                        onToggleDetailPane = if (isCompact) null else {
+                            { detailExpanded = !detailExpanded }
+                        },
+                        onBack = {
+                            if (!isCompact && detailExpanded) {
+                                // 全屏详情先回分屏
+                                detailExpanded = false
+                            } else {
+                                detailNavController.popBackStack()
+                            }
+                        },
                     )
                 }
             }
@@ -99,30 +116,50 @@ fun ListDetailPaneHost(
     }
 
     CompositionLocalProvider(LocalDetailPaneOpen provides isDetailShowing) {
-        if (isCompact) {
-            if (isDetailShowing) {
-                // 从双栏折叠而来: 详情继续全屏展示, 返回键先关闭详情
-                detailPane()
-            } else {
-                listPane(openThread)
+        Box(modifier = modifier) {
+            // 列表层
+            when {
+                isCompact && isDetailShowing -> Unit
+                !isDetailShowing -> listPane(openThread)
+                detailExpanded -> Unit
+                else -> {
+                    // 分屏: 列表占左半
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(ListPaneFraction)
+                            .fillMaxHeight()
+                            .align(Alignment.CenterStart)
+                    ) {
+                        listPane(openThread)
+                        VerticalDivider(
+                            modifier = Modifier
+                                .align(Alignment.CenterEnd)
+                                .fillMaxHeight()
+                        )
+                    }
+                }
             }
-        } else {
-            Row(modifier = modifier) {
-                Box(
-                    modifier = Modifier
-                        .weight(1f)
-                        .widthIn(max = listPaneMaxWidth)
-                ) {
-                    listPane(openThread)
+            // 详情层: 固定组合位置, 仅切换尺寸与对齐
+            val detailModifier = when {
+                !isDetailShowing -> Modifier.size(0.dp)
+                isCompact || detailExpanded -> Modifier.fillMaxSize()
+                else -> {
+                    // 分屏: 详情占右半
+                    Modifier
+                        .fillMaxWidth(1f - ListPaneFraction)
+                        .fillMaxHeight()
+                        .align(Alignment.CenterEnd)
                 }
-                VerticalDivider()
-                Box(modifier = Modifier.weight(1f)) {
-                    detailPane()
-                }
+            }
+            Box(modifier = detailModifier) {
+                detailPane()
             }
         }
     }
 }
+
+/** 分屏时列表栏占窗口宽度比例. */
+private const val ListPaneFraction = 0.45f
 
 @Composable
 private fun ListDetailPanePlaceholderContent() {

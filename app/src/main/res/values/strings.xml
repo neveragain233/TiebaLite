@@ -618,4 +618,6 @@
     <string name="welcome_completed">一切就绪！</string>
     <string name="welcome_completed_subtitle">接下来，登录您的百度账号，然后开始使用吧</string>
     <string name="tip_select_thread_to_view_detail">从左侧选择帖子查看详情</string>
+    <string name="desc_expand_detail">展开详情</string>
+    <string name="desc_collapse_detail">收起详情</string>
 </resources>

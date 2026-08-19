@@ -37,6 +37,8 @@ import androidx.compose.material.icons.rounded.Face6
 import androidx.compose.material.icons.rounded.FaceRetouchingOff
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material.icons.rounded.Report
 import androidx.compose.material.icons.rounded.RocketLaunch
@@ -232,6 +234,8 @@ fun ThreadPage(
     navigator: NavController,
     viewModel: ThreadViewModel,
     onBack: (() -> Unit)? = null,
+    detailPaneExpanded: Boolean = false,
+    onToggleDetailPane: (() -> Unit)? = null,
 ) = trace(MacrobenchmarkConstant.TRACE_THREAD) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -406,7 +410,8 @@ fun ThreadPage(
                     bottomSheetState.isVisible || collectMarkPid != lazyListState.middleVisiblePost(state)?.id
                 }
             }
-            BackHandler(enabled = interceptBack, onBack = onBackPressedCallback)
+            // 面板模式下始终接管返回键: 全屏详情先回分屏, 分屏详情先关闭详情
+            BackHandler(enabled = onBack != null || interceptBack, onBack = onBackPressedCallback)
         }
     }
 
@@ -436,6 +441,18 @@ fun ThreadPage(
                         BackNavigationIcon(onBackPressed = onBackPressedCallback)
                     },
                     actions = {
+                        if (onToggleDetailPane != null) {
+                            ActionItem(
+                                icon = if (detailPaneExpanded) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen,
+                                contentDescription = if (detailPaneExpanded) {
+                                    R.string.desc_collapse_detail
+                                } else {
+                                    R.string.desc_expand_detail
+                                }
+                            ) {
+                                onToggleDetailPane()
+                            }
+                        }
                         val scrollToTopVisible by remember { // Not on top or Toolbar is collapsed
                             derivedStateOf { lazyListState.canScrollBackward || toolbarScrollBehavior.state.collapsedFraction >= 0.9f }
                         }
