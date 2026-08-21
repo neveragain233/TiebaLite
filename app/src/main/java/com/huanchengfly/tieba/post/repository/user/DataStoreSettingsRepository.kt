@@ -39,6 +39,7 @@ import com.huanchengfly.tieba.post.ui.models.settings.SignConfig
 import com.huanchengfly.tieba.post.ui.models.settings.Theme
 import com.huanchengfly.tieba.post.ui.models.settings.ThemeSettings
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
+import com.huanchengfly.tieba.post.ui.models.settings.UpdateSettings
 import com.huanchengfly.tieba.post.ui.models.settings.WaterType
 import com.huanchengfly.tieba.post.ui.models.settings.randomSignTime
 import com.huanchengfly.tieba.post.utils.DeviceUtils
@@ -124,11 +125,28 @@ class DataStoreSettingsRepository @Inject constructor(
 
     override val uiSettings: Settings<UISettings> = ComplexSettings(UISettingsTransformer)
 
+    override val updateSettings: Settings<UpdateSettings> = ComplexSettings(UpdateSettingsTransformer)
+
     override val signConfig: Settings<SignConfig> = ComplexSettings(SignConfigTransformer)
 
     override val UUIDSettings: Settings<String> = SimpleSettings(stringPreferencesKey("uuid"), "")
 
     override val myLittleTail: Settings<String> = SimpleSettings(stringPreferencesKey("little_tail"), "")
+}
+
+private object UpdateSettingsTransformer : PreferenceTransformer<UpdateSettings> {
+    override val get: (Preferences) -> UpdateSettings = {
+        UpdateSettings(
+            backgroundDownload =
+                it[booleanPreferencesKey(KEY_BACKGROUND_DOWNLOAD)] ?: true,
+        )
+    }
+
+    override val set: (MutablePreferences, UpdateSettings) -> Unit = { it, update ->
+        it[booleanPreferencesKey(KEY_BACKGROUND_DOWNLOAD)] = update.backgroundDownload
+    }
+
+    private const val KEY_BACKGROUND_DOWNLOAD = "update_background_download"
 }
 
 private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {

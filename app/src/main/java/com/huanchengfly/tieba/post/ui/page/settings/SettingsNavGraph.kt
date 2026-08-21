@@ -65,7 +65,10 @@ fun NavGraphBuilder.settingsGraph(navController: NavController, settingsRepo: Se
     }
 
     composable<SettingsDestination.About> {
-        AboutPage(navController::navigateUp)
+        AboutPage(
+            onBack = navController::navigateUp,
+            updateSettings = settingsRepo.updateSettings,
+        )
     }
 
     composable<SettingsDestination.AccountManage> {
@@ -115,7 +118,10 @@ fun NavGraphBuilder.settingsGraph(navController: NavController, settingsRepo: Se
     }
 
     composable<SettingsDestination.More> {
-        MoreSettingsPage(navController)
+        MoreSettingsPage(
+            navigator = navController,
+            updateSettings = settingsRepo.updateSettings,
+        )
     }
 
     composable<SettingsDestination.OKSign> {

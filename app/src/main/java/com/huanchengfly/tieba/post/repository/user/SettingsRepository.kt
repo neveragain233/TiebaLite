@@ -8,6 +8,7 @@ import com.huanchengfly.tieba.post.ui.models.settings.PrivacySettings
 import com.huanchengfly.tieba.post.ui.models.settings.SignConfig
 import com.huanchengfly.tieba.post.ui.models.settings.ThemeSettings
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
+import com.huanchengfly.tieba.post.ui.models.settings.UpdateSettings
 import com.huanchengfly.tieba.post.utils.UIDUtil
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
@@ -47,6 +48,8 @@ interface SettingsRepository {
     val themeSettings: Settings<ThemeSettings>
 
     val uiSettings: Settings<UISettings>
+
+    val updateSettings: Settings<UpdateSettings>
 
     val signConfig: Settings<SignConfig>
 

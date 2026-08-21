@@ -6,20 +6,27 @@ import android.os.Build
 import android.provider.Settings
 import android.widget.Toast
 import androidx.compose.foundation.Image
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.CallSplit
+import androidx.compose.material.icons.rounded.Download
 import androidx.compose.material.icons.rounded.Info
 import androidx.compose.material.icons.rounded.SystemUpdate
 import androidx.compose.material3.AlertDialog as MaterialAlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.material3.Icon
 import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -43,6 +50,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.window.core.layout.WindowSizeClass
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import coil3.compose.AsyncImage
 import coil3.request.ImageRequest
 import coil3.request.crossfade
@@ -50,17 +58,22 @@ import com.huanchengfly.tieba.post.BuildConfig
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.components.TiebaWebView
+import com.huanchengfly.tieba.post.repository.user.Settings as SettingsFlow
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
+import com.huanchengfly.tieba.post.ui.models.settings.UpdateSettings
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.icons.GitHubInvertocat
 import com.huanchengfly.tieba.post.ui.icons.License
 import com.huanchengfly.tieba.post.ui.page.welcome.UaWebView
+import com.huanchengfly.tieba.post.update.UpdateDownloadWorker
 import com.huanchengfly.tieba.post.update.UpdateManager
 import com.huanchengfly.tieba.post.ui.widgets.compose.AlertDialog
+import com.huanchengfly.tieba.post.ui.widgets.compose.MarkdownText
 import com.huanchengfly.tieba.post.ui.widgets.compose.NegativeButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import kotlinx.coroutines.Job
+import kotlinx.coroutines.flow.flowOf
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.io.File
@@ -229,12 +242,18 @@ fun AboutPage(
 }
 
 @Composable
-fun AboutPage(onBack: () -> Unit) {
+fun AboutPage(
+    onBack: () -> Unit,
+    updateSettings: SettingsFlow<UpdateSettings>? = null,
+) {
     val context = LocalContext.current
     val disclaimerDialogState = rememberDialogState()
     val coroutineScope = rememberCoroutineScope()
     var updateState by remember { mutableStateOf<UpdateUiState>(UpdateUiState.Idle) }
     var downloadJob by remember { mutableStateOf<Job?>(null) }
+    val updatePref by (updateSettings ?: remember { flowOf(UpdateSettings()) })
+        .collectAsStateWithLifecycle(initialValue = UpdateSettings())
+    val backgroundDownload = updatePref.backgroundDownload
 
     fun launchCustomTab(url: String) {
         TiebaWebView.launchCustomTab(context, Uri.parse(url))
@@ -249,7 +268,12 @@ fun AboutPage(onBack: () -> Unit) {
                 if (info == null) {
                     UpdateUiState.UpToDate
                 } else {
-                    UpdateUiState.Available(info)
+                    val file = UpdateManager.updateApkFile(context, info)
+                    if (file.exists() && (info.apkSize <= 0L || file.length() == info.apkSize)) {
+                        UpdateUiState.Downloaded(info, file)
+                    } else {
+                        UpdateUiState.Available(info)
+                    }
                 }
             } catch (e: Exception) {
                 UpdateUiState.Failed(
@@ -260,6 +284,12 @@ fun AboutPage(onBack: () -> Unit) {
     }
 
     fun startDownload(info: UpdateManager.UpdateInfo) {
+        if (backgroundDownload) {
+            UpdateDownloadWorker.enqueue(context, info)
+            Toast.makeText(context, R.string.toast_update_background_start, Toast.LENGTH_SHORT).show()
+            updateState = UpdateUiState.Idle
+            return
+        }
         downloadJob = coroutineScope.launch {
             updateState = UpdateUiState.Downloading(0f)
             updateState = when (val result = UpdateManager.downloadAndTrack(context, info) { progress ->
@@ -338,15 +368,28 @@ fun AboutPage(onBack: () -> Unit) {
             onDismissRequest = { updateState = UpdateUiState.Idle },
             title = { Text(stringResource(R.string.update_available_title, state.info.versionName)) },
             text = {
-                Column {
-                    state.info.changelog?.let { Text(it) }
+                Column(
+                    modifier = Modifier
+                        .heightIn(max = 440.dp)
+                        .verticalScroll(rememberScrollState()),
+                ) {
+                    state.info.changelog?.let {
+                        MarkdownText(it)
+                        Spacer(Modifier.height(8.dp))
+                    }
                     formatApkSize(state.info.apkSize)?.let { size ->
                         Text(stringResource(R.string.update_size, size))
                     }
                 }
             },
             confirmButton = {
-                TextButton(onClick = { startDownload(state.info) }) {
+                Button(onClick = { startDownload(state.info) }) {
+                    Icon(
+                        imageVector = Icons.Rounded.Download,
+                        contentDescription = null,
+                        modifier = Modifier.size(18.dp),
+                    )
+                    Spacer(Modifier.width(6.dp))
                     Text(stringResource(R.string.btn_download))
                 }
             },
@@ -383,7 +426,7 @@ fun AboutPage(onBack: () -> Unit) {
             title = { Text(stringResource(R.string.update_download_finished)) },
             text = { Text(stringResource(R.string.update_install_prompt, state.info.versionName)) },
             confirmButton = {
-                TextButton(onClick = { installUpdate(state.file) }) {
+                Button(onClick = { installUpdate(state.file) }) {
                     Text(stringResource(R.string.update_install))
                 }
             },

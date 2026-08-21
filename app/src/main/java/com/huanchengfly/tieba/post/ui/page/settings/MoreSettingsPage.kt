@@ -7,6 +7,7 @@ import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Analytics
+import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemShapes
@@ -29,6 +30,8 @@ import androidx.compose.ui.res.vectorResource
 import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.components.TiebaWebView.Companion.dumpWebViewVersion
+import com.huanchengfly.tieba.post.repository.user.Settings
+import com.huanchengfly.tieba.post.ui.models.settings.UpdateSettings
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalSnackbarHostState
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.SegmentedPreference
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.preference
@@ -40,12 +43,17 @@ import kotlinx.coroutines.launch
 
 @SuppressLint("WebViewApiAvailability")
 @Composable
-fun MoreSettingsPage(navigator: NavController) {
+fun MoreSettingsPage(
+    navigator: NavController,
+    updateSettings: Settings<UpdateSettings>,
+) {
     val context = LocalContext.current
 
     SettingsScaffold(
         titleRes = R.string.title_settings_more,
         onBack = navigator::navigateUp,
+        settings = updateSettings,
+        initialValue = UpdateSettings(),
     ) {
         group(title = R.string.summary_settings_more) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
@@ -73,6 +81,13 @@ fun MoreSettingsPage(navigator: NavController) {
                     navigator.navigate(route = SettingsDestination.WorkInfo)
                 },
                 leadingIcon = Icons.Outlined.Analytics,
+            )
+
+            toggleablePreference(
+                property = UpdateSettings::backgroundDownload,
+                title = R.string.settings_update_background_download,
+                summary = R.string.summary_update_background_download,
+                leadingIcon = Icons.Outlined.Download,
             )
         }
 

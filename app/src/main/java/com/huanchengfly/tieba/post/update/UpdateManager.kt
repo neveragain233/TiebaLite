@@ -27,7 +27,7 @@ object UpdateManager {
     private const val REPO = "neveragain233/TiebaLite"
     private const val GITHUB_LATEST_RELEASE_URL =
         "https://api.github.com/repos/$REPO/releases/latest"
-    private const val APK_MIME_TYPE = "application/vnd.android.package-archive"
+    internal const val APK_MIME_TYPE = "application/vnd.android.package-archive"
 
     private val httpClient by lazy {
         OkHttpClient.Builder()
@@ -104,11 +104,8 @@ object UpdateManager {
         info: UpdateInfo,
         onProgress: (Float) -> Unit,
     ): DownloadResult = withContext(Dispatchers.IO) {
-        val destinationDir = File(
-            context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS),
-            "apk",
-        ).apply { mkdirs() }
-        val targetFile = File(destinationDir, "TiebaLite-${info.versionName}.apk")
+        val targetFile = updateApkFile(context, info)
+        targetFile.parentFile?.mkdirs()
         targetFile.delete()
 
         val downloadId = try {
@@ -186,6 +183,13 @@ object UpdateManager {
             false
         }
     }
+
+    /** 更新包落盘位置, 前台下载与后台下载共用同一路径 */
+    fun updateApkFile(context: Context, info: UpdateInfo): File =
+        File(
+            File(context.getExternalFilesDir(Environment.DIRECTORY_DOWNLOADS), "apk"),
+            "TiebaLite-${info.versionName}.apk",
+        )
 
     private data class DownloadProgress(
         val status: Int,
