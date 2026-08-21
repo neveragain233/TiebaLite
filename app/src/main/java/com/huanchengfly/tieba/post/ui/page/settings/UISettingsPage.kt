@@ -21,6 +21,7 @@ import androidx.compose.material.icons.outlined.FontDownload
 import androidx.compose.material.icons.outlined.House
 import androidx.compose.material.icons.outlined.Houseboat
 import androidx.compose.material.icons.outlined.NightsStay
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SwipeVertical
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.ViewColumn
@@ -162,6 +163,13 @@ fun UISettingsPage(
                 summary = R.string.summary_nav_hide_on_scroll,
                 enabled = currentPreference.bottomNavFloating,
                 leadingIcon = Icons.Outlined.SwipeVertical,
+            )
+
+            toggleablePreference(
+                property = UISettings::refreshExploreOnBackToTopLongPress,
+                title = R.string.settings_refresh_on_back_to_top_long_press,
+                summary = R.string.summary_refresh_on_back_to_top_long_press,
+                leadingIcon = Icons.Outlined.Refresh,
             )
 
             listPref(

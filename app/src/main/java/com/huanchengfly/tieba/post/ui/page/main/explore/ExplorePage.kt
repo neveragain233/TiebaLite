@@ -40,6 +40,7 @@ import androidx.navigation.NavController
 import androidx.navigation.NavOptions
 import androidx.navigation.Navigator
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.arch.GlobalEvent
 import com.huanchengfly.tieba.post.arch.emitGlobalEvent
 import com.huanchengfly.tieba.post.arch.isScrolling
@@ -187,6 +188,7 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
     val context = LocalContext.current
     val coroutineScope = rememberCoroutineScope()
     val navigator = LocalNavController.current
+    val uiSettings = LocalUISettings.current
     val navigationSuiteType = calculateMainNavigationSuiteType()
     // Hide FAB on FloatingNavigationBarCompact
     val isFloatingNavBarCompat = navigationSuiteType === MainNavigationSuiteType.FloatingNavigationBarCompact
@@ -268,11 +270,15 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
                     onClick = {
                         coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
                     },
-                    onLongClick = {
-                        // 长按回顶键: 回顶 + 刷新当前 tab, 触发瞬间给轻微震动
-                        hapticFeedback.performHapticFeedback(HapticFeedbackType.KeyboardTap)
-                        coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
-                        coroutineScope.emitGlobalEvent(GlobalEvent.RefreshExplore(pagerState.currentPage))
+                    onLongClick = if (uiSettings.refreshExploreOnBackToTopLongPress) {
+                        {
+                            // 长按回顶键: 回顶 + 刷新当前 tab, 触发瞬间给轻微震动
+                            hapticFeedback.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+                            coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
+                            coroutineScope.emitGlobalEvent(GlobalEvent.RefreshExplore(pagerState.currentPage))
+                        }
+                    } else {
+                        null
                     },
                 )
             },
