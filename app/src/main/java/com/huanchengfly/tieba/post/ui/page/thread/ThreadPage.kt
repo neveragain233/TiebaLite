@@ -186,6 +186,12 @@ private fun createResult(threadId: Long, like: Like?, markedPostId: Long?): Thre
     }
 }
 
+/** 评论导航在触发加载后, 待列表更新再定位的目标. */
+private data class PendingCommentNav(
+    val direction: CommentNavDirection,
+    val anchorPostId: Long,
+)
+
 @Composable
 private fun ToggleButton(
     text: String,
@@ -258,6 +264,63 @@ fun ThreadPage(
         TopAppBarDefaults.enterAlwaysScrollBehavior()
     }
     val toolbarScrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(exitDirection = Bottom)
+
+    val layout = remember(state) { buildThreadListLayout(state) }
+    var pendingCommentNav by remember { mutableStateOf<PendingCommentNav?>(null) }
+
+    val fullscreenToggle = if (LocalUISettings.current.fullscreenButtonStyle == FullscreenButtonStyle.FAB) {
+        onToggleDetailPane
+    } else {
+        null
+    }
+
+    fun requestNavigateComment(direction: CommentNavDirection) {
+        val anchor = lazyListState.middleVisiblePost(state) ?: return
+        val target = layout.targetPostId(anchor.id, direction)
+        if (target != null) {
+            layout.itemIndexOf(target)?.let { targetIndex ->
+                coroutineScope.launch { lazyListState.animateScrollToItem(targetIndex) }
+            }
+            return
+        }
+        // 处于边界: 决定是触发加载, 还是回跳楼主帖 / 提示已到首末楼
+        when (direction) {
+            CommentNavDirection.NEXT -> {
+                if (state.pageData.hasMore) {
+                    pendingCommentNav = PendingCommentNav(direction, anchor.id)
+                    viewModel.requestLoadMore()
+                } else {
+                    context.toastShort(R.string.tip_no_more_comment)
+                }
+            }
+            CommentNavDirection.PREV -> {
+                when {
+                    anchor.id == layout.firstPostId -> context.toastShort(R.string.tip_no_prev_comment)
+                    state.pageData.hasPrevious -> {
+                        pendingCommentNav = PendingCommentNav(direction, anchor.id)
+                        viewModel.requestLoadPrevious(offset = 0)
+                    }
+                    else -> {
+                        // 无更早分页: 回跳楼主帖(此时 targetPostId 已应返回 firstPost, 兜底)
+                        layout.itemIndexOf(layout.firstPostId ?: return)?.let { firstPostIndex ->
+                            coroutineScope.launch { lazyListState.animateScrollToItem(firstPostIndex) }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    LaunchedEffect(state) {
+        val pending = pendingCommentNav ?: return@LaunchedEffect
+        if (state.isLoadingMore) return@LaunchedEffect
+        val newLayout = buildThreadListLayout(state)
+        val target = newLayout.targetPostId(pending.anchorPostId, pending.direction)
+        if (target != null) {
+            newLayout.itemIndexOf(target)?.let { lazyListState.animateScrollToItem(it) }
+            pendingCommentNav = null
+        }
+    }
 
     var showBottomSheet by rememberSaveable { mutableStateOf(false) }
     val bottomSheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
@@ -524,18 +587,40 @@ fun ThreadPage(
             // Ignore Scaffold padding top changes if workaround enabled
             val contentPadding = padding.fixedTopBarPadding()
 
-            Container(modifier = Modifier.clipToBounds()) {
-                ProvideNavigator(navigator = navigator) {
-                    ThreadContent(
+            Box(modifier = Modifier.fillMaxSize()) {
+                Container(modifier = Modifier.clipToBounds()) {
+                    ProvideNavigator(navigator = navigator) {
+                        ThreadContent(
+                            modifier = Modifier
+                                .hazeSource(hazeState?.state)
+                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                                .nestedScroll(toolbarScrollBehavior),
+                            viewModel = viewModel,
+                            lazyListState = lazyListState,
+                            contentPadding = contentPadding,
+                            topAppBarScrollBehavior = topAppBarScrollBehavior,
+                            layout = layout,
+                            useStickyHeader = useStickyHeader && !useStickyHeaderWorkaround
+                        )
+                    }
+                }
+
+                val commentNavEnabled = LocalUISettings.current.commentNavEnabled
+                if (commentNavEnabled || fullscreenToggle != null) {
+                    ThreadNavigationDock(
                         modifier = Modifier
-                            .hazeSource(hazeState?.state)
-                            .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                            .nestedScroll(toolbarScrollBehavior),
-                        viewModel = viewModel,
-                        lazyListState = lazyListState,
-                        contentPadding = contentPadding,
-                        topAppBarScrollBehavior = topAppBarScrollBehavior,
-                        useStickyHeader = useStickyHeader && !useStickyHeaderWorkaround
+                            .align(Alignment.BottomEnd)
+                            .padding(
+                                end = CardHorizontalSpacing,
+                                bottom = padding.calculateBottomPadding() +
+                                        ThreadToolbarScreenOffset +
+                                        CardHorizontalSpacing,
+                            ),
+                        onPrev = { requestNavigateComment(CommentNavDirection.PREV) },
+                        onNext = { requestNavigateComment(CommentNavDirection.NEXT) },
+                        showCommentNav = commentNavEnabled,
+                        onToggleDetailPane = fullscreenToggle,
+                        detailPaneExpanded = detailPaneExpanded,
                     )
                 }
             }

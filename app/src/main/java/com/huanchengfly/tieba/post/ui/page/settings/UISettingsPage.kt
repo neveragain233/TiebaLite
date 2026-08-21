@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.material.icons.outlined.WatchLater
 import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
@@ -231,6 +232,13 @@ fun UISettingsPage(
                     FullscreenButtonStyle.TOP_BAR to R.string.fullscreen_button_style_top_bar,
                     FullscreenButtonStyle.NONE to R.string.fullscreen_button_style_none,
                 ),
+            )
+
+            toggleablePreference(
+                property = UISettings::commentNavEnabled,
+                title = R.string.settings_comment_nav_enabled,
+                summary = R.string.summary_comment_nav_enabled,
+                leadingIcon = Icons.Rounded.KeyboardArrowDown,
             )
         }
     }

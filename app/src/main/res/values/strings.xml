@@ -631,6 +631,10 @@
     <string name="tip_select_thread_to_view_detail">从左侧选择帖子查看详情</string>
     <string name="desc_expand_detail">展开详情</string>
     <string name="desc_collapse_detail">收起详情</string>
+    <string name="title_prev_comment">上一楼</string>
+    <string name="title_next_comment">下一楼</string>
+    <string name="tip_no_more_comment">已到最后一楼</string>
+    <string name="tip_no_prev_comment">已到第一楼</string>
     <string name="settings_group_dual_pane">双栏布局</string>
     <string name="settings_forum_detail_mode">吧内详情显示方式</string>
     <string name="forum_detail_mode_keep_detail">选帖后分屏，保持详情进入新吧</string>
@@ -643,4 +647,6 @@
     <string name="fullscreen_button_style_fab">右下角 FAB</string>
     <string name="fullscreen_button_style_top_bar">顶栏图标</string>
     <string name="fullscreen_button_style_none">不显示</string>
+    <string name="settings_comment_nav_enabled">评论上/下导航</string>
+    <string name="summary_comment_nav_enabled">在帖子详情页显示上一楼/下一楼按钮</string>
 </resources>

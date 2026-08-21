@@ -293,12 +293,12 @@ fun StateScreenScope.ThreadContent(
     lazyListState: LazyListState,
     contentPadding: PaddingValues = PaddingNone,
     topAppBarScrollBehavior: TopAppBarScrollBehavior,
+    layout: ThreadListLayout,
     useStickyHeader: Boolean // Bug: StickyHeader doesn't respect content padding
 ) {
     val navigator = LocalNavController.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
     val collectPid = state.thread?.collectMarkPid ?: -1
-    val latestPosts = state.latestPosts
     val isLoadingMore = state.isLoadingMore
     val hasMore = state.pageData.hasMore
     val localUid = state.user?.id
@@ -325,87 +325,86 @@ fun StateScreenScope.ThreadContent(
                 }
             }
         ) {
-            item(key = Type.FirstPost.key, contentType = Type.FirstPost) {
-                val firstPost = state.firstPost ?: return@item
-                Column {
-                    PostCardItem(viewModel, firstPost, localUid, collectPid)
+            layout.segments.forEach { segment ->
+                when (segment) {
+                    ThreadListSegment.FirstPost -> item(key = Type.FirstPost.key, contentType = Type.FirstPost) {
+                        val firstPost = state.firstPost ?: return@item
+                        Column {
+                            PostCardItem(viewModel, firstPost, localUid, collectPid)
 
-                    state.thread?.originThreadInfo?.let { info ->
-                        OriginThreadCard(
-                            originThreadInfo = info,
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
-                        ) {
-                            val threadId = info.item.tid.toLong()
-                            navigator.navigateDebounced(route = Thread(threadId, forumId = info.get { fid }))
+                            state.thread?.originThreadInfo?.let { info ->
+                                OriginThreadCard(
+                                    originThreadInfo = info,
+                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp)
+                                ) {
+                                    val threadId = info.item.tid.toLong()
+                                    navigator.navigateDebounced(route = Thread(threadId, forumId = info.get { fid }))
+                                }
+                            }
+
+                            state.thread?.pollInfo?.let { pollInfo ->
+                                ThreadPoll(
+                                    modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
+                                    info = pollInfo,
+                                    onPull = viewModel::requestPollPost.takeIf { localUid != null },
+                                )
+                            }
+
+                            HorizontalDivider(
+                                modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
+                                thickness = 2.dp
+                            )
                         }
                     }
 
-                    state.thread?.pollInfo?.let { pollInfo ->
-                        ThreadPoll(
-                            modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 16.dp),
-                            info = pollInfo,
-                            onPull = viewModel::requestPollPost.takeIf { localUid != null },
+                    ThreadListSegment.Header -> {
+                        if (useStickyHeader) {
+                            stickyHeader(key = Type.Header.key, contentType = Type.Header) {
+                                val appbarState = topAppBarScrollBehavior.state
+                                val colors = TiebaLiteTheme.topAppBarColors
+                                ThreadHeader(
+                                    modifier = Modifier.stickyHeaderBackground(appbarState, colors, lazyListState),
+                                    uiState = state,
+                                    viewModel = viewModel
+                                )
+                            }
+                        } else {
+                            item(key = Type.Header.key, contentType = Type.Header) {
+                                ThreadHeader(uiState = state, viewModel = viewModel)
+                            }
+                        }
+                    }
+
+                    ThreadListSegment.LoadPrevious -> item(key = Type.LoadPrevious.key, contentType = Type.LoadPrevious) {
+                        LoadPreviousButton(isLoading = state.isLoadingMore) {
+                            viewModel.requestLoadPrevious(offset = lazyListState.firstVisiblePostOffset())
+                        }
+                    }
+
+                    ThreadListSegment.EmptyTip -> item(key = "EmptyTip") {
+                        DefaultEmptyScreen(
+                            modifier = Modifier.fillParentMaxHeight(fraction = 0.9f),
+                            titleRes = if (state.seeLz) R.string.title_lz_empty else R.string.title_empty,
+                            messageRes = R.string.message_turn_off_see_lz.takeIf { state.seeLz },
                         )
                     }
 
-                    HorizontalDivider(
-                        modifier = Modifier.padding(start = 16.dp, end = 16.dp, bottom = 8.dp),
-                        thickness = 2.dp
-                    )
-                }
-            }
+                    ThreadListSegment.DescTip -> postTipItem(isDesc = true)
 
-            if (state.thread != null) {
-                if (useStickyHeader) {
-                    stickyHeader(key = Type.Header.key, contentType = Type.Header) {
-                        val appbarState = topAppBarScrollBehavior.state
-                        val colors = TiebaLiteTheme.topAppBarColors
-                        ThreadHeader(
-                            modifier = Modifier.stickyHeaderBackground(appbarState, colors, lazyListState),
-                            uiState = state,
-                            viewModel = viewModel
-                        )
+                    ThreadListSegment.AscTip -> postTipItem(isDesc = false)
+
+                    is ThreadListSegment.Posts -> {
+                        val posts = segment.posts
+                        if (segment.source == PostSource.DATA) {
+                            items(items = posts, key = { it.id }, contentType = { Type.Post }) { post ->
+                                PostCardItem(viewModel, post, localUid, collectPid)
+                            }
+                        } else {
+                            items(items = posts, key = { post -> "LatestPost_${post.id}" }) { post ->
+                                PostCardItem(viewModel, post, localUid, collectPid)
+                            }
+                        }
                     }
-                } else {
-                    item(key = Type.Header.key, contentType = Type.Header) {
-                        ThreadHeader(uiState = state, viewModel = viewModel)
-                    }
-                }
-            }
-
-            if (state.sortType == ThreadSortType.BY_DESC && !latestPosts.isNullOrEmpty()) {
-                items(items = latestPosts, key = { post -> "LatestPost_${post.id}" }) { post ->
-                    PostCardItem(viewModel, post, localUid, collectPid)
-                }
-                postTipItem(isDesc = true)    // DESC tip on bottom
-            }
-
-            if (state.pageData.hasPrevious) {
-                item(key = Type.LoadPrevious.key, contentType = Type.LoadPrevious) {
-                    LoadPreviousButton(isLoading = state.isLoadingMore) {
-                        viewModel.requestLoadPrevious(offset = lazyListState.firstVisiblePostOffset())
-                    }
-                }
-            }
-
-            if (state.data.isEmpty()) {
-                item(key = "EmptyTip") {
-                    DefaultEmptyScreen(
-                        modifier = Modifier.fillParentMaxHeight(fraction = 0.9f),
-                        titleRes = if (state.seeLz) R.string.title_lz_empty else R.string.title_empty,
-                        messageRes = R.string.message_turn_off_see_lz.takeIf { state.seeLz },
-                    )
-                }
-            } else {
-                items(items = state.data, key = { it.id }, contentType = { Type.Post }) { item ->
-                    PostCardItem(viewModel, item, localUid, collectPid)
-                }
-            }
-
-            if (state.sortType != ThreadSortType.BY_DESC && !latestPosts.isNullOrEmpty()) {
-                postTipItem(isDesc = false)  // ASC Tip on top
-                items(items = latestPosts, key = { post -> "LatestPost_${post.id}" }) { post ->
-                    PostCardItem(viewModel, post, localUid, collectPid)
                 }
             }
         }

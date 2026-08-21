@@ -5,14 +5,8 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
-import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.rounded.Fullscreen
-import androidx.compose.material.icons.rounded.FullscreenExit
-import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
-import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
@@ -39,11 +33,9 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.huanchengfly.tieba.post.R
-import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
-import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadPage
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadViewModel
 import com.huanchengfly.tieba.post.ui.page.main.LocalMainNavState
@@ -85,7 +77,6 @@ fun ListDetailPaneHost(
     listPane: @Composable (onOpenThread: (Destination.Thread) -> Unit) -> Unit,
 ) {
     val isCompact = isWindowWidthCompact()
-    val uiSettings = LocalUISettings.current
     val detailNavController = rememberNavController()
     val detailEntry by detailNavController.currentBackStackEntryAsState()
     val isDetailShowing = detailEntry?.destination?.hasRoute<Destination.Thread>() == true
@@ -253,32 +244,6 @@ fun ListDetailPaneHost(
             }
             Box(modifier = detailModifier) {
                 detailPane()
-                if (!isCompact && isDetailShowing &&
-                    uiSettings.fullscreenButtonStyle == FullscreenButtonStyle.FAB
-                ) {
-                    // 右下角全屏/收起按钮, 底边距避开详情回复工具条
-                    SmallFloatingActionButton(
-                        onClick = { detailExpanded = !detailExpanded },
-                        modifier = Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(end = 16.dp, bottom = 72.dp),
-                    ) {
-                        Icon(
-                            imageVector = if (detailExpanded) {
-                                Icons.Rounded.FullscreenExit
-                            } else {
-                                Icons.Rounded.Fullscreen
-                            },
-                            contentDescription = stringResource(
-                                id = if (detailExpanded) {
-                                    R.string.desc_collapse_detail
-                                } else {
-                                    R.string.desc_expand_detail
-                                }
-                            ),
-                        )
-                    }
-                }
             }
         }
     }

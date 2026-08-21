@@ -292,6 +292,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             fullscreenButtonStyle = FullscreenButtonStyle.entries.getOrElse(fullscreenButtonStyleOrdinal) {
                 FullscreenButtonStyle.FAB
             },
+            commentNavEnabled = it[booleanPreferencesKey(KEY_COMMENT_NAV_ENABLED)] ?: true,
         )
     }
 
@@ -315,6 +316,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[intPreferencesKey(KEY_FORUM_DETAIL_MODE)] = ui.forumDetailMode.ordinal
         it[booleanPreferencesKey(KEY_FOLD_TO_PORTRAIT)] = ui.foldToPortrait
         it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] = ui.fullscreenButtonStyle.ordinal
+        it[booleanPreferencesKey(KEY_COMMENT_NAV_ENABLED)] = ui.commentNavEnabled
     }
 
     private const val KEY_APP_ICON = "app_icon"
@@ -343,6 +345,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_FORUM_DETAIL_MODE = "ui_forum_detail_mode"
     private const val KEY_FOLD_TO_PORTRAIT = "ui_fold_to_portrait"
     private const val KEY_FULLSCREEN_BUTTON_STYLE = "ui_fullscreen_button_style"
+    private const val KEY_COMMENT_NAV_ENABLED = "ui_comment_nav_enabled"
 }
 
 private object BlockTransformer: PreferenceTransformer<BlockSettings> {

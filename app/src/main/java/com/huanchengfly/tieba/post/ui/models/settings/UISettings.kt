@@ -70,6 +70,7 @@ enum class FullscreenButtonStyle {
  * @param forumDetailMode 吧内详情显示方式
  * @param foldToPortrait 折叠到外屏时自动切换竖屏(收起双列进入详情全屏)
  * @param fullscreenButtonStyle 详情全屏按钮样式
+ * @param commentNavEnabled 帖子详情页启用评论上/下导航
  * */
 @Immutable
 data class UISettings(
@@ -91,4 +92,5 @@ data class UISettings(
     val forumDetailMode: ForumDetailMode = ForumDetailMode.KEEP_DETAIL,
     val foldToPortrait: Boolean = true,
     val fullscreenButtonStyle: FullscreenButtonStyle = FullscreenButtonStyle.FAB,
+    val commentNavEnabled: Boolean = true,
 )
