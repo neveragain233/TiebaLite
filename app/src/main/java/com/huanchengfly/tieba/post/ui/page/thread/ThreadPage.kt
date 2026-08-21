@@ -22,8 +22,8 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
+import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -85,7 +85,6 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -163,6 +162,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.fixedTopBarPadding
 import com.huanchengfly.tieba.post.ui.widgets.compose.hazeSource
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberSnackbarHostState
+import com.huanchengfly.tieba.post.ui.widgets.compose.scrollToItemWithHeader
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.useStickyHeaderWorkaround
 import com.huanchengfly.tieba.post.utils.StringUtil.getShortNumString
@@ -242,7 +242,11 @@ private fun LazyListState.middleVisiblePost(uiState: ThreadUiState): PostData? =
  * 与 [middleVisiblePost](取中间楼, 用于收藏楼层/返回键) 区分, 避免锚点漂移导致方向感知错乱.
  */
 private fun LazyListState.navigationAnchorPost(uiState: ThreadUiState): PostData? = layoutInfo.run {
-    val postItem = visibleItemsInfo.firstOrNull { it.contentType === Type.Post }
+    // 优先取「顶边已进入视口」的首个楼层; 跳转让位后, 上一楼顶部在视口外, 不会被误选为锚点
+    val viewportStart = layoutInfo.viewportStartOffset
+    val postItem = visibleItemsInfo.firstOrNull {
+        it.contentType === Type.Post && (it.offset - viewportStart) >= 0
+    } ?: visibleItemsInfo.firstOrNull { it.contentType === Type.Post }
         ?: return uiState.firstPost
     // item key is Post ID
     val postId = postItem.key as Long
@@ -282,12 +286,14 @@ fun ThreadPage(
 
     val layout = remember(state) { buildThreadListLayout(state) }
     var pendingCommentNav by remember { mutableStateOf<PendingCommentNav?>(null) }
+    // 上次导航跳转到的楼层, 作为下一次导航的锚点, 保证连续按 ▲▼ 逐楼前进
+    var lastNavAnchorPostId by remember { mutableStateOf<Long?>(null) }
+    // 用户是否触碰过列表(区别于导航按钮触发的程序化滚动)
+    var userTouchedList by remember { mutableStateOf(false) }
     val scrollInProgress by remember { derivedStateOf { lazyListState.isScrollInProgress } }
-
-    // 导航跳转时向下让出顶栏高度, 避免目标楼层头像被顶栏裁掉
-    val density = LocalDensity.current
-    val topBarInsetPx = WindowInsets.statusBars.getTop(density) +
-            with(density) { TopAppBarDefaults.TopAppBarExpandedHeight.roundToPx() }
+    // 只在用户主动拖动/惯性滑动时隐藏评论导航键, 导航按钮自身触发的滚动不隐藏
+    val hideCommentNav = scrollInProgress && userTouchedList
+    val useStickyThreadHeader = useStickyHeader && !useStickyHeaderWorkaround
 
     val fullscreenToggle = if (LocalUISettings.current.fullscreenButtonStyle == FullscreenButtonStyle.FAB) {
         onToggleDetailPane
@@ -296,23 +302,48 @@ fun ThreadPage(
     }
 
     val scrollToTop: () -> Unit = {
+        lastNavAnchorPostId = null
+        userTouchedList = false
         coroutineScope.launch { lazyListState.scrollToItem(0) }
     }
 
-    // 顶栏可见比例: 0=收起, 1=完全展开. 导航时按可见高度让出偏移, 避免头像被裁且不过度下移.
-    val topBarVisibleFraction: () -> Float = {
-        1f - topAppBarScrollBehavior.state.collapsedFraction
+    // 用户触碰列表: 重置导航锚点, 并标记为用户滚动(用于隐藏导航键)
+    LaunchedEffect(lazyListState) {
+        lazyListState.interactionSource.interactions.collect { interaction ->
+            if (interaction is PressInteraction.Press) {
+                userTouchedList = true
+                lastNavAnchorPostId = null
+            }
+        }
     }
-    fun navScrollOffsetPx(): Int = -(topBarInsetPx * topBarVisibleFraction()).toInt()
+    LaunchedEffect(scrollInProgress) {
+        if (!scrollInProgress) {
+            userTouchedList = false
+        }
+    }
+
+    suspend fun scrollToPost(targetIndex: Int) {
+        if (useStickyThreadHeader) {
+            // 让出 sticky 排序栏高度, 避免目标楼层头像/昵称被裁
+            lazyListState.scrollToItemWithHeader(targetIndex, animate = true) {
+                it.contentType === Type.Header
+            }
+        } else {
+            lazyListState.animateScrollToItem(targetIndex)
+        }
+    }
 
     fun requestNavigateComment(direction: CommentNavDirection) {
-        val anchor = lazyListState.navigationAnchorPost(state) ?: return
-        val target = layout.targetPostId(anchor.id, direction)
+        // 本次是导航键操作, 不计为用户滚动, 避免导航触发的滚动隐藏按钮
+        userTouchedList = false
+        val anchorId = lastNavAnchorPostId?.takeIf { it in layout.orderedPostIds }
+            ?: lazyListState.navigationAnchorPost(state)?.id
+            ?: return
+        val target = layout.targetPostId(anchorId, direction)
         if (target != null) {
             layout.itemIndexOf(target)?.let { targetIndex ->
-                coroutineScope.launch {
-                    lazyListState.animateScrollToItem(targetIndex, scrollOffset = navScrollOffsetPx())
-                }
+                lastNavAnchorPostId = target
+                coroutineScope.launch { scrollToPost(targetIndex) }
             }
             return
         }
@@ -320,7 +351,7 @@ fun ThreadPage(
         when (direction) {
             CommentNavDirection.NEXT -> {
                 if (state.pageData.hasMore) {
-                    pendingCommentNav = PendingCommentNav(direction, anchor.id)
+                    pendingCommentNav = PendingCommentNav(direction, anchorId)
                     viewModel.requestLoadMore()
                 } else {
                     context.toastShort(R.string.tip_no_more_comment)
@@ -328,20 +359,16 @@ fun ThreadPage(
             }
             CommentNavDirection.PREV -> {
                 when {
-                    anchor.id == layout.firstPostId -> context.toastShort(R.string.tip_no_prev_comment)
+                    anchorId == layout.firstPostId -> context.toastShort(R.string.tip_no_prev_comment)
                     state.pageData.hasPrevious -> {
-                        pendingCommentNav = PendingCommentNav(direction, anchor.id)
+                        pendingCommentNav = PendingCommentNav(direction, anchorId)
                         viewModel.requestLoadPrevious(offset = 0)
                     }
                     else -> {
                         // 无更早分页: 回跳楼主帖(此时 targetPostId 已应返回 firstPost, 兜底)
                         layout.itemIndexOf(layout.firstPostId ?: return)?.let { firstPostIndex ->
-                            coroutineScope.launch {
-                                lazyListState.animateScrollToItem(
-                                    firstPostIndex,
-                                    scrollOffset = navScrollOffsetPx(),
-                                )
-                            }
+                            lastNavAnchorPostId = layout.firstPostId
+                            coroutineScope.launch { scrollToPost(firstPostIndex) }
                         }
                     }
                 }
@@ -355,9 +382,8 @@ fun ThreadPage(
         val newLayout = buildThreadListLayout(state)
         val target = newLayout.targetPostId(pending.anchorPostId, pending.direction)
         if (target != null) {
-            newLayout.itemIndexOf(target)?.let {
-                lazyListState.animateScrollToItem(it, scrollOffset = navScrollOffsetPx())
-            }
+            lastNavAnchorPostId = target
+            newLayout.itemIndexOf(target)?.let { scrollToPost(it) }
             pendingCommentNav = null
         }
     }
@@ -659,7 +685,7 @@ fun ThreadPage(
                         onPrev = { requestNavigateComment(CommentNavDirection.PREV) },
                         onNext = { requestNavigateComment(CommentNavDirection.NEXT) },
                         showCommentNav = commentNavEnabled,
-                        hideCommentNav = scrollInProgress,
+                        hideCommentNav = hideCommentNav,
                         onPrevLongPress = scrollToTop,
                         onToggleDetailPane = fullscreenToggle,
                         detailPaneExpanded = detailPaneExpanded,
