@@ -8,6 +8,7 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SmallFloatingActionButton
@@ -241,19 +242,29 @@ fun ListDetailPaneHost(
             }
             Box(modifier = detailModifier) {
                 detailPane()
-                if (!isCompact && isDetailShowing && !detailExpanded &&
+                if (!isCompact && isDetailShowing &&
                     uiSettings.fullscreenButtonStyle == FullscreenButtonStyle.FAB
                 ) {
-                    // 分屏模式下右下角展开按钮, 底边距避开详情回复工具条
+                    // 右下角全屏/收起按钮, 底边距避开详情回复工具条
                     SmallFloatingActionButton(
-                        onClick = { detailExpanded = true },
+                        onClick = { detailExpanded = !detailExpanded },
                         modifier = Modifier
                             .align(Alignment.BottomEnd)
                             .padding(end = 16.dp, bottom = 72.dp),
                     ) {
                         Icon(
-                            imageVector = Icons.Rounded.Fullscreen,
-                            contentDescription = stringResource(id = R.string.desc_expand_detail),
+                            imageVector = if (detailExpanded) {
+                                Icons.Rounded.FullscreenExit
+                            } else {
+                                Icons.Rounded.Fullscreen
+                            },
+                            contentDescription = stringResource(
+                                id = if (detailExpanded) {
+                                    R.string.desc_collapse_detail
+                                } else {
+                                    R.string.desc_expand_detail
+                                }
+                            ),
                         )
                     }
                 }
