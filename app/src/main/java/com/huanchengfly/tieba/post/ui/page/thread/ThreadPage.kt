@@ -180,6 +180,9 @@ private val ThreadToolbarContainerHeight = 48.dp
  * */
 private val ThreadToolbarScreenOffset = FloatingToolbarDefaults.ScreenOffset / 2
 
+/** 评论导航接近末尾多少楼时提前预加载下一页, 避免临界点再加载导致来回跳动. */
+private const val NavPreloadNearEnd = 3
+
 const val ThreadResultKey = "THREAD_PAGE"
 
 private fun createResult(threadId: Long, like: Like?, markedPostId: Long?): ThreadResult? {
@@ -371,6 +374,14 @@ fun ThreadPage(
             ?: return
         val target = layout.targetPostId(anchorId, direction)
         if (target != null) {
+            // 预加载: 目标楼接近已加载末尾且还有下一页时提前拉取, 避免到临界点再加载导致来回跳动
+            if (direction == CommentNavDirection.NEXT && state.pageData.hasMore) {
+                val remainingAfterTarget =
+                    layout.orderedReplyPostIds.size - (layout.orderedReplyPostIds.indexOf(target) + 1)
+                if (remainingAfterTarget <= NavPreloadNearEnd) {
+                    viewModel.requestLoadMore()
+                }
+            }
             layout.itemIndexOf(target)?.let { targetIndex ->
                 lastNavAnchorPostId = target
                 navScrollActive = true
