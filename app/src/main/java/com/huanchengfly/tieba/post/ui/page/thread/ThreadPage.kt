@@ -297,11 +297,11 @@ fun ThreadPage(
     var pendingCommentNav by remember { mutableStateOf<PendingCommentNav?>(null) }
     // 上次导航跳转到的楼层, 作为下一次导航的锚点, 保证连续按 ▲▼ 逐楼前进
     var lastNavAnchorPostId by remember { mutableStateOf<Long?>(null) }
-    // 用户是否触碰过列表(区别于导航按钮触发的程序化滚动)
-    var userTouchedList by remember { mutableStateOf(false) }
+    // 导航键自身触发的滚动进行中; 期间不隐藏导航键
+    var navScrollActive by remember { mutableStateOf(false) }
     val scrollInProgress by remember { derivedStateOf { lazyListState.isScrollInProgress } }
-    // 只在用户主动拖动/惯性滑动时隐藏评论导航键, 导航按钮自身触发的滚动不隐藏
-    val hideCommentNav = scrollInProgress && userTouchedList
+    // 列表在滚动(用户拖动/惯性)且非导航键触发时隐藏评论导航键
+    val hideCommentNav = scrollInProgress && !navScrollActive
     val useStickyThreadHeader = useStickyHeader && !useStickyHeaderWorkaround
     // 顶栏(含状态栏)高度: 跳转时让出, 避免目标楼层头像/昵称被顶栏裁掉
     val density = LocalDensity.current
@@ -320,22 +320,19 @@ fun ThreadPage(
 
     val scrollToTop: () -> Unit = {
         lastNavAnchorPostId = null
-        userTouchedList = false
-        coroutineScope.launch { lazyListState.scrollToItem(0) }
+        navScrollActive = true
+        coroutineScope.launch {
+            lazyListState.scrollToItem(0)
+            navScrollActive = false
+        }
     }
 
-    // 用户触碰列表: 重置导航锚点, 并标记为用户滚动(用于隐藏导航键)
+    // 用户触碰列表: 重置导航锚点
     LaunchedEffect(lazyListState) {
         lazyListState.interactionSource.interactions.collect { interaction ->
             if (interaction is PressInteraction.Press) {
-                userTouchedList = true
                 lastNavAnchorPostId = null
             }
-        }
-    }
-    LaunchedEffect(scrollInProgress) {
-        if (!scrollInProgress) {
-            userTouchedList = false
         }
     }
 
@@ -358,8 +355,6 @@ fun ThreadPage(
     }
 
     fun requestNavigateComment(direction: CommentNavDirection) {
-        // 本次是导航键操作, 不计为用户滚动, 避免导航触发的滚动隐藏按钮
-        userTouchedList = false
         val anchorId = lastNavAnchorPostId?.takeIf { it in layout.orderedPostIds }
             ?: lazyListState.navigationAnchorPost(state)?.id
             ?: return
@@ -367,7 +362,11 @@ fun ThreadPage(
         if (target != null) {
             layout.itemIndexOf(target)?.let { targetIndex ->
                 lastNavAnchorPostId = target
-                coroutineScope.launch { scrollToPost(targetIndex) }
+                navScrollActive = true
+                coroutineScope.launch {
+                    scrollToPost(targetIndex)
+                    navScrollActive = false
+                }
             }
             return
         }
@@ -392,7 +391,11 @@ fun ThreadPage(
                         // 无更早分页: 回跳楼主帖(此时 targetPostId 已应返回 firstPost, 兜底)
                         layout.itemIndexOf(layout.firstPostId ?: return)?.let { firstPostIndex ->
                             lastNavAnchorPostId = layout.firstPostId
-                            coroutineScope.launch { scrollToPost(firstPostIndex) }
+                            navScrollActive = true
+                            coroutineScope.launch {
+                                scrollToPost(firstPostIndex)
+                                navScrollActive = false
+                            }
                         }
                     }
                 }
@@ -407,7 +410,9 @@ fun ThreadPage(
         val target = newLayout.targetPostId(pending.anchorPostId, pending.direction)
         if (target != null) {
             lastNavAnchorPostId = target
+            navScrollActive = true
             newLayout.itemIndexOf(target)?.let { scrollToPost(it) }
+            navScrollActive = false
             pendingCommentNav = null
         }
     }
