@@ -292,7 +292,6 @@ fun ThreadPage(
         TopAppBarDefaults.enterAlwaysScrollBehavior()
     }
     val toolbarScrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(exitDirection = Bottom)
-    val navDockScrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(exitDirection = Bottom)
 
     val layout = remember(state) { buildThreadListLayout(state) }
     var pendingCommentNav by remember { mutableStateOf<PendingCommentNav?>(null) }
@@ -302,13 +301,13 @@ fun ThreadPage(
     var navScrollActive by remember { mutableStateOf(false) }
     // 评论导航坞与回复栏一致: 内容向下滚动时隐藏, 直到向上滚动才恢复
     val commentNavHidden by remember {
-        derivedStateOf { navDockScrollBehavior.state.collapsedFraction >= 0.9f }
+        derivedStateOf { toolbarScrollBehavior.state.collapsedFraction >= 0.9f }
     }
     val hideCommentNav = commentNavHidden && !navScrollActive
-    // 导航键触发程序化滚动后, 复位导航坞为显示状态, 保证连续导航不被隐藏
+    // 导航键触发程序化滚动后, 复位回复栏收起状态, 保证连续导航不被隐藏
     fun resetCommentNavDock() {
-        navDockScrollBehavior.state.contentOffset = 0f
-        navDockScrollBehavior.state.offset = 0f
+        toolbarScrollBehavior.state.contentOffset = 0f
+        toolbarScrollBehavior.state.offset = 0f
     }
     val useStickyThreadHeader = useStickyHeader && !useStickyHeaderWorkaround
     // 顶栏(含状态栏)高度: 跳转时让出, 避免目标楼层头像/昵称被顶栏裁掉
@@ -701,8 +700,7 @@ fun ThreadPage(
                             modifier = Modifier
                                 .hazeSource(hazeState?.state)
                                 .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                                .nestedScroll(toolbarScrollBehavior)
-                                .nestedScroll(navDockScrollBehavior),
+                                .nestedScroll(toolbarScrollBehavior),
                             viewModel = viewModel,
                             lazyListState = lazyListState,
                             contentPadding = contentPadding,
