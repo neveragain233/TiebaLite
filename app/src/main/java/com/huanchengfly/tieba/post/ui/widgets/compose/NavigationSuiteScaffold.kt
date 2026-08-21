@@ -41,6 +41,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.layout.Layout
 import androidx.compose.ui.layout.layoutId
+import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.util.fastFirst
 import com.huanchengfly.tieba.post.NoWindowInsets
@@ -70,6 +71,8 @@ import com.huanchengfly.tieba.post.NoWindowInsets
  * @param navigationSuiteType the current [NavigationSuiteType]. Usually
  *   [NavigationSuiteScaffoldDefaults.navigationSuiteType]
  * @param navigationBarAtop place the content behind the navigation bar just like MD3 Scaffold
+ * @param bottomOffset 浮动底栏相对屏幕底部的上移间距(dp), 隐藏时需要额外多滑出该距离,
+ *   否则底栏上边缘会残留一截
  * @param state the [NavigationSuiteScaffoldState] of this navigation suite scaffold layout
  * @param primaryActionContent The optional primary action content of the navigation suite scaffold,
  *   if any. Typically a [androidx.compose.material3.FloatingActionButton]. It'll be displayed
@@ -85,6 +88,7 @@ fun NavigationSuiteScaffoldLayout(
     navigationSuite: @Composable () -> Unit,
     navigationSuiteType: NavigationSuiteType,
     navigationBarAtop: Boolean = true,
+    bottomOffset: Dp = 0.dp,
     state: NavigationSuiteScaffoldState = rememberNavigationSuiteScaffoldState(),
     primaryActionContent: @Composable (() -> Unit) = {},
     primaryActionContentHorizontalAlignment: Alignment.Horizontal =
@@ -114,6 +118,7 @@ fun NavigationSuiteScaffoldLayout(
         val isNavigationBar = navigationSuiteType.isNavigationBar
         val layoutHeight = constraints.maxHeight
         val layoutWidth = constraints.maxWidth
+        val hideOffsetPx = with(density) { bottomOffset.toPx() }
 
         // Find the navigation suite composable through it's layoutId tag
         val navigationPlaceable =
@@ -168,7 +173,8 @@ fun NavigationSuiteScaffoldLayout(
                 if (navigationSuiteType != NavigationSuiteType.ShortNavigationBarCompact) {
                     navigationPlaceable.placeRelative(
                         (layoutWidth - navigationPlaceable.width) / 2,
-                        layoutHeight - (navigationPlaceable.height * animationProgress).toInt(),
+                        ((layoutHeight + hideOffsetPx) -
+                            ((navigationPlaceable.height + hideOffsetPx) * animationProgress)).toInt(),
                     )
                 } else {
                     // 0Ranko0p changes: Place the primary action at the end of the navigation bar
@@ -180,11 +186,13 @@ fun NavigationSuiteScaffoldLayout(
                     val navigationX = (layoutWidth - navigationPlaceable.width - actionWidth ) / 2
                     navigationPlaceable.placeRelative(
                         navigationX,
-                        layoutHeight - (navigationPlaceable.height * animationProgress).toInt(),
+                        ((layoutHeight + hideOffsetPx) -
+                            ((navigationPlaceable.height + hideOffsetPx) * animationProgress)).toInt(),
                     )
                     primaryActionContentPlaceable.placeRelative(
                         layoutWidth - navigationX - actionWidth + ToolbarToFabGap.roundToPx(),
-                        layoutHeight - (navigationPlaceable.height * animationProgress).toInt(),
+                        ((layoutHeight + hideOffsetPx) -
+                            ((navigationPlaceable.height + hideOffsetPx) * animationProgress)).toInt(),
                     )
                     return@layout
                     // End of 0Ranko0p changes

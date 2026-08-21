@@ -289,8 +289,8 @@ fun MainPage(
             ): Offset {
                 if (source != NestedScrollSource.UserInput) return Offset.Zero
 
-                // 消息页保持底栏常驻，便于切换，不参与滑动隐藏
-                if (currentDestinationState.value == MainDestination.Notification) return Offset.Zero
+                // 只在动态页参与滑动隐藏, 其余 tab 底栏常驻
+                if (currentDestinationState.value != MainDestination.Explore) return Offset.Zero
 
                 // 只累计子级真正消费的滚动量，避免内容不足一屏时的拖拽手势触发隐藏
                 val dy = consumed.y
@@ -315,7 +315,7 @@ fun MainPage(
     }
 
     LaunchedEffect(scrollHideEnabled, currentDestination) {
-        if ((!scrollHideEnabled || currentDestination == MainDestination.Notification) &&
+        if ((!scrollHideEnabled || currentDestination != MainDestination.Explore) &&
             scaffoldState.targetValue != NavigationSuiteScaffoldValue.Visible
         ) {
             scaffoldState.show()
@@ -518,6 +518,11 @@ private fun MainNavigationSuiteScaffold(
         state = state,
         navigationSuiteType = navigationSuiteType,
         navigationBarAtop = navigationBarAtop,
+        bottomOffset = if (mainNavSuiteType.isFloatingNavigationBar) {
+            floatingNavigationBarCompactScreenOffset
+        } else {
+            0.dp
+        },
         primaryActionContent = primaryActionContent,
         primaryActionContentHorizontalAlignment = primaryActionContentHorizontalAlignment,
         content = {
