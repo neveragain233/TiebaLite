@@ -8,13 +8,20 @@ import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Shapes
 import androidx.compose.material3.TopAppBarColors
 import androidx.compose.material3.Typography
+import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.toArgb
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.window.core.layout.WindowSizeClass
+import com.huanchengfly.tieba.post.arch.BaseComposeActivity
+import com.huanchengfly.tieba.post.findActivity
 import com.huanchengfly.tieba.post.LocalRealWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.theme.colorscheme.BlueColorScheme
@@ -34,7 +41,19 @@ fun TiebaLiteTheme(
     typography: Typography = MaterialTheme.typography,
     content: @Composable () -> Unit
 ) {
-    val windowAdaptiveInfo = currentWindowAdaptiveInfo()
+    // 折叠/旋转后窗口容器尺寸可能未及时刷新, 导致 currentWindowAdaptiveInfo()
+    // 提供的尺寸类别停留在旧方向. 这里以 LocalConfiguration(配置变化必然更新)
+    // 为尺寸真值源, 并叠加 BaseComposeActivity 的 configVersion 强制重算.
+    val context = LocalContext.current
+    val configuration = LocalConfiguration.current
+    val configVersion = (context.findActivity() as? BaseComposeActivity)?.configVersion ?: 0
+    val posture = currentWindowAdaptiveInfo().windowPosture
+    val windowSizeClass = remember(configuration, configVersion) {
+        WindowSizeClass(configuration.screenWidthDp, configuration.screenHeightDp)
+    }
+    val windowAdaptiveInfo = remember(windowSizeClass, posture) {
+        WindowAdaptiveInfo(windowSizeClass, posture)
+    }
     CompositionLocalProvider(
         LocalExtendedColorScheme provides colorSchemeExt,
         LocalWindowAdaptiveInfo provides windowAdaptiveInfo,

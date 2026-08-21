@@ -8,6 +8,8 @@ import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
 import com.huanchengfly.tieba.post.activities.BaseActivity
@@ -22,6 +24,13 @@ abstract class BaseComposeActivity : BaseActivity() {
     protected val windowInsetsController: WindowInsetsControllerCompat by lazy {
         WindowCompat.getInsetsController(window, window.decorView)
     }
+
+    /**
+     * 配置变化版本号. [onConfigurationChanged] 时自增, 供 Compose 侧强制重算
+     * 窗口自适应信息, 避免折叠/旋转后窗口容器尺寸未刷新导致布局卡在旧方向.
+     */
+    var configVersion by mutableStateOf(0)
+        private set
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
@@ -55,6 +64,7 @@ abstract class BaseComposeActivity : BaseActivity() {
 
         // Update night theme if needed
         ThemeUtil.onUpdateSystemUiMode(this)
+        configVersion++
     }
 
     fun handleCommonEvent(event: CommonUiEvent) {
