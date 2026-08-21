@@ -31,6 +31,7 @@ import com.huanchengfly.tieba.post.ui.models.settings.ClientConfig
 import com.huanchengfly.tieba.post.ui.models.settings.DarkPreference
 import com.huanchengfly.tieba.post.ui.models.settings.ForumDetailMode
 import com.huanchengfly.tieba.post.ui.models.settings.ForumSortType
+import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
 import com.huanchengfly.tieba.post.ui.models.settings.NavigationLabel
 import com.huanchengfly.tieba.post.ui.models.settings.PrivacySettings
@@ -246,6 +247,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             it[intPreferencesKey(KEY_BOTTOM_NAV_LABEL)] ?: NavigationLabel.ALWAYS.ordinal
         val forumDetailModeOrdinal =
             it[intPreferencesKey(KEY_FORUM_DETAIL_MODE)] ?: ForumDetailMode.KEEP_DETAIL.ordinal
+        val fullscreenButtonStyleOrdinal =
+            it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] ?: FullscreenButtonStyle.FAB.ordinal
 
         UISettings(
             appIcon = LauncherIcons.entries[appIconOrdinal],
@@ -266,6 +269,9 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
                 ForumDetailMode.KEEP_DETAIL
             },
             foldToPortrait = it[booleanPreferencesKey(KEY_FOLD_TO_PORTRAIT)] ?: true,
+            fullscreenButtonStyle = FullscreenButtonStyle.entries.getOrElse(fullscreenButtonStyleOrdinal) {
+                FullscreenButtonStyle.FAB
+            },
         )
     }
 
@@ -286,6 +292,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] = ui.showHistoryInHome
         it[intPreferencesKey(KEY_FORUM_DETAIL_MODE)] = ui.forumDetailMode.ordinal
         it[booleanPreferencesKey(KEY_FOLD_TO_PORTRAIT)] = ui.foldToPortrait
+        it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] = ui.fullscreenButtonStyle.ordinal
     }
 
     private const val KEY_APP_ICON = "app_icon"
@@ -311,6 +318,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_HOME_PAGE_SHOW_HISTORY = "ui_history_in_home"
     private const val KEY_FORUM_DETAIL_MODE = "ui_forum_detail_mode"
     private const val KEY_FOLD_TO_PORTRAIT = "ui_fold_to_portrait"
+    private const val KEY_FULLSCREEN_BUTTON_STYLE = "ui_fullscreen_button_style"
 }
 
 private object BlockTransformer: PreferenceTransformer<BlockSettings> {

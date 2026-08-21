@@ -19,6 +19,12 @@ class MainNavState {
 
     /** 双栏面板的详情是否处于打开状态, 折叠后用于隐藏底栏避免遮挡 */
     var paneDetailOpen by mutableStateOf(false)
+
+    /** 面板详情是否处于全屏状态, 供侧栏判断「先收起再跳转」 */
+    var paneDetailExpanded by mutableStateOf(false)
+
+    /** 请求收起全屏详情的计数, 侧栏点击当前 tab 时递增, 由面板宿主消费 */
+    var collapsePaneDetailRequest by mutableStateOf(0)
 }
 
 val LocalMainNavState = staticCompositionLocalOf<MainNavState> { error("No MainNavState provided!") }

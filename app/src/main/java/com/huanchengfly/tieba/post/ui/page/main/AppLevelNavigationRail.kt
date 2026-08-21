@@ -49,7 +49,6 @@ fun AppLevelNavigationRail(
             NavigationRailItem(
                 selected = selected,
                 onClick = {
-                    mainNavState.requestedTab = destination
                     onSelect(destination)
                 },
                 icon = {

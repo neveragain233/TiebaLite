@@ -271,10 +271,16 @@ class MainActivityV2 : BaseComposeActivity() {
                                 modifier = Modifier
                                     .align(Alignment.CenterStart)
                                     .width(AppLevelRailWidth),
-                                onSelect = { _ ->
-                                    navController.navigate(Destination.Main) {
-                                        popUpTo<Destination.Main>()
-                                        launchSingleTop = true
+                                onSelect = { dest ->
+                                    if (mainNavState.paneDetailExpanded && dest === mainNavState.currentTab) {
+                                        // 当前 tab 且详情全屏: 先收起到双栏, 不跳转
+                                        mainNavState.collapsePaneDetailRequest++
+                                    } else {
+                                        mainNavState.requestedTab = dest
+                                        navController.navigate(Destination.Main) {
+                                            popUpTo<Destination.Main>()
+                                            launchSingleTop = true
+                                        }
                                     }
                                 },
                                 onLoginClick = { navController.navigate(Destination.Login) },

@@ -124,6 +124,7 @@ import com.huanchengfly.tieba.post.ui.common.defaultVerticalExitTransition
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.common.theme.compose.withNonNull
+import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.LikeZero
 import com.huanchengfly.tieba.post.ui.models.PostData
@@ -449,7 +450,9 @@ fun ThreadPage(
                         BackNavigationIcon(onBackPressed = onBackPressedCallback)
                     },
                     actions = {
-                        if (onToggleDetailPane != null) {
+                        if (onToggleDetailPane != null &&
+                            LocalUISettings.current.fullscreenButtonStyle == FullscreenButtonStyle.TOP_BAR
+                        ) {
                             ActionItem(
                                 icon = if (detailPaneExpanded) Icons.Rounded.FullscreenExit else Icons.Rounded.Fullscreen,
                                 contentDescription = if (detailPaneExpanded) {

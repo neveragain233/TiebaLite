@@ -36,6 +36,20 @@ enum class ForumDetailMode {
 }
 
 /**
+ * 详情「全屏/收起」按钮的展示样式
+ */
+enum class FullscreenButtonStyle {
+    /** 右下角 FAB (默认) */
+    FAB,
+
+    /** 顶栏图标 */
+    TOP_BAR,
+
+    /** 不显示 */
+    NONE,
+}
+
+/**
  * User UI Settings
  *
  * @param appIcon 应用图标
@@ -54,6 +68,7 @@ enum class ForumDetailMode {
  * @param showHistoryInHome 首页显示最近逛的吧
  * @param forumDetailMode 吧内详情显示方式
  * @param foldToPortrait 折叠到外屏时自动切换竖屏(收起双列进入详情全屏)
+ * @param fullscreenButtonStyle 详情全屏按钮样式
  * */
 @Immutable
 data class UISettings(
@@ -73,4 +88,5 @@ data class UISettings(
     val showHistoryInHome: Boolean = true,
     val forumDetailMode: ForumDetailMode = ForumDetailMode.KEEP_DETAIL,
     val foldToPortrait: Boolean = true,
+    val fullscreenButtonStyle: FullscreenButtonStyle = FullscreenButtonStyle.FAB,
 )

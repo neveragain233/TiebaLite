@@ -109,6 +109,7 @@ import com.huanchengfly.tieba.post.ui.page.main.explore.createThreadClickListene
 import com.huanchengfly.tieba.post.ui.page.photoview.PhotoViewActivity
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadLikeUiEvent
 import com.huanchengfly.tieba.post.ui.utils.rememberScrollOrientationConnection
+import com.huanchengfly.tieba.post.ui.utils.backToTopFabPosition
 import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.Avatar
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
@@ -423,6 +424,7 @@ fun ForumPage(
         },
         snackbarHostState = snackbarHostState,
         snackbarHost = { SwipeToDismissSnackbarHost(snackbarHostState) },
+        floatingActionButtonPosition = backToTopFabPosition(),
         floatingActionButton = {
             if (forumData == null) return@BlurScaffold
             // FAB visibility: no error, scrolling forward, pager is not scrolling

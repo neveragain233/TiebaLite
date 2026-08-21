@@ -4,8 +4,13 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Fullscreen
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SmallFloatingActionButton
 import androidx.compose.material3.Text
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
@@ -32,9 +37,11 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
+import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadPage
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadViewModel
 import com.huanchengfly.tieba.post.ui.page.main.LocalMainNavState
@@ -76,6 +83,7 @@ fun ListDetailPaneHost(
     listPane: @Composable (onOpenThread: (Destination.Thread) -> Unit) -> Unit,
 ) {
     val isCompact = isWindowWidthCompact()
+    val uiSettings = LocalUISettings.current
     val detailNavController = rememberNavController()
     val detailEntry by detailNavController.currentBackStackEntryAsState()
     val isDetailShowing = detailEntry?.destination?.hasRoute<Destination.Thread>() == true
@@ -88,8 +96,21 @@ fun ListDetailPaneHost(
     LaunchedEffect(isDetailShowing) {
         mainNavState.paneDetailOpen = isDetailShowing
     }
+    // 镜像详情全屏状态, 供侧栏判断「先收起再跳转」
+    LaunchedEffect(detailExpanded) {
+        mainNavState.paneDetailExpanded = detailExpanded
+    }
+    // 侧栏点击当前 tab 时请求收起全屏, 回到双栏
+    LaunchedEffect(mainNavState.collapsePaneDetailRequest) {
+        if (mainNavState.collapsePaneDetailRequest > 0 && detailExpanded) {
+            detailExpanded = false
+        }
+    }
     DisposableEffect(Unit) {
-        onDispose { mainNavState.paneDetailOpen = false }
+        onDispose {
+            mainNavState.paneDetailOpen = false
+            mainNavState.paneDetailExpanded = false
+        }
     }
 
     // 从详情进入新吧时预置当前帖子: 仅首次组合且详情尚未恢复时执行
@@ -157,9 +178,12 @@ fun ListDetailPaneHost(
                             { detailExpanded = !detailExpanded }
                         },
                         onBack = {
-                            // 全屏或分屏下返回都直接关闭详情回列表全屏
-                            detailExpanded = false
-                            detailNavController.popBackStack()
+                            if (!isCompact && detailExpanded) {
+                                // 全屏详情先收起到双栏
+                                detailExpanded = false
+                            } else {
+                                detailNavController.popBackStack()
+                            }
                         },
                     )
                 }
@@ -210,6 +234,22 @@ fun ListDetailPaneHost(
             }
             Box(modifier = detailModifier) {
                 detailPane()
+                if (!isCompact && isDetailShowing && !detailExpanded &&
+                    uiSettings.fullscreenButtonStyle == FullscreenButtonStyle.FAB
+                ) {
+                    // 分屏模式下右下角展开按钮, 底边距避开详情回复工具条
+                    SmallFloatingActionButton(
+                        onClick = { detailExpanded = true },
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(end = 16.dp, bottom = 72.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.Fullscreen,
+                            contentDescription = stringResource(id = R.string.desc_expand_detail),
+                        )
+                    }
+                }
             }
         }
     }
