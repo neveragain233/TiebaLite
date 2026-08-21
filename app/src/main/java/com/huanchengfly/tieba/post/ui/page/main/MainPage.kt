@@ -61,6 +61,7 @@ import androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteType
 import androidx.compose.material3.adaptive.navigationsuite.rememberNavigationSuiteScaffoldState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.NonRestartableComposable
@@ -101,6 +102,7 @@ import androidx.compose.ui.util.fastMap
 import androidx.compose.ui.util.lerp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.lifecycle.repeatOnLifecycle
@@ -305,7 +307,9 @@ fun MainPage(
                     coroutineScope.launch { scaffoldState.hide() }
                     scrollDelta = 0f
                 } else if (scrollDelta >= scrollHideThreshold &&
-                    scaffoldState.targetValue != NavigationSuiteScaffoldValue.Visible
+                    // 以实际显示状态为准: targetValue 可能因动画被取消而停留在 Visible,
+                    // 但底栏实际仍处于隐藏位置, 仅判断 targetValue 会漏掉恢复
+                    scaffoldState.currentValue != NavigationSuiteScaffoldValue.Visible
                 ) {
                     coroutineScope.launch { scaffoldState.show() }
                     scrollDelta = 0f
@@ -316,17 +320,29 @@ fun MainPage(
     }
 
     LaunchedEffect(scrollHideEnabled, currentDestination) {
-        if ((!scrollHideEnabled || currentDestination != MainDestination.Explore) &&
-            scaffoldState.targetValue != NavigationSuiteScaffoldValue.Visible
+        if (currentDestination != null &&
+            (!scrollHideEnabled || currentDestination != MainDestination.Explore) &&
+            scaffoldState.currentValue != NavigationSuiteScaffoldValue.Visible
         ) {
             scaffoldState.show()
         }
     }
     // 回顶操作（回顶 FAB、重复点击底栏等）时确保底栏重新弹出
     onGlobalEvent<GlobalEvent.ScrollToTop>(coroutineScope) {
-        if (scaffoldState.targetValue != NavigationSuiteScaffoldValue.Visible) {
+        if (scaffoldState.currentValue != NavigationSuiteScaffoldValue.Visible) {
             coroutineScope.launch { scaffoldState.show() }
         }
+    }
+    // 回到主页面（从帖子/吧页等根页面返回、应用回前台）时确保底栏重新弹出
+    val lifecycleOwner = LocalLifecycleOwner.current
+    DisposableEffect(lifecycleOwner) {
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                coroutineScope.launch { scaffoldState.show() }
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose { lifecycleOwner.lifecycle.removeObserver(observer) }
     }
     MainNavigationSuiteScaffold(
         state = scaffoldState,
@@ -340,7 +356,7 @@ fun MainPage(
                 items = destinations,
                 isSelected = { dest -> dest === currentDestination },
                 onSelect = { dest ->
-                    if (scaffoldState.targetValue != NavigationSuiteScaffoldValue.Visible) {
+                    if (scaffoldState.currentValue != NavigationSuiteScaffoldValue.Visible) {
                         coroutineScope.launch { scaffoldState.show() }
                     }
                     nestedNavController.navigate(route = dest) {
@@ -353,7 +369,7 @@ fun MainPage(
                     if (dest == MainDestination.Notification) vm.onNavigateNotification()
                 },
                 onReSelect = { dest ->
-                    if (scaffoldState.targetValue != NavigationSuiteScaffoldValue.Visible) {
+                    if (scaffoldState.currentValue != NavigationSuiteScaffoldValue.Visible) {
                         coroutineScope.launch { scaffoldState.show() }
                     }
                     coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(dest))
