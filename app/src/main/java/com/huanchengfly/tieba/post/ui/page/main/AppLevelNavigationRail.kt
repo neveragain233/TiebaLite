@@ -11,6 +11,7 @@ import androidx.compose.material3.NavigationRail
 import androidx.compose.material3.NavigationRailItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.key
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -45,24 +46,26 @@ fun AppLevelNavigationRail(
         // 顶部占位使图标组垂直居中, 与根页面 Rail 一致
         Spacer(modifier = Modifier.weight(1f))
         destinations.forEach { destination ->
-            val selected = destination === mainNavState.currentTab
-            NavigationRailItem(
-                selected = selected,
-                onClick = {
-                    onSelect(destination)
-                },
-                icon = {
-                    Icon(
-                        modifier = Modifier.size(Sizes.Tiny),
-                        painter = rememberAnimatedVectorPainter(
-                            animatedImageVector = AnimatedImageVector.animatedVectorResource(destination.iconRes),
-                            atEnd = selected,
-                        ),
-                        contentDescription = stringResource(destination.titleRes),
-                    )
-                },
-                label = { Text(stringResource(destination.titleRes)) },
-            )
+            key(destination) {
+                val selected = destination === mainNavState.currentTab
+                NavigationRailItem(
+                    selected = selected,
+                    onClick = {
+                        onSelect(destination)
+                    },
+                    icon = {
+                        Icon(
+                            modifier = Modifier.size(Sizes.Tiny),
+                            painter = rememberAnimatedVectorPainter(
+                                animatedImageVector = AnimatedImageVector.animatedVectorResource(destination.iconRes),
+                                atEnd = selected,
+                            ),
+                            contentDescription = stringResource(destination.titleRes),
+                        )
+                    },
+                    label = { Text(stringResource(destination.titleRes)) },
+                )
+            }
         }
         Spacer(modifier = Modifier.weight(1f))
         AccountNavIcon(onLoginClicked = onLoginClick)

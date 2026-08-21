@@ -2,7 +2,7 @@
     xmlns:aapt="http://schemas.android.com/aapt">
     <aapt:attr name="android:drawable">
         <vector
-            android:name="vector"
+            android:name="icon_user"
             android:width="960dp"
             android:height="960dp"
             android:viewportWidth="960"

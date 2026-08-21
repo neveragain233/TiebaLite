@@ -74,6 +74,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.produceState
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.key
 import androidx.compose.runtime.saveable.Saver
 import androidx.compose.runtime.saveable.listSaver
 import androidx.compose.runtime.saveable.rememberSaveable
@@ -566,22 +567,23 @@ private fun MainNavigationItems(
 ) {
     val isNavigationBar = mainNavigationSuiteType.isNavigationBar
     items.fastForEach { destination ->
-        val selected = isSelected(destination)
-        MainNavigationSuiteItem(
-            selected = selected,
-            onClick = {
-                if (selected) onReSelect(destination) else onSelect(destination)
-            },
-            icon = {
-                Icon(
-                    painter = rememberAnimatedVectorPainter(
-                        animatedImageVector = AnimatedImageVector.animatedVectorResource(destination.iconRes),
-                        atEnd = selected
-                    ),
-                    modifier = Modifier.size(Sizes.Tiny),
-                    contentDescription = stringResource(destination.titleRes),
-                )
-            },
+        key(destination) {
+            val selected = isSelected(destination)
+            MainNavigationSuiteItem(
+                selected = selected,
+                onClick = {
+                    if (selected) onReSelect(destination) else onSelect(destination)
+                },
+                icon = {
+                    Icon(
+                        painter = rememberAnimatedVectorPainter(
+                            animatedImageVector = AnimatedImageVector.animatedVectorResource(destination.iconRes),
+                            atEnd = selected
+                        ),
+                        modifier = Modifier.size(Sizes.Tiny),
+                        contentDescription = stringResource(destination.titleRes),
+                    )
+                },
             label = if (mainNavigationSuiteType != MainNavigationSuiteType.NavigationRail &&
                 (!isNavigationBar || bottomNavLabel.visible(selected))
             ) {
@@ -607,7 +609,8 @@ private fun MainNavigationItems(
                     }
                 }
             } else null,
-        )
+            )
+        }
     }
 }
 
