@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.navigationBars
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.lazy.LazyListState
@@ -85,6 +86,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.semantics.Role
@@ -242,12 +244,19 @@ private fun LazyListState.middleVisiblePost(uiState: ThreadUiState): PostData? =
  * 与 [middleVisiblePost](取中间楼, 用于收藏楼层/返回键) 区分, 避免锚点漂移导致方向感知错乱.
  */
 private fun LazyListState.navigationAnchorPost(uiState: ThreadUiState): PostData? = layoutInfo.run {
-    // 优先取「顶边已进入视口」的首个楼层; 跳转让位后, 上一楼顶部在视口外, 不会被误选为锚点
+    // 楼主帖(FirstPost)也视为可锚定帖子: 进入详情后首个可见帖是楼主帖, 这样第一按 ▼ 落到 2 楼
+    // 优先取「顶边已进入视口」的首个帖子; 跳转让位后, 上一楼顶部在视口外, 不会被误选为锚点
     val viewportStart = layoutInfo.viewportStartOffset
     val postItem = visibleItemsInfo.firstOrNull {
-        it.contentType === Type.Post && (it.offset - viewportStart) >= 0
-    } ?: visibleItemsInfo.firstOrNull { it.contentType === Type.Post }
+        (it.contentType === Type.Post || it.contentType === Type.FirstPost) &&
+                (it.offset - viewportStart) >= 0
+    } ?: visibleItemsInfo.firstOrNull {
+        it.contentType === Type.Post || it.contentType === Type.FirstPost
+    }
         ?: return uiState.firstPost
+    if (postItem.contentType === Type.FirstPost) {
+        return uiState.firstPost
+    }
     // item key is Post ID
     val postId = postItem.key as Long
     return uiState.data.fastFirstOrNull { p -> p.id == postId } ?: uiState.firstPost
@@ -294,6 +303,14 @@ fun ThreadPage(
     // 只在用户主动拖动/惯性滑动时隐藏评论导航键, 导航按钮自身触发的滚动不隐藏
     val hideCommentNav = scrollInProgress && userTouchedList
     val useStickyThreadHeader = useStickyHeader && !useStickyHeaderWorkaround
+    // 顶栏(含状态栏)高度: 跳转时让出, 避免目标楼层头像/昵称被顶栏裁掉
+    val density = LocalDensity.current
+    val topBarInsetPx = WindowInsets.statusBars.getTop(density) +
+            with(density) { TopAppBarDefaults.TopAppBarExpandedHeight.roundToPx() }
+    // 顶栏可见比例: 0=收起, 1=完全展开(enterAlways 模式下滚动后顶栏会收起)
+    val currentTopBarInsetPx: () -> Int = {
+        (topBarInsetPx * (1f - topAppBarScrollBehavior.state.collapsedFraction)).toInt()
+    }
 
     val fullscreenToggle = if (LocalUISettings.current.fullscreenButtonStyle == FullscreenButtonStyle.FAB) {
         onToggleDetailPane
@@ -323,13 +340,20 @@ fun ThreadPage(
     }
 
     suspend fun scrollToPost(targetIndex: Int) {
+        if (targetIndex == 0) {
+            // 回顶: 楼主帖本身就在顶栏下方, 不需要让位
+            lazyListState.animateScrollToItem(0)
+            return
+        }
         if (useStickyThreadHeader) {
-            // 让出 sticky 排序栏高度, 避免目标楼层头像/昵称被裁
-            lazyListState.scrollToItemWithHeader(targetIndex, animate = true) {
-                it.contentType === Type.Header
-            }
+            // 让出顶栏 + sticky 排序栏高度
+            lazyListState.scrollToItemWithHeader(
+                index = targetIndex,
+                scrollOffset = -currentTopBarInsetPx(),
+                animate = true,
+            ) { it.contentType === Type.Header }
         } else {
-            lazyListState.animateScrollToItem(targetIndex)
+            lazyListState.animateScrollToItem(targetIndex, scrollOffset = -currentTopBarInsetPx())
         }
     }
 
