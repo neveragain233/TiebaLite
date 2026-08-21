@@ -27,6 +27,7 @@ import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -42,8 +43,10 @@ import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.MacrobenchmarkConstant
 import com.huanchengfly.tieba.post.MacrobenchmarkConstant.testColumn
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.arch.GlobalEvent
 import com.huanchengfly.tieba.post.arch.collectCommonUiEventWithLifecycle
 import com.huanchengfly.tieba.post.arch.collectPartialAsState
+import com.huanchengfly.tieba.post.arch.onGlobalEvent
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.OrangeA700
 import com.huanchengfly.tieba.post.theme.RedA700
@@ -80,7 +83,10 @@ fun HotPage(
     onHideFab: (Boolean) -> Unit,
     viewModel: HotViewModel = hiltViewModel(),
     onOpenThread: ((Destination.Thread) -> Unit)? = null,
+    pageIndex: Int,
 ) {
+    val coroutineScope = rememberCoroutineScope()
+
     val isRefreshing by viewModel.uiState.collectPartialAsState(
         prop1 = HotUiState::isRefreshing,
         initial = true
@@ -93,6 +99,11 @@ fun HotPage(
     val isError = error != null
 
     viewModel.uiEvent.collectCommonUiEventWithLifecycle()
+
+    // 长按回顶键触发的刷新请求, 只处理属于本页的索引
+    onGlobalEvent<GlobalEvent.RefreshExplore>(coroutineScope, filter = { it.pageIndex == pageIndex }) {
+        viewModel.onRefresh()
+    }
 
     LaunchedFabStateEffect(listState, onHideFab, isRefreshing, isError)
 

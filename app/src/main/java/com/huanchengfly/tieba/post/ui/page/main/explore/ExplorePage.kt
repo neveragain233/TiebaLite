@@ -28,8 +28,10 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
@@ -254,15 +256,25 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
             bottomBarAtop = navigationSuiteType.isFloatingNavigationBar,
             floatingActionButton = {
                 if (isFloatingNavBarCompat) return@MyScaffold
+                val hapticFeedback = LocalHapticFeedback.current
                 // 未在顶部时回顶 FAB 常驻，不随滚动方向或底栏隐藏状态消失
                 val visible by remember {
                     derivedStateOf {
                         !transition.isRunning && !fabHideStates[pagerState.currentPage]
                     }
                 }
-                DefaultBackToTopFAB(visible = visible) {
-                    coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
-                }
+                DefaultBackToTopFAB(
+                    visible = visible,
+                    onClick = {
+                        coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
+                    },
+                    onLongClick = {
+                        // 长按回顶键: 回顶 + 刷新当前 tab, 触发瞬间给轻微震动
+                        hapticFeedback.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+                        coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
+                        coroutineScope.emitGlobalEvent(GlobalEvent.RefreshExplore(pagerState.currentPage))
+                    },
+                )
             },
             floatingActionButtonPosition = if (isFloatingNavBarCompat) FabPosition.EndOverlay else backToTopFabPosition(),
         ) { contentPadding ->
@@ -287,15 +299,27 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
 
                     when (pages[index]) {
                         ExplorePageItem.Concern -> {
-                            ConcernPage(modifier, contentPadding, listState, navigator, onHideFab, onOpenThread = onOpenThread)
+                            ConcernPage(
+                                modifier, contentPadding, listState, navigator, onHideFab,
+                                onOpenThread = onOpenThread,
+                                pageIndex = index,
+                            )
                         }
 
                         ExplorePageItem.Personalized -> {
-                            PersonalizedPage(modifier, contentPadding, listState, navigator, onHideFab, onOpenThread = onOpenThread)
+                            PersonalizedPage(
+                                modifier, contentPadding, listState, navigator, onHideFab,
+                                onOpenThread = onOpenThread,
+                                pageIndex = index,
+                            )
                         }
 
                         ExplorePageItem.Hot -> {
-                            HotPage(modifier, contentPadding, listState, navigator, onHideFab, onOpenThread = onOpenThread)
+                            HotPage(
+                                modifier, contentPadding, listState, navigator, onHideFab,
+                                onOpenThread = onOpenThread,
+                                pageIndex = index,
+                            )
                         }
                     }
                 }

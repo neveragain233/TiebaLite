@@ -18,6 +18,9 @@ sealed interface GlobalEvent : UiEvent {
 
     class ScrollToTop(val tag: Any) : GlobalEvent
 
+    /** 动态页回顶键长按触发的刷新请求, pageIndex 为当前 Pager 页索引 */
+    class RefreshExplore(val pageIndex: Int) : GlobalEvent
+
     data class ReplySuccess(
         val threadId: Long,
         val newPostId: Long,

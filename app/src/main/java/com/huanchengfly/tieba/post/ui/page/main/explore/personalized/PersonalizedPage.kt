@@ -40,8 +40,10 @@ import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaNotLoggedInException
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.arch.CommonUiEvent
+import com.huanchengfly.tieba.post.arch.GlobalEvent
 import com.huanchengfly.tieba.post.arch.collectPartialAsState
 import com.huanchengfly.tieba.post.arch.collectUiEventWithLifecycle
+import com.huanchengfly.tieba.post.arch.onGlobalEvent
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.toastShort
@@ -79,10 +81,16 @@ fun PersonalizedPage(
     onHideFab: (Boolean) -> Unit,
     viewModel: PersonalizedViewModel = hiltViewModel(),
     onOpenThread: ((Destination.Thread) -> Unit)? = null,
+    pageIndex: Int,
 ) {
     val coroutineScope = rememberCoroutineScope()
 
     var refreshCount by remember { mutableIntStateOf(0) }
+
+    // 长按回顶键触发的刷新请求, 只处理属于本页的索引
+    onGlobalEvent<GlobalEvent.RefreshExplore>(coroutineScope, filter = { it.pageIndex == pageIndex }) {
+        viewModel.onRefresh()
+    }
 
     viewModel.uiEvent.collectUiEventWithLifecycle {
         when (it) {

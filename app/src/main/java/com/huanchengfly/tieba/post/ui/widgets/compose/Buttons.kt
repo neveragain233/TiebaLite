@@ -4,6 +4,7 @@ import androidx.annotation.StringRes
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.focusable
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
@@ -11,6 +12,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -248,6 +250,7 @@ fun DefaultBackToTopFAB(
     modifier: Modifier = Modifier,
     visible: Boolean,
     size: Dp = ExtendedFabHeight,
+    onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
     TooltipBox(
@@ -260,16 +263,35 @@ fun DefaultBackToTopFAB(
         },
         state = rememberTooltipState(),
         modifier = modifier,
-        hasAction = true,
+        // 长按被赋予新语义时禁用长按 tooltip, 避免手势冲突
+        hasAction = onLongClick == null,
     ) {
         FloatingActionButton(
             onClick = onClick,
-            modifier = Modifier.animateFloatingActionButton(visible, alignment = Alignment.Center).size(size),
+            modifier = Modifier
+                .animateFloatingActionButton(visible, alignment = Alignment.Center)
+                .size(size),
         ) {
-            Icon(
-                imageVector = Icons.Rounded.VerticalAlignTop,
-                contentDescription = stringResource(R.string.btn_back_to_top)
-            )
+            // FAB 内部 Surface 的 clickable 会先消费 down, 外层 combinedClickable 收不到长按;
+            // 因此长按手势放到内容层, 让它在事件链中先于 Surface 的 clickable 处理
+            if (onLongClick != null) {
+                Box(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .combinedClickable(onClick = onClick, onLongClick = onLongClick),
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Icon(
+                        imageVector = Icons.Rounded.VerticalAlignTop,
+                        contentDescription = stringResource(R.string.btn_back_to_top)
+                    )
+                }
+            } else {
+                Icon(
+                    imageVector = Icons.Rounded.VerticalAlignTop,
+                    contentDescription = stringResource(R.string.btn_back_to_top)
+                )
+            }
         }
     }
 }
