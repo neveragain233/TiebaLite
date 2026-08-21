@@ -69,6 +69,7 @@ import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.main.AppLevelNavigationRail
 import com.huanchengfly.tieba.post.ui.page.main.AppLevelRailWidth
 import com.huanchengfly.tieba.post.ui.page.main.LocalMainNavState
+import com.huanchengfly.tieba.post.ui.page.main.MainDestination
 import com.huanchengfly.tieba.post.ui.page.main.MainNavState
 import com.huanchengfly.tieba.post.ui.page.RootNavGraph
 import com.huanchengfly.tieba.post.ui.page.TB_LITE_DOMAIN
@@ -246,6 +247,13 @@ class MainActivityV2 : BaseComposeActivity() {
                 }
 
                 val mainNavState = remember { MainNavState() }
+                val navigateToMainTab: (MainDestination) -> Unit = { dest ->
+                    mainNavState.requestedTab = dest
+                    navController.navigate(Destination.Main) {
+                        popUpTo<Destination.Main>()
+                        launchSingleTop = true
+                    }
+                }
                 val isCompact = isWindowWidthCompact()
                 val currentRootEntry by navController.currentBackStackEntryAsState()
                 val showAppLevelRail =
@@ -272,15 +280,20 @@ class MainActivityV2 : BaseComposeActivity() {
                                     .align(Alignment.CenterStart)
                                     .width(AppLevelRailWidth),
                                 onSelect = { dest ->
-                                    if (mainNavState.paneDetailExpanded && dest === mainNavState.currentTab) {
-                                        // 当前 tab 且详情全屏: 先收起到双栏, 不跳转
-                                        mainNavState.collapsePaneDetailRequest++
-                                    } else {
-                                        mainNavState.requestedTab = dest
-                                        navController.navigate(Destination.Main) {
-                                            popUpTo<Destination.Main>()
-                                            launchSingleTop = true
+                                    // 当前 tab 点击沿详情状态机往回走:
+                                    // 全屏 -> 双栏 -> 列表全屏 -> 根页
+                                    if (dest === mainNavState.currentTab) {
+                                        when {
+                                            mainNavState.paneDetailExpanded ->
+                                                mainNavState.collapsePaneDetailRequest++
+
+                                            mainNavState.paneDetailOpen ->
+                                                mainNavState.closePaneDetailRequest++
+
+                                            else -> navigateToMainTab(dest)
                                         }
+                                    } else {
+                                        navigateToMainTab(dest)
                                     }
                                 },
                                 onLoginClick = { navController.navigate(Destination.Login) },

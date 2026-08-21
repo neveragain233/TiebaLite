@@ -25,6 +25,9 @@ class MainNavState {
 
     /** 请求收起全屏详情的计数, 侧栏点击当前 tab 时递增, 由面板宿主消费 */
     var collapsePaneDetailRequest by mutableStateOf(0)
+
+    /** 请求关闭详情(回列表全屏)的计数, 侧栏点击当前 tab 且详情分屏时递增 */
+    var closePaneDetailRequest by mutableStateOf(0)
 }
 
 val LocalMainNavState = staticCompositionLocalOf<MainNavState> { error("No MainNavState provided!") }

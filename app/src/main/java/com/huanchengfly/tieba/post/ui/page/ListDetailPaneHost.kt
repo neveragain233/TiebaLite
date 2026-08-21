@@ -106,6 +106,13 @@ fun ListDetailPaneHost(
             detailExpanded = false
         }
     }
+    // 侧栏点击当前 tab 且详情分屏时请求关闭详情, 回到列表全屏
+    LaunchedEffect(mainNavState.closePaneDetailRequest) {
+        if (mainNavState.closePaneDetailRequest > 0 && isDetailShowing) {
+            detailExpanded = false
+            detailNavController.popBackStack()
+        }
+    }
     DisposableEffect(Unit) {
         onDispose {
             mainNavState.paneDetailOpen = false
