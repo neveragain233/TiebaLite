@@ -8,6 +8,7 @@ import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.arch.BaseStateViewModel
 import com.huanchengfly.tieba.post.arch.UiEvent
 import com.huanchengfly.tieba.post.models.database.dao.BlockDao
+import com.huanchengfly.tieba.post.models.database.dao.HiddenThreadDao
 import com.huanchengfly.tieba.post.models.database.dao.TransactionRunner
 import com.huanchengfly.tieba.post.ui.models.settings.BlockBackupMetadata
 import com.huanchengfly.tieba.post.utils.BlockRuleBackupUtil
@@ -41,6 +42,7 @@ private const val TAG = "BlockSettingsViewModel"
 class BlockSettingsViewModel @Inject constructor(
     @param:ApplicationContext val context: Context,
     private val blockDao: BlockDao,
+    private val hiddenDao: HiddenThreadDao,
     private val transactionRunner: TransactionRunner,
 ): BaseStateViewModel<BlockSettingsUiState>() {
 
@@ -52,7 +54,7 @@ class BlockSettingsViewModel @Inject constructor(
             val start = Clock.System.now()
             runCatching {
                 context.contentResolver.openOutputStream(uri)!!.use { out ->
-                    BlockRuleBackupUtil.backup(blockDao, transactionRunner, timestamp, out)
+                    BlockRuleBackupUtil.backup(blockDao, hiddenDao, transactionRunner, timestamp, out)
                 }
             }
             .onFailure { e ->
@@ -99,8 +101,9 @@ class BlockSettingsViewModel @Inject constructor(
      * @param forum 是否恢复吧黑名单
      * @param keyword 是否恢复关键字规则
      * @param user 是否恢复用户规则
+     * @param hidden 是否恢复已隐藏帖子
      * */
-    fun onRestore(forum: Boolean, keyword: Boolean, user: Boolean) {
+    fun onRestore(forum: Boolean, keyword: Boolean, user: Boolean, hidden: Boolean) {
         val state = currentState
         if (state.loading || state.pendingRestore == null) return
 
@@ -110,12 +113,13 @@ class BlockSettingsViewModel @Inject constructor(
             // Convert to RestoreOption flags
             val option = (if (forum) 0 else RestoreOption.EXCLUDE_FORUM) or
                     (if (keyword) 0 else RestoreOption.EXCLUDE_KEYWORD) or
-                    (if (user) 0 else RestoreOption.EXCLUDE_USER)
+                    (if (user) 0 else RestoreOption.EXCLUDE_USER) or
+                    (if (hidden) 0 else RestoreOption.EXCLUDE_HIDDEN)
 
             runCatching {
                 val (metadata, uri) = state.pendingRestore
                 context.contentResolver.openInputStream(uri)!!.use { input ->
-                    BlockRuleBackupUtil.restore(blockDao, transactionRunner, input, option)
+                    BlockRuleBackupUtil.restore(blockDao, hiddenDao, transactionRunner, input, option)
                 }
                 val cost = Clock.System.now() - start
                 Log.w(TAG, "onRestore: Done, backup ver.${metadata.version}, opt: $option, cost: $cost")

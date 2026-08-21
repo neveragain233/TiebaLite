@@ -3,14 +3,19 @@ package com.huanchengfly.tieba.post.ui.page.main.explore.concern
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.compose.ui.util.fastMap
+import androidx.lifecycle.viewModelScope
 import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaNotLoggedInException
 import com.huanchengfly.tieba.post.arch.BaseStateViewModel
 import com.huanchengfly.tieba.post.arch.CommonUiEvent
 import com.huanchengfly.tieba.post.arch.TbLiteExceptionHandler
 import com.huanchengfly.tieba.post.arch.UiState
 import com.huanchengfly.tieba.post.arch.emitGlobalEventSuspend
+import com.huanchengfly.tieba.post.arch.stateInViewModel
+import com.huanchengfly.tieba.post.models.database.HiddenThread
 import com.huanchengfly.tieba.post.repository.ExploreRepository
 import com.huanchengfly.tieba.post.repository.ExploreRepository.Companion.distinctById
+import com.huanchengfly.tieba.post.repository.HiddenThreadRepository
+import com.huanchengfly.tieba.post.repository.user.SettingsRepository
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.ThreadItem
 import com.huanchengfly.tieba.post.ui.page.main.explore.ExplorePageItem
@@ -20,6 +25,9 @@ import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.ensureActive
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
@@ -42,8 +50,14 @@ data class ConcernUiState(
 @Stable
 @HiltViewModel
 class ConcernViewModel @Inject constructor(
-    private val exploreRepo: ExploreRepository
+    private val exploreRepo: ExploreRepository,
+    private val hiddenRepo: HiddenThreadRepository,
+    settingsRepository: SettingsRepository,
 ) : BaseStateViewModel<ConcernUiState>() {
+
+    val hideBlockedContent: StateFlow<Boolean> = settingsRepository.blockSettings
+        .map { it.hideBlocked }
+        .stateInViewModel(initialValue = false)
 
     override val errorHandler = TbLiteExceptionHandler(TAG) { _, e, suppressed ->
         // Allow user browse existing content on suppressed exceptions
@@ -109,6 +123,32 @@ class ConcernViewModel @Inject constructor(
         ) { threadId, liked, loading ->
             val newData = currentState.data.updateLikeStatus(threadId, liked, loading)
             _uiState.update { it.copy(data = newData) }
+        }
+    }
+
+    fun hideThread(thread: ThreadItem) {
+        viewModelScope.launch {
+            hiddenRepo.hide(
+                HiddenThread(
+                    tid = thread.id,
+                    forumName = thread.simpleForum.second,
+                    title = thread.title,
+                    authorName = thread.author.name,
+                    hiddenTime = System.currentTimeMillis(),
+                )
+            )
+            _uiState.update { state ->
+                state.copy(data = state.data.map { if (it.id == thread.id) it.copy(hidden = true) else it })
+            }
+        }
+    }
+
+    fun unhideThread(thread: ThreadItem) {
+        viewModelScope.launch {
+            hiddenRepo.unhide(thread.id)
+            _uiState.update { state ->
+                state.copy(data = state.data.map { if (it.id == thread.id) it.copy(hidden = false) else it })
+            }
         }
     }
 

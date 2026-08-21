@@ -9,4 +9,5 @@ data class BlockBackupMetadata(
     val forumRuleCount: Int,
     val keywordRuleCount: Int,
     val userRuleCount: Int,
+    val hiddenPostCount: Int = 0,
 )

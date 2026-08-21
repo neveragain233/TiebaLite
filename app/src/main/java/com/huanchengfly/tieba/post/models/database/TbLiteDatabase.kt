@@ -12,6 +12,7 @@ import com.huanchengfly.tieba.post.models.database.dao.AccountDao
 import com.huanchengfly.tieba.post.models.database.dao.BlockDao
 import com.huanchengfly.tieba.post.models.database.dao.DraftDao
 import com.huanchengfly.tieba.post.models.database.dao.ForumHistoryDao
+import com.huanchengfly.tieba.post.models.database.dao.HiddenThreadDao
 import com.huanchengfly.tieba.post.models.database.dao.LikedForumDao
 import com.huanchengfly.tieba.post.models.database.dao.SearchDao
 import com.huanchengfly.tieba.post.models.database.dao.SearchPostDao
@@ -30,6 +31,7 @@ import java.util.concurrent.TimeUnit
         BlockUser::class,
         Draft::class,
         ForumHistory::class,
+        HiddenThread::class,
         LocalLikedForum::class,
         SearchHistory::class,
         SearchPostHistory::class,
@@ -38,11 +40,12 @@ import java.util.concurrent.TimeUnit
         Timestamp::class,
         UserProfile::class,
     ],
-    version = 4,
+    version = 5,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migrations.Migration_1_2::class),
         AutoMigration(from = 2, to = 3, spec = Migrations.Migration_2_3::class),
         AutoMigration(from = 3, to = 4, spec = Migrations.Migration_3_4::class),
+        AutoMigration(from = 4, to = 5, spec = Migrations.Migration_4_5::class),
     ]
 )
 abstract class TbLiteDatabase : RoomDatabase() {
@@ -54,6 +57,8 @@ abstract class TbLiteDatabase : RoomDatabase() {
     abstract fun draftDao(): DraftDao
 
     abstract fun forumHistoryDao(): ForumHistoryDao
+
+    abstract fun hiddenThreadDao(): HiddenThreadDao
 
     abstract fun likedForumDao(): LikedForumDao
 
@@ -116,6 +121,16 @@ abstract class TbLiteDatabase : RoomDatabase() {
              * @since 4.0.0-beta.4.4
              */
             class Migration_3_4 : AutoMigrationSpec {
+                override fun onPostMigrate(connection: SQLiteConnection) {
+                }
+            }
+
+            /**
+             * [HiddenThread] new Entity
+             *
+             * @since 1.2.0
+             */
+            class Migration_4_5 : AutoMigrationSpec {
                 override fun onPostMigrate(connection: SQLiteConnection) {
                 }
             }

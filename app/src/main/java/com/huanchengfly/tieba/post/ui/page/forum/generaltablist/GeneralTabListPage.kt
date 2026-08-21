@@ -115,6 +115,8 @@ fun GeneralTabListPage(
                         val route = Destination.Thread(threadId = it.tid.toLong(), forumId = it.fid)
                         navigator.navigateDebounced(route)
                     },
+                    onHide = viewModel::hideThread,
+                    onUndoHidden = viewModel::unhideThread,
                     hideBlocked = hideBlocked,
                 )
             }

@@ -47,17 +47,16 @@ import com.huanchengfly.tieba.post.ui.page.ProvideNavigator
 import com.huanchengfly.tieba.post.ui.page.hottopic.detail.TopicDetailViewModel.Companion.feedId
 import com.huanchengfly.tieba.post.ui.page.main.explore.ConsumeThreadPageResult
 import com.huanchengfly.tieba.post.ui.page.main.explore.createThreadClickListeners
-import com.huanchengfly.tieba.post.ui.page.main.explore.personalized.ThreadBlockedTip
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadLikeUiEvent
 import com.huanchengfly.tieba.post.ui.utils.rememberScrollOrientationConnection
 import com.huanchengfly.tieba.post.ui.utils.backToTopFabPosition
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
-import com.huanchengfly.tieba.post.ui.widgets.compose.BlockableContent
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlurScaffold
 import com.huanchengfly.tieba.post.ui.widgets.compose.CollapsingTopAppBar
 import com.huanchengfly.tieba.post.ui.widgets.compose.Container
 import com.huanchengfly.tieba.post.ui.widgets.compose.DefaultBackToTopFAB
 import com.huanchengfly.tieba.post.ui.widgets.compose.FeedCard
+import com.huanchengfly.tieba.post.ui.widgets.compose.FeedThreadItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.PullToRefreshBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.SwipeUpLazyLoadColumn
 import com.huanchengfly.tieba.post.ui.widgets.compose.defaultBottomIndicator
@@ -156,11 +155,11 @@ fun TopicDetailPage(
                                 items = uiState.threads,
                                 key = { _, item -> item.feedId },
                             ) { index, item ->
-                                BlockableContent(
-                                    blocked = item.blocked,
-                                    blockedTip = ThreadBlockedTip,
+                                FeedThreadItem(
+                                    thread = item,
+                                    hideBlockedContent = hideBlockedContent,
                                     modifier = Modifier.fillMaxWidth(),
-                                    hideBlockedContent = hideBlockedContent
+                                    onUndoHidden = viewModel::unhideThread,
                                 ) {
                                     FeedCard(
                                         thread = item,
@@ -169,6 +168,7 @@ fun TopicDetailPage(
                                         onClickReply = threadClickListeners.onReplyClicked,
                                         onClickUser = threadClickListeners.onAuthorClicked,
                                         onClickForum = threadClickListeners.onForumClicked,
+                                        onHide = viewModel::hideThread,
                                         cardDivider = index < uiState.threads.lastIndex,
                                     )
                                 }

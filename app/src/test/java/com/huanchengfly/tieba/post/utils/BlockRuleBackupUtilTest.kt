@@ -4,7 +4,9 @@ import com.huanchengfly.tieba.post.mockk.varargArray
 import com.huanchengfly.tieba.post.models.database.BlockForum
 import com.huanchengfly.tieba.post.models.database.BlockKeyword
 import com.huanchengfly.tieba.post.models.database.BlockUser
+import com.huanchengfly.tieba.post.models.database.HiddenThread
 import com.huanchengfly.tieba.post.models.database.dao.BlockDao
+import com.huanchengfly.tieba.post.models.database.dao.HiddenThreadDao
 import com.huanchengfly.tieba.post.models.database.dao.KeywordCSV
 import com.huanchengfly.tieba.post.models.database.dao.TransactionRunner
 import com.huanchengfly.tieba.post.models.database.dao.TransactionRunnerDao
@@ -86,6 +88,9 @@ class BlockRuleBackupUtilTest {
     @RelaxedMockK
     private lateinit var dao: BlockDao
 
+    @RelaxedMockK
+    private lateinit var hiddenDao: HiddenThreadDao
+
     // Dummy Database TransactionRunner
     private val transaction: TransactionRunner = TransactionRunnerDao
 
@@ -98,7 +103,7 @@ class BlockRuleBackupUtilTest {
 
         // Write to In-Memory Zip
         val zipBytes = ByteArrayOutputStream().use { out ->
-            BlockRuleBackupUtil.backup(dao, transaction, timestamp = 0, output = out)
+            BlockRuleBackupUtil.backup(dao, hiddenDao, transaction, timestamp = 0, output = out)
             out.toByteArray()
         }
 
@@ -149,7 +154,7 @@ class BlockRuleBackupUtilTest {
     fun `Test restore all rules`() = runTest {
         // Prepare In-Memory Zip
         val zipBytes = genTestZip(testForumsTxt, testKeywordsCSV, testUserCSV)
-        BlockRuleBackupUtil.restore(dao, transaction, ByteArrayInputStream(zipBytes), 0)
+        BlockRuleBackupUtil.restore(dao, hiddenDao, transaction, ByteArrayInputStream(zipBytes), 0)
 
         // Prepare expected vararg Database entities
         val expectedForums: Array<BlockForum> = testForums.map { BlockForum(it) }.toTypedArray()
@@ -178,7 +183,7 @@ class BlockRuleBackupUtilTest {
 
         // Prepare In-Memory Zip
         val zipBytes = genTestZip(testForumsTxt, testKeywordsCSV, testUserCSV)
-        BlockRuleBackupUtil.restore(dao, transaction, ByteArrayInputStream(zipBytes), restoreOption)
+        BlockRuleBackupUtil.restore(dao, hiddenDao, transaction, ByteArrayInputStream(zipBytes), restoreOption)
 
         coEvery { dao.insertForums(*anyVararg()) } answers {
             throw AssertionError("Unexpected forum insertion")
@@ -229,6 +234,23 @@ class BlockRuleBackupUtilTest {
         }
 
         assertThat(users, `is`(testUser))
+    }
+
+    @Test
+    fun `writeHidden then readHidden should round-trip`() {
+        val hidden = listOf(
+            HiddenThread(tid = 1, forumName = "吧一", title = ",标题,", authorName = "作者", hiddenTime = 1000),
+            HiddenThread(tid = 2, forumName = "吧二", title = "标题\n跨行", authorName = null, hiddenTime = Long.MAX_VALUE),
+        )
+
+        val csv = ByteArrayOutputStream().use { out ->
+            out.writer().use { writer ->
+                BlockRuleBackupUtil.writeHidden(hidden, writer)
+            }
+            out.toByteArray().toString(Charsets.UTF_8)
+        }
+
+        assertThat(BlockRuleBackupUtil.readHidden(csv.reader()), `is`(hidden))
     }
 
     @Test(expected = CsvParseException::class)

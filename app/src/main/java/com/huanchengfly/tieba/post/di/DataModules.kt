@@ -9,6 +9,7 @@ import com.huanchengfly.tieba.post.models.database.dao.AccountDao
 import com.huanchengfly.tieba.post.models.database.dao.BlockDao
 import com.huanchengfly.tieba.post.models.database.dao.DraftDao
 import com.huanchengfly.tieba.post.models.database.dao.ForumHistoryDao
+import com.huanchengfly.tieba.post.models.database.dao.HiddenThreadDao
 import com.huanchengfly.tieba.post.models.database.dao.LikedForumDao
 import com.huanchengfly.tieba.post.models.database.dao.SearchDao
 import com.huanchengfly.tieba.post.models.database.dao.SearchPostDao
@@ -105,6 +106,9 @@ object DatabaseModule {
 
     @Provides
     fun provideForumHistoryDao(database: TbLiteDatabase): ForumHistoryDao = database.forumHistoryDao()
+
+    @Provides
+    fun provideHiddenThreadDao(database: TbLiteDatabase): HiddenThreadDao = database.hiddenThreadDao()
 
     @Provides
     fun likedForumDao(database: TbLiteDatabase): LikedForumDao = database.likedForumDao()

@@ -446,6 +446,12 @@
     <string name="tip_blocked_thread">由于你的屏蔽设置，该贴已被屏蔽</string>
     <string name="tip_blocked_content">由于你的屏蔽设置，该内容已被屏蔽</string>
     <string name="tip_blocked_message">由于你的屏蔽设置，该消息已被屏蔽</string>
+    <string name="menu_hide_thread">隐藏该贴</string>
+    <string name="title_hidden_thread_list">已隐藏帖子</string>
+    <string name="tip_hidden_thread">你已隐藏该贴</string>
+    <string name="title_unhide_thread">取消隐藏</string>
+    <string name="toast_hidden_success">已隐藏该贴</string>
+    <string name="toast_unhidden_success">已取消隐藏</string>
     <string name="tip_thread_store_deleted">该贴已被删除</string>
     <string name="button_clear">清除</string>
     <string name="button_search">搜索</string>
@@ -600,6 +606,7 @@
     <string name="title_restore_forum">吧黑名单</string>
     <string name="title_restore_keyword">关键词</string>
     <string name="title_restore_user">用户</string>
+    <string name="title_restore_hidden">已隐藏帖子</string>
     <string name="theme_dialog_unsave">主题未保存</string>
     <string name="theme_dialog_unsave_msg">保存或放弃更改?</string>
     <string name="theme_dialog_saving">应用主题中</string>

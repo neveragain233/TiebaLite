@@ -7,12 +7,15 @@ import com.huanchengfly.tieba.post.api.booleanToString
 import com.huanchengfly.tieba.post.models.database.BlockForum
 import com.huanchengfly.tieba.post.models.database.BlockKeyword
 import com.huanchengfly.tieba.post.models.database.BlockUser
+import com.huanchengfly.tieba.post.models.database.HiddenThread
 import com.huanchengfly.tieba.post.models.database.dao.BlockDao
+import com.huanchengfly.tieba.post.models.database.dao.HiddenThreadDao
 import com.huanchengfly.tieba.post.models.database.dao.KeywordCSV
 import com.huanchengfly.tieba.post.models.database.dao.TransactionRunner
 import com.huanchengfly.tieba.post.models.database.dao.UserCSV
 import com.huanchengfly.tieba.post.ui.models.settings.BlockBackupMetadata
 import com.huanchengfly.tieba.post.utils.RestoreOption.Companion.EXCLUDE_FORUM
+import com.huanchengfly.tieba.post.utils.RestoreOption.Companion.EXCLUDE_HIDDEN
 import com.huanchengfly.tieba.post.utils.RestoreOption.Companion.EXCLUDE_KEYWORD
 import com.huanchengfly.tieba.post.utils.RestoreOption.Companion.EXCLUDE_USER
 import com.huanchengfly.tieba.post.utils.StringUtil.normalized
@@ -42,7 +45,7 @@ import java.util.zip.ZipInputStream
 import java.util.zip.ZipOutputStream
 import kotlin.time.Clock
 
-@IntDef(EXCLUDE_FORUM, EXCLUDE_KEYWORD, EXCLUDE_USER)
+@IntDef(EXCLUDE_FORUM, EXCLUDE_KEYWORD, EXCLUDE_USER, EXCLUDE_HIDDEN)
 @Retention(AnnotationRetention.SOURCE)
 annotation class RestoreOption {
     companion object {
@@ -54,6 +57,9 @@ annotation class RestoreOption {
 
         /** 恢复选项: 排除用户规则 */
         const val EXCLUDE_USER: Int = EXCLUDE_FORUM shl 2
+
+        /** 恢复选项: 排除已隐藏帖子 */
+        const val EXCLUDE_HIDDEN: Int = EXCLUDE_FORUM shl 3
     }
 }
 
@@ -83,18 +89,25 @@ object BlockRuleBackupUtil {
     const val ENTRY_NAME_USER = "users.csv"
 
     /**
-     * Block rule backup version 1
+     * Zip Entry: hidden_thread table csv backup
+     * */
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    const val ENTRY_NAME_HIDDEN = "hidden_posts.csv"
+
+    /**
+     * Block rule backup version 2
      *
      * Backup Structure
      *   ├── META-INF
      *   │      └── metadata
      *   ├── forum.txt
      *   ├── keywords.csv
-     *   └── users.csv
+     *   ├── users.csv
+     *   └── hidden_posts.csv
      *
-     * @since 4.0.0-beta.4.4
+     * @since 4.0.0-beta.4.4 / v1.2.0
      * */
-    private const val DEFAULT_BACKUP_VERSION = 1
+    private const val DEFAULT_BACKUP_VERSION = 2
 
     @WorkerThread
     @Throws(IOException::class, SerializationException::class)
@@ -113,6 +126,7 @@ object BlockRuleBackupUtil {
     @Throws(IOException::class)
     suspend fun backup(
         dao: BlockDao,
+        hiddenDao: HiddenThreadDao,
         transaction: TransactionRunner,
         timestamp: Long,
         output: OutputStream
@@ -120,7 +134,8 @@ object BlockRuleBackupUtil {
         val (forums, keywords, users) = transaction {
             Triple(dao.getForums(), dao.getAllKeywords(), dao.getAllUsers())
         }
-        val totalRules = forums.size + keywords.size + users.size
+        val hidden = hiddenDao.getAllHidden()
+        val totalRules = forums.size + keywords.size + users.size + hidden.size
         if (totalRules == 0) {
             throw IllegalStateException("备份规则为空")
         }
@@ -131,6 +146,7 @@ object BlockRuleBackupUtil {
             forumRuleCount = forums.size,
             keywordRuleCount = keywords.size,
             userRuleCount = users.size,
+            hiddenPostCount = hidden.size,
         )
 
         var zipOut: ZipOutputStream? = null
@@ -147,6 +163,7 @@ object BlockRuleBackupUtil {
             writer.writeListToZipEntry(forums, ENTRY_NAME_FORUM, zipOut, ::writeForum)
             writer.writeListToZipEntry(keywords, ENTRY_NAME_KEYWORD, zipOut, ::writeKeyword)
             writer.writeListToZipEntry(users, ENTRY_NAME_USER, zipOut, ::writeUser)
+            writer.writeListToZipEntry(hidden, ENTRY_NAME_HIDDEN, zipOut, ::writeHidden)
         } finally {
             writer?.closeQuietly()
             zipOut?.closeQuietly()
@@ -211,10 +228,33 @@ object BlockRuleBackupUtil {
         writer.flush()
     }
 
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    @Throws(IOException::class)
+    fun writeHidden(hidden: List<HiddenThread>, writer: Writer) {
+        CsvWriter.builder()
+            .lineDelimiter(LineDelimiter.LF)
+            .bufferSize(0) // Disable buffer on FastCSV 2.x
+            .build(writer)
+            .writeRow("tid", "forumName", "title", "authorName", "hiddenTime")
+            .apply {
+                for (h in hidden) {
+                    writeRow(
+                        h.tid.toString(),
+                        h.forumName,
+                        h.title,
+                        h.authorName ?: "",
+                        h.hiddenTime.toString(),
+                    )
+                }
+            }
+        writer.flush()
+    }
+
     /**
      * Restore block rules from backup
      *
      * @param dao Block rule DAO
+     * @param hiddenDao hidden thread rule DAO
      * @param transaction Database transaction runner
      * @param input backup data InputStream
      * @param restoreOption flags controlling how data is restored, see [RestoreOption]
@@ -222,6 +262,7 @@ object BlockRuleBackupUtil {
     @Throws(IOException::class)
     suspend fun restore(
         dao: BlockDao,
+        hiddenDao: HiddenThreadDao,
         transaction: TransactionRunner,
         input: InputStream,
         restoreOption: Int = 0,
@@ -229,6 +270,7 @@ object BlockRuleBackupUtil {
         var forums: List<String>? = null
         var keywords: List<KeywordCSV>? = null
         var users: List<UserCSV>? = null
+        var hidden: List<HiddenThread>? = null
 
         var zipIn: ZipInputStream? = null
         var reader: BufferedReader? = null
@@ -249,6 +291,10 @@ object BlockRuleBackupUtil {
                     ENTRY_NAME_USER -> if (restoreOption and EXCLUDE_USER != EXCLUDE_USER) {
                         users = readUser(reader)
                     }
+
+                    ENTRY_NAME_HIDDEN -> if (restoreOption and EXCLUDE_HIDDEN != EXCLUDE_HIDDEN) {
+                        hidden = readHidden(reader)
+                    }
                 }
                 zipIn.closeEntry()
                 entry = zipIn.nextEntry
@@ -258,7 +304,7 @@ object BlockRuleBackupUtil {
             zipIn?.closeQuietly()
         }
         // Empty backup or user excluded all data
-        if (forums.isNullOrEmpty() && keywords.isNullOrEmpty() && users.isNullOrEmpty()) {
+        if (forums.isNullOrEmpty() && keywords.isNullOrEmpty() && users.isNullOrEmpty() && hidden.isNullOrEmpty()) {
             throw IllegalStateException("Empty restore list, abort!")
         }
 
@@ -285,6 +331,12 @@ object BlockRuleBackupUtil {
                 dao.insertUsers(blockUsers = users.mapToEntity { (uid, name, whitelisted) ->
                     BlockUser(uid, name, whitelisted)
                 })
+            }
+
+            // Restore hidden threads
+            if (!hidden.isNullOrEmpty()) {
+                hiddenDao.deleteAllHidden()
+                hiddenDao.insertHidden(*hidden.toTypedArray())
             }
         }
     }
@@ -342,6 +394,30 @@ object BlockRuleBackupUtil {
                     )
                 } catch (e: Throwable) {
                     throw CsvParseException("Read user failed at: ${record.originalLineNumber}", e)
+                }
+            }
+    }
+
+    @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
+    @Throws(IOException::class, CsvParseException::class)
+    fun readHidden(reader: Reader): List<HiddenThread> {
+        return NamedCsvReader.builder()
+            .build(reader)
+            .map { record -> // tid, forumName, title, authorName, hiddenTime
+                try {
+                    val tid = record.getField("tid").toLong()
+                    if (tid <= 0) {
+                        throw IllegalArgumentException("Invalid tid $tid")
+                    }
+                    HiddenThread(
+                        tid = tid,
+                        forumName = record.getField("forumName").trim(),
+                        title = record.getField("title").trim(),
+                        authorName = record.getField("authorName").trim().takeUnless { it.isEmpty() },
+                        hiddenTime = record.getField("hiddenTime").toLong(),
+                    )
+                } catch (e: Throwable) {
+                    throw CsvParseException("Read hidden thread failed at: ${record.originalLineNumber}", e)
                 }
             }
     }

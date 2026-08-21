@@ -4,12 +4,17 @@ import android.util.SparseArray
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.core.util.forEach
+import androidx.lifecycle.viewModelScope
 import com.huanchengfly.tieba.post.arch.BaseStateViewModel
 import com.huanchengfly.tieba.post.arch.TbLiteExceptionHandler
 import com.huanchengfly.tieba.post.arch.UiState
 import com.huanchengfly.tieba.post.arch.emitGlobalEventSuspend
+import com.huanchengfly.tieba.post.arch.stateInViewModel
+import com.huanchengfly.tieba.post.models.database.HiddenThread
 import com.huanchengfly.tieba.post.repository.ExploreRepository
 import com.huanchengfly.tieba.post.repository.ExploreRepository.Companion.HOT_THREAD_TAB_ALL
+import com.huanchengfly.tieba.post.repository.HiddenThreadRepository
+import com.huanchengfly.tieba.post.repository.user.SettingsRepository
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.ThreadItem
 import com.huanchengfly.tieba.post.ui.models.explore.HotTab
@@ -20,6 +25,9 @@ import com.huanchengfly.tieba.post.ui.page.main.explore.concern.ConcernViewModel
 import com.huanchengfly.tieba.post.utils.extension.set
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.runBlocking
 import kotlinx.coroutines.sync.Mutex
@@ -46,8 +54,14 @@ data class HotUiState(
 @Stable
 @HiltViewModel
 class HotViewModel @Inject constructor(
-    private val exploreRepo: ExploreRepository
+    private val exploreRepo: ExploreRepository,
+    private val hiddenRepo: HiddenThreadRepository,
+    settingsRepository: SettingsRepository,
 ) : BaseStateViewModel<HotUiState>() {
+
+    val hideBlockedContent: StateFlow<Boolean> = settingsRepository.blockSettings
+        .map { it.hideBlocked }
+        .stateInViewModel(initialValue = false)
 
     private val defaultTab = HotTab(name = "", tabCode = HOT_THREAD_TAB_ALL, isLoading = false)
 
@@ -98,6 +112,40 @@ class HotViewModel @Inject constructor(
 
     fun onRefresh() {
         if (!currentState.isRefreshing) refreshInternal(cached = false)
+    }
+
+    fun hideThread(thread: ThreadItem) {
+        viewModelScope.launch {
+            hiddenRepo.hide(
+                HiddenThread(
+                    tid = thread.id,
+                    forumName = thread.simpleForum.second,
+                    title = thread.title,
+                    authorName = thread.author.name,
+                    hiddenTime = System.currentTimeMillis(),
+                )
+            )
+            memCacheMutex.withLock {
+                memCache.forEach { _, v -> v.clear() }
+                memCache.clear()
+            }
+            _uiState.update { state ->
+                state.copy(
+                    threads = state.threads?.map { if (it.id == thread.id) it.copy(hidden = true) else it }
+                )
+            }
+        }
+    }
+
+    fun unhideThread(thread: ThreadItem) {
+        viewModelScope.launch {
+            hiddenRepo.unhide(thread.id)
+            _uiState.update { state ->
+                state.copy(
+                    threads = state.threads?.map { if (it.id == thread.id) it.copy(hidden = false) else it }
+                )
+            }
+        }
     }
 
     fun onTabSelected(tab: HotTab) {

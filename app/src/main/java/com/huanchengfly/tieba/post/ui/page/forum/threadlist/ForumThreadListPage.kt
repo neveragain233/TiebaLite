@@ -40,10 +40,9 @@ import com.huanchengfly.tieba.post.ui.page.LocalNavController
 import com.huanchengfly.tieba.post.ui.page.forum.threadlist.ForumThreadListViewModel.Companion.ForumVMFactory
 import com.huanchengfly.tieba.post.ui.page.main.explore.ConsumeThreadPageResult
 import com.huanchengfly.tieba.post.ui.page.main.explore.ThreadClickListeners
-import com.huanchengfly.tieba.post.ui.widgets.compose.BlockTip
-import com.huanchengfly.tieba.post.ui.widgets.compose.BlockableContent
 import com.huanchengfly.tieba.post.ui.widgets.compose.Container
 import com.huanchengfly.tieba.post.ui.widgets.compose.FeedCard
+import com.huanchengfly.tieba.post.ui.widgets.compose.FeedThreadItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.LoadMoreIndicator
 import com.huanchengfly.tieba.post.ui.widgets.compose.SwipeUpLazyLoadColumn
 import com.huanchengfly.tieba.post.ui.widgets.compose.ThreadContentType
@@ -84,15 +83,6 @@ private fun TopThreadItem(
             modifier = Modifier.weight(1f),
         )
     }
-}
-
-private val ThreadBlockedTip: @Composable BoxScope.() -> Unit = {
-    BlockTip(
-        modifier = Modifier.padding(horizontal = 16.dp, vertical = 8.dp),
-        text = {
-            Text(text = stringResource(id = R.string.tip_blocked_thread))
-        }
-    )
 }
 
 @Composable
@@ -188,6 +178,8 @@ fun ForumThreadList(
                         val route = Thread(threadId = it.tid.toLong(), forumId = it.fid)
                         navigator.navigateDebounced(route)
                     },
+                    onHide = viewModel::hideThread,
+                    onUndoHidden = viewModel::unhideThread,
                     hideBlocked = hideBlocked,
                 )
             }
@@ -200,6 +192,8 @@ fun LazyListScope.forumThreadList(
     threadClickListeners: ThreadClickListeners,
     onLikeClicked: (ThreadItem) -> Unit,
     onOriginThreadClicked: (OriginThreadInfo) -> Unit = {},
+    onHide: ((ThreadItem) -> Unit)? = null,
+    onUndoHidden: (ThreadItem) -> Unit = {},
     hideBlocked: Boolean = false,
 ) {
     itemsIndexed(threads, key = { _, it -> it.id }, ThreadContentType) { index, thread ->
@@ -214,10 +208,10 @@ fun LazyListScope.forumThreadList(
                 onClick = { threadClickListeners.onClicked(thread) }
             )
         } else {
-            BlockableContent(
-                blocked = thread.blocked,
-                blockedTip = ThreadBlockedTip,
-                hideBlockedContent = hideBlocked
+            FeedThreadItem(
+                thread = thread,
+                hideBlockedContent = hideBlocked,
+                onUndoHidden = onUndoHidden,
             ) {
                 FeedCard(
                     thread = thread,
@@ -227,6 +221,7 @@ fun LazyListScope.forumThreadList(
                     onClickUser = threadClickListeners.onAuthorClicked,
                     cardDivider = true,
                     onClickOriginThread = onOriginThreadClicked,
+                    onHide = onHide,
                 )
             }
         }

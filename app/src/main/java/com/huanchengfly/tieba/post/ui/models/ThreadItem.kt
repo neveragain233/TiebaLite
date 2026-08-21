@@ -17,6 +17,7 @@ import com.huanchengfly.tieba.post.ui.models.explore.Dislike
     val firstPostId: Long = -1,
     val author: Author,
     val blocked: Boolean = false,
+    val hidden: Boolean = false,
     val content: AnnotatedString? = null,
     val title: String,
     val isTop: Boolean = false,
@@ -38,6 +39,7 @@ import com.huanchengfly.tieba.post.ui.models.explore.Dislike
     fun copy(
         author: Author = this.author,
         blocked: Boolean = this.blocked,
+        hidden: Boolean = this.hidden,
         content: AnnotatedString? = this.content,
         title: String = this.title,
         lastTimeMill: Long = this.lastTimeMill,
@@ -55,6 +57,7 @@ import com.huanchengfly.tieba.post.ui.models.explore.Dislike
         firstPostId = this.firstPostId,
         author = author,
         blocked = blocked,
+        hidden = hidden,
         content = content,
         title = title,
         isTop = this.isTop,

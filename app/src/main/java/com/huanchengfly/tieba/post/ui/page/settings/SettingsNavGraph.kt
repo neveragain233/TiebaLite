@@ -5,7 +5,9 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
+import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.settings.blocklist.ForumBlockListPage
+import com.huanchengfly.tieba.post.ui.page.settings.blocklist.HiddenPostListPage
 import com.huanchengfly.tieba.post.ui.page.settings.blocklist.KeywordBlockListPage
 import com.huanchengfly.tieba.post.ui.page.settings.blocklist.UserBlockListPage
 import com.huanchengfly.tieba.post.ui.page.settings.theme.AppFontPage
@@ -36,6 +38,9 @@ sealed interface SettingsDestination {
 
     @Serializable
     object UserBlockList: SettingsDestination
+
+    @Serializable
+    object HiddenPostList: SettingsDestination
 
     @Serializable
     object UI: SettingsDestination
@@ -93,6 +98,15 @@ fun NavGraphBuilder.settingsGraph(navController: NavController, settingsRepo: Se
 
     composable<SettingsDestination.UserBlockList> {
         UserBlockListPage(onBack = navController::navigateUp)
+    }
+
+    composable<SettingsDestination.HiddenPostList> {
+        HiddenPostListPage(
+            onBack = navController::navigateUp,
+            onOpenThread = { hidden ->
+                navController.navigateDebounced(Destination.Thread(threadId = hidden.tid))
+            },
+        )
     }
 
     composable<SettingsDestination.UI> {

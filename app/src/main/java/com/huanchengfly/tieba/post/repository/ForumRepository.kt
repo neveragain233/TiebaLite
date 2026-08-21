@@ -39,6 +39,7 @@ private typealias ForumPageResult = Triple<ForumData, ThreadItemList, List<Forum
 class ForumRepository @Inject constructor(
     settingsRepo: SettingsRepository,
     private val blockRepo: BlockRepository,
+    private val hiddenRepo: HiddenThreadRepository,
     private val homeRepo: HomeRepository
 ) {
     private val networkDataSource = ForumNetworkDataSource
@@ -79,8 +80,14 @@ class ForumRepository @Inject constructor(
         val forumData = data.toData()
         var forumManagers: List<ForumManager>? = null
         val showBothName = habitSettings.first().showBothName
+        val hiddenTids = hiddenRepo.hiddenTids.first()
         val typedThreads = ThreadItemList(
-            threads = data.thread_list.mapUiModel(blockedSettings.first(), showBothName, blockRepo::isBlocked),
+            threads = data.thread_list.mapUiModel(
+                blockedSettings.first(),
+                showBothName,
+                blockRepo::isBlocked,
+                isHidden = { it in hiddenTids },
+            ),
             threadIds = data.thread_id_list,
             hasMore = data.page!!.has_more == 1
         )
@@ -190,7 +197,13 @@ class ForumRepository @Inject constructor(
         )
         val blockedSettings = blockedSettings.first()
         val showBothName = habitSettings.first().showBothName
-        val threadList = data.general_list.mapUiModel(blockedSettings, showBothName, blockRepo::isBlocked)
+        val hiddenTids = hiddenRepo.hiddenTids.first()
+        val threadList = data.general_list.mapUiModel(
+            blockedSettings,
+            showBothName,
+            blockRepo::isBlocked,
+            isHidden = { it in hiddenTids },
+        )
         val result = ThreadItemList(threadList, threadIds = emptyList(), hasMore = data.has_more == 1)
         if (cacheKey != null) {
             generalThreadCache.put(cacheKey, result)
@@ -226,6 +239,7 @@ class ForumRepository @Inject constructor(
         )
 
     suspend fun threadList(forumId: Long, forumName: String, page: Int, sortType: Int, threadIds: List<Long>): List<ThreadItem> {
+        val hiddenTids = hiddenRepo.hiddenTids.first()
         return networkDataSource
             .loadThread(forumId, forumName, page, sortType, threadIds)
             .thread_list
@@ -233,6 +247,7 @@ class ForumRepository @Inject constructor(
                 showBothName = habitSettings.first().showBothName,
                 blockedSetting = blockedSettings.first(),
                 isBlocked = blockRepo::isBlocked,
+                isHidden = { it in hiddenTids },
             )
     }
 
@@ -321,12 +336,15 @@ private suspend fun List<ThreadInfo>.mapUiModel(
     blockedSetting: BlockSettings,
     showBothName: Boolean,
     isBlocked: suspend (uid: Long, content: Array<String>) -> Boolean,
+    isHidden: suspend (Long) -> Boolean,
 ): List<ThreadItem> {
     return if (isNotEmpty()) {
         withContext(Dispatchers.Default) {
             mapNotNull {
                 val notBlocked = !blockedSetting.blockVideo || it.videoInfo == null
-                if (notBlocked) it.mapUiModel(showBothName, isBlocked, threadDislikeMap = null) else null
+                if (notBlocked) {
+                    it.mapUiModel(showBothName, isBlocked, isHidden, threadDislikeMap = null)
+                } else null
             }
             .distinctById()
         }

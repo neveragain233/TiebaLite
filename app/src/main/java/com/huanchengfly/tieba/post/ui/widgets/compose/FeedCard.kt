@@ -26,12 +26,17 @@ import androidx.compose.material.icons.rounded.Photo
 import androidx.compose.material.icons.rounded.PhotoLibrary
 import androidx.compose.material.icons.rounded.PhotoSizeSelectActual
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
+import androidx.compose.material.icons.rounded.MoreVert
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DividerDefaults
+import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
@@ -528,6 +533,7 @@ fun FeedCard(
     onClickForum: ((ThreadItem) -> Unit)? = null, // Parse Null to Hide ForumInfo
     onClickOriginThread: (OriginThreadInfo) -> Unit = {},
     cardDivider: Boolean = false,
+    onHide: ((ThreadItem) -> Unit)? = null,
     dislikeAction: (@Composable RowScope.() -> Unit)? = null,
 ) {
     val context = LocalContext.current
@@ -540,7 +546,12 @@ fun FeedCard(
                 extraKey = thread.id,
                 desc = remember { DateTimeUtils.getRelativeTimeString(context, thread.lastTimeMill) },
                 onClick = { onClickUser(thread) },
-                content = dislikeAction
+                content = if (dislikeAction != null || onHide != null) {
+                    {
+                        dislikeAction?.invoke(this)
+                        onHide?.let { HideOverflowMenu(thread = thread, onHide = it) }
+                    }
+                } else null
             )
         },
         content = {
@@ -601,6 +612,99 @@ fun FeedCard(
         modifier = modifier
             .onCase(cardDivider) { cardBottomDivider(DividerDefaults.color) },
     )
+}
+
+@Composable
+private fun HideOverflowMenu(thread: ThreadItem, onHide: (ThreadItem) -> Unit) {
+    var expanded by remember { mutableStateOf(false) }
+    Box {
+        IconButton(onClick = { expanded = true }) {
+            Icon(
+                imageVector = Icons.Rounded.MoreVert,
+                contentDescription = stringResource(id = R.string.btn_more),
+            )
+        }
+        DropdownMenu(
+            expanded = expanded,
+            onDismissRequest = { expanded = false },
+        ) {
+            DropdownMenuItem(
+                text = { Text(text = stringResource(id = R.string.menu_hide_thread)) },
+                onClick = {
+                    expanded = false
+                    onHide(thread)
+                },
+            )
+        }
+    }
+}
+
+/** 屏蔽 (黑名单) 帖子在列表中的占位提示. */
+val ThreadBlockedTip: @Composable BoxScope.() -> Unit = {
+    BlockTip(modifier = Modifier.padding(horizontal = CardHorizontalSpacing, vertical = 4.dp)) {
+        Text(text = stringResource(id = R.string.tip_blocked_thread))
+    }
+}
+
+@Composable
+private fun ThreadHiddenTip(
+    onUndo: () -> Unit,
+    modifier: Modifier = Modifier,
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .background(MaterialTheme.colorScheme.surfaceContainerHighest, MaterialTheme.shapes.extraSmall)
+            .padding(horizontal = 16.dp, vertical = 4.dp),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        ProvideContentColorTextStyle(
+            contentColor = MaterialTheme.colorScheme.onSurface,
+            textStyle = MaterialTheme.typography.bodyMedium,
+        ) {
+            Text(
+                text = stringResource(id = R.string.tip_hidden_thread),
+                modifier = Modifier.weight(1f),
+            )
+            TextButton(onClick = onUndo) {
+                Text(text = stringResource(id = R.string.button_undo))
+            }
+        }
+    }
+}
+
+/**
+ * 帖子列表项的统一占位包装: 处理「已隐藏」与「被屏蔽」两种情况.
+ *
+ * - 已隐藏: 当 [hideBlockedContent] 为真时完全隐藏, 否则显示带「撤销」按钮的占位.
+ * - 被屏蔽 (黑名单): 与旧行为一致, 按 [hideBlockedContent] 显示/彻底隐藏.
+ */
+@Composable
+fun FeedThreadItem(
+    thread: ThreadItem,
+    hideBlockedContent: Boolean,
+    modifier: Modifier = Modifier,
+    onUndoHidden: (ThreadItem) -> Unit,
+    content: @Composable BoxScope.() -> Unit,
+) {
+    when {
+        thread.hidden && hideBlockedContent -> Unit
+
+        thread.hidden -> ThreadHiddenTip(
+            onUndo = { onUndoHidden(thread) },
+            modifier = modifier,
+        )
+
+        thread.blocked -> BlockableContent(
+            blocked = true,
+            blockedTip = ThreadBlockedTip,
+            hideBlockedContent = hideBlockedContent,
+            modifier = modifier,
+            content = content,
+        )
+
+        else -> Box(modifier = modifier, content = content)
+    }
 }
 
 @Composable

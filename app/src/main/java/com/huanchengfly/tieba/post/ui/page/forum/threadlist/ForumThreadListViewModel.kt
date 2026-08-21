@@ -1,6 +1,7 @@
 package com.huanchengfly.tieba.post.ui.page.forum.threadlist
 
 import androidx.compose.runtime.Stable
+import androidx.lifecycle.viewModelScope
 import com.huanchengfly.tieba.post.arch.BaseStateViewModel
 import com.huanchengfly.tieba.post.arch.CommonUiEvent
 import com.huanchengfly.tieba.post.arch.TbLiteExceptionHandler
@@ -8,8 +9,10 @@ import com.huanchengfly.tieba.post.arch.UiEvent
 import com.huanchengfly.tieba.post.arch.UiState
 import com.huanchengfly.tieba.post.arch.emitGlobalEventSuspend
 import com.huanchengfly.tieba.post.arch.stateInViewModel
+import com.huanchengfly.tieba.post.models.database.HiddenThread
 import com.huanchengfly.tieba.post.repository.ExploreRepository.Companion.distinctById
 import com.huanchengfly.tieba.post.repository.ForumRepository
+import com.huanchengfly.tieba.post.repository.HiddenThreadRepository
 import com.huanchengfly.tieba.post.repository.PbPageRepository
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
 import com.huanchengfly.tieba.post.ui.models.Like
@@ -22,6 +25,7 @@ import dagger.assisted.Assisted
 import dagger.assisted.AssistedFactory
 import dagger.assisted.AssistedInject
 import dagger.hilt.android.lifecycle.HiltViewModel
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -37,6 +41,7 @@ class ForumThreadListViewModel @AssistedInject constructor(
     @Assisted val initialSortType: Int,
     private val forumRepo: ForumRepository,
     private val threadRepo: PbPageRepository,
+    private val hiddenRepo: HiddenThreadRepository,
     settingsRepo: SettingsRepository,
 ) : BaseStateViewModel<ForumThreadListUiState>() {
 
@@ -106,6 +111,32 @@ class ForumThreadListViewModel @AssistedInject constructor(
             } else {
                 val currentClassifyId = currentState.goodClassifyId ?: 0
                 loadInternal(sortType = 0, classifyId = currentClassifyId, forceNew = true)
+            }
+        }
+    }
+
+    fun hideThread(thread: ThreadItem) {
+        viewModelScope.launch {
+            hiddenRepo.hide(
+                HiddenThread(
+                    tid = thread.id,
+                    forumName = thread.simpleForum.second,
+                    title = thread.title,
+                    authorName = thread.author.name,
+                    hiddenTime = System.currentTimeMillis(),
+                )
+            )
+            _uiState.update { state ->
+                state.copy(threads = state.threads.map { if (it.id == thread.id) it.copy(hidden = true) else it })
+            }
+        }
+    }
+
+    fun unhideThread(thread: ThreadItem) {
+        viewModelScope.launch {
+            hiddenRepo.unhide(thread.id)
+            _uiState.update { state ->
+                state.copy(threads = state.threads.map { if (it.id == thread.id) it.copy(hidden = false) else it })
             }
         }
     }

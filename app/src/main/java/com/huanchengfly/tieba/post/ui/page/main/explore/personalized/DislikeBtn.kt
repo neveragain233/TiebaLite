@@ -9,16 +9,20 @@ import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
+import androidx.compose.material.icons.rounded.VisibilityOff
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.DropdownMenu
+import androidx.compose.material3.HorizontalDivider
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
@@ -57,7 +61,8 @@ fun Dislike(
     selectedReasons: Set<Dislike>,
     onDismiss: () -> Unit,
     onDislikeSelected: (Dislike) -> Unit,
-    onDislikeClicked: () -> Unit
+    onHide: (() -> Unit)? = null,
+    onDislikeClicked: () -> Unit,
 ) {
     val menuState = rememberMenuState()
 
@@ -109,6 +114,31 @@ fun Dislike(
                         ) {
                             Text(text = dislike.reason, maxLines = 1, overflow = TextOverflow.Ellipsis)
                         }
+                    }
+                }
+
+                if (onHide != null) {
+                    HorizontalDivider(modifier = Modifier.padding(vertical = 2.dp))
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable {
+                                onHide()
+                                dismiss()
+                            }
+                            .padding(vertical = 8.dp),
+                        verticalAlignment = Alignment.CenterVertically,
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                    ) {
+                        Icon(
+                            imageVector = Icons.Rounded.VisibilityOff,
+                            contentDescription = null,
+                            modifier = Modifier.size(18.dp),
+                        )
+                        Text(
+                            text = stringResource(id = R.string.menu_hide_thread),
+                            style = MaterialTheme.typography.bodyMedium,
+                        )
                     }
                 }
             }

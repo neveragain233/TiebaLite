@@ -62,6 +62,7 @@ import com.huanchengfly.tieba.post.ui.page.main.explore.createThreadClickListene
 import com.huanchengfly.tieba.post.ui.widgets.compose.Chip
 import com.huanchengfly.tieba.post.ui.widgets.compose.FeedCard
 import com.huanchengfly.tieba.post.ui.widgets.compose.FeedCardPlaceholder
+import com.huanchengfly.tieba.post.ui.widgets.compose.FeedThreadItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.ProvideContentColor
 import com.huanchengfly.tieba.post.ui.widgets.compose.PullToRefreshBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.VerticalGrid
@@ -131,6 +132,7 @@ fun HotPage(
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             val topicList = uiState.topics
             val threadList = uiState.threads
+            val hideBlockedContent by viewModel.hideBlockedContent.collectAsStateWithLifecycle()
 
             LazyColumn(
                 modifier = modifier.fillMaxSize().testColumn(),
@@ -251,16 +253,23 @@ fun HotPage(
                     contentType = { _,_ -> HotType.Thread }
                 ) { index, thread ->
                     trace(MacrobenchmarkConstant.TRACE_FEED_CARD) {
-                        FeedCard(
+                        FeedThreadItem(
                             thread = thread,
-                            onClick = threadClickListeners.onClicked,
-                            onLike = viewModel::onThreadLikeClicked,
-                            onClickReply = threadClickListeners.onReplyClicked,
-                            onClickUser = threadClickListeners.onAuthorClicked,
-                            onClickForum = threadClickListeners.onForumClicked,
-                            cardDivider = index != threadList.lastIndex,
+                            hideBlockedContent = hideBlockedContent,
+                            onUndoHidden = viewModel::unhideThread,
                         ) {
-                            HotRankText(rank = index + 1, hotNum = thread.hotNum)
+                            FeedCard(
+                                thread = thread,
+                                onClick = threadClickListeners.onClicked,
+                                onLike = viewModel::onThreadLikeClicked,
+                                onClickReply = threadClickListeners.onReplyClicked,
+                                onClickUser = threadClickListeners.onAuthorClicked,
+                                onClickForum = threadClickListeners.onForumClicked,
+                                onHide = viewModel::hideThread,
+                                cardDivider = index != threadList.lastIndex,
+                            ) {
+                                HotRankText(rank = index + 1, hotNum = thread.hotNum)
+                            }
                         }
                     }
                 }

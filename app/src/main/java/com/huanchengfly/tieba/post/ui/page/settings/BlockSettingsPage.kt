@@ -151,6 +151,15 @@ fun BlockSettingsPage(
                 }
             )
 
+            preference(
+                title = R.string.title_hidden_thread_list,
+                leadingIcon = Icons.Outlined.HideSource,
+                trailingIcon = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
+                onClick = {
+                    navigator.navigate(route = SettingsDestination.HiddenPostList)
+                }
+            )
+
             customPreference {
                 BlockRuleBackupPreference(
                     modifier = Modifier.padding(top = 2.dp),
@@ -299,7 +308,7 @@ private fun BlockRuleList(
 private fun BlockRuleRestoreDialog(
     state: DialogState = rememberDialogState(),
     uiState: BlockSettingsUiState,
-    onRestoreClicked: (forum: Boolean, keyword: Boolean, user: Boolean) -> Unit,
+    onRestoreClicked: (forum: Boolean, keyword: Boolean, user: Boolean, hidden: Boolean) -> Unit,
     onCancelClicked: () -> Unit,
 ) {
     val metadata: BlockBackupMetadata? = uiState.pendingRestore?.first
@@ -307,6 +316,7 @@ private fun BlockRuleRestoreDialog(
     val restoreForum = rememberSaveable { mutableStateOf(true) }
     val restoreKeyword = rememberSaveable { mutableStateOf(true) }
     val restoreUser = rememberSaveable { mutableStateOf(true) }
+    val restoreHidden = rememberSaveable { mutableStateOf(true) }
 
     AlertDialog(
         modifier = Modifier.padding(horizontal = 16.dp), // Make Dialog compact
@@ -338,11 +348,18 @@ private fun BlockRuleRestoreDialog(
 
                     if (uiState.error == null && uiState.pendingRestore != null) {
                         val enabled by remember {
-                            derivedStateOf { restoreForum.value || restoreKeyword.value || restoreUser.value }
+                            derivedStateOf {
+                                restoreForum.value || restoreKeyword.value || restoreUser.value || restoreHidden.value
+                            }
                         }
                         Button(
                             onClick = {
-                                onRestoreClicked(restoreForum.value, restoreKeyword.value, restoreUser.value)
+                                onRestoreClicked(
+                                    restoreForum.value,
+                                    restoreKeyword.value,
+                                    restoreUser.value,
+                                    restoreHidden.value,
+                                )
                             },
                             enabled = enabled,
                             content = { Text(text = stringResource(R.string.button_sure)) }
@@ -374,6 +391,7 @@ private fun BlockRuleRestoreDialog(
                     Triple(R.string.title_restore_forum, metadata.forumRuleCount, restoreForum),
                     Triple(R.string.title_restore_keyword, metadata.keywordRuleCount, restoreKeyword),
                     Triple(R.string.title_restore_user, metadata.userRuleCount, restoreUser),
+                    Triple(R.string.title_restore_hidden, metadata.hiddenPostCount, restoreHidden),
                 ).apply {
                     // Unselect empty rules for RestoreButton
                     fastForEach { (_, ruleCount, checked) -> if (ruleCount <= 0) checked.value = false }

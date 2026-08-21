@@ -23,6 +23,7 @@ import com.huanchengfly.tieba.post.ui.page.main.explore.ConsumeThreadPageResult
 import com.huanchengfly.tieba.post.ui.page.main.explore.LaunchedFabStateEffect
 import com.huanchengfly.tieba.post.ui.page.main.explore.createThreadClickListeners
 import com.huanchengfly.tieba.post.ui.widgets.compose.FeedCard
+import com.huanchengfly.tieba.post.ui.widgets.compose.FeedThreadItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.PullToRefreshBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.SwipeUpLazyLoadColumn
 import com.huanchengfly.tieba.post.ui.widgets.compose.ThreadContentType
@@ -88,6 +89,7 @@ fun ConcernPage(
             val uiState by viewModel.uiState.collectAsStateWithLifecycle()
             val isLoadingMore = uiState.isLoadingMore
             val data = uiState.data
+            val hideBlockedContent by viewModel.hideBlockedContent.collectAsStateWithLifecycle()
 
             SwipeUpLazyLoadColumn(
                 modifier = modifier.fillMaxSize(),
@@ -98,15 +100,22 @@ fun ConcernPage(
                 bottomIndicator = defaultBottomIndicator,
             ) {
                 itemsIndexed(data, key = { _, it -> it.id }, ThreadContentType) { i, thread ->
-                    FeedCard(
+                    FeedThreadItem(
                         thread = thread,
-                        onClick = threadClickListeners.onClicked,
-                        onLike = viewModel::onThreadLikeClicked,
-                        onClickReply = threadClickListeners.onReplyClicked,
-                        onClickUser = threadClickListeners.onAuthorClicked,
-                        onClickForum = threadClickListeners.onForumClicked,
-                        cardDivider = i < data.lastIndex
-                    )
+                        hideBlockedContent = hideBlockedContent,
+                        onUndoHidden = viewModel::unhideThread,
+                    ) {
+                        FeedCard(
+                            thread = thread,
+                            onClick = threadClickListeners.onClicked,
+                            onLike = viewModel::onThreadLikeClicked,
+                            onClickReply = threadClickListeners.onReplyClicked,
+                            onClickUser = threadClickListeners.onAuthorClicked,
+                            onClickForum = threadClickListeners.onForumClicked,
+                            onHide = viewModel::hideThread,
+                            cardDivider = i < data.lastIndex
+                        )
+                    }
                 }
             }
         }

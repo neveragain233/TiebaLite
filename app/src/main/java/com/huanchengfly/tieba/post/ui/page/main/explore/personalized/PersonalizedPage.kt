@@ -52,10 +52,8 @@ import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.main.explore.ConsumeThreadPageResult
 import com.huanchengfly.tieba.post.ui.page.main.explore.LaunchedFabStateEffect
 import com.huanchengfly.tieba.post.ui.page.main.explore.createThreadClickListeners
-import com.huanchengfly.tieba.post.ui.widgets.compose.BlockTip
-import com.huanchengfly.tieba.post.ui.widgets.compose.BlockableContent
-import com.huanchengfly.tieba.post.ui.widgets.compose.CardHorizontalSpacing
 import com.huanchengfly.tieba.post.ui.widgets.compose.FeedCard
+import com.huanchengfly.tieba.post.ui.widgets.compose.FeedThreadItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.PullToRefreshBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.SwipeUpLazyLoadColumn
@@ -65,12 +63,6 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import com.huanchengfly.tieba.post.utils.trace
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
-
-val ThreadBlockedTip: @Composable BoxScope.() -> Unit = {
-    BlockTip(modifier = Modifier.padding(horizontal = CardHorizontalSpacing, vertical = 4.dp)) {
-        Text(text = stringResource(id = R.string.tip_blocked_thread))
-    }
-}
 
 @Composable
 fun PersonalizedPage(
@@ -165,15 +157,14 @@ fun PersonalizedPage(
                 bottomIndicator = defaultBottomIndicator,
             ) {
                 itemsIndexed(data, key = { _, it -> it.id }, ThreadContentType) { index, thread ->
-                    val isHidden = thread.blocked && hideBlockedContent
                     trace(MacrobenchmarkConstant.TRACE_FEED_CARD) {
-                        BlockableContent(
-                            blocked = thread.blocked,
-                            blockedTip = ThreadBlockedTip,
+                        FeedThreadItem(
+                            thread = thread,
+                            hideBlockedContent = hideBlockedContent,
                             modifier = Modifier
                                 .fillMaxWidth()
                                 .animateItem(fadeInSpec = null, placementSpec = itemPlacementSpec, fadeOutSpec = null),
-                            hideBlockedContent = hideBlockedContent
+                            onUndoHidden = viewModel::unhideThread,
                         ) {
                             FeedCard(
                                 thread = thread,
@@ -195,11 +186,12 @@ fun PersonalizedPage(
                                                 dislikeReasons.add(it)
                                             }
                                         },
+                                        onHide = { viewModel.hideThread(thread) },
                                     ) {
                                         viewModel.onThreadDislike(thread, dislikeReasons.toList())
                                     }
                                 },
-                                cardDivider = !isHidden && index < data.lastIndex,
+                                cardDivider = index < data.lastIndex,
                             )
                         }
                     }

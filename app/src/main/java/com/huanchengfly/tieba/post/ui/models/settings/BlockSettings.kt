@@ -5,5 +5,5 @@ import androidx.compose.runtime.Immutable
 @Immutable
 data class BlockSettings(
     val blockVideo: Boolean = false,
-    val hideBlocked: Boolean = false
+    val hideBlocked: Boolean = false,
 )

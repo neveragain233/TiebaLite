@@ -50,6 +50,7 @@ class ExploreRepository @Inject constructor(
     @ApplicationScope private val scope: CoroutineScope,
     private val localDataSource: ExploreLocalDataSource,
     private val blockRepo: BlockRepository,
+    private val hiddenRepo: HiddenThreadRepository,
     private val threadRepo: PbPageRepository,
     settingsRepository: SettingsRepository
 ) {
@@ -89,7 +90,8 @@ class ExploreRepository @Inject constructor(
             localDataSource.saveHotThread(tabCode, data)
         }
 
-        return data.mapUiModel(habit.showBothName, blockRepo::isBlocked)
+        val hiddenTids = hiddenRepo.hiddenTids.first()
+        return data.mapUiModel(habit.showBothName, blockRepo::isBlocked, isHidden = { it in hiddenTids })
     }
 
     suspend fun loadPersonalized(page: Int, cached: Boolean): List<ThreadItem> {
@@ -109,10 +111,12 @@ class ExploreRepository @Inject constructor(
             localDataSource.savePersonalized(data, page)
         }
 
+        val hiddenTids = hiddenRepo.hiddenTids.first()
         return data.mapUiModel(
             showBothName = habitSettings.snapshot().showBothName,
             blockVideo = blockSettings.snapshot().blockVideo,
             isBlocked = blockRepo::isBlocked,
+            isHidden = { it in hiddenTids },
             dislikeProvider = this::getCachedDislike
         )
     }
@@ -134,7 +138,8 @@ class ExploreRepository @Inject constructor(
             localDataSource.saveUserLikeFirstPage(uid, data)
         }
         val showBothName = habitSettings.snapshot().showBothName
-        val threads = data.threadInfo.mapUiModel(showBothName, blockRepo::isBlocked)
+        val hiddenTids = hiddenRepo.hiddenTids.first()
+        val threads = data.threadInfo.mapUiModel(showBothName, blockRepo::isBlocked, isHidden = { it in hiddenTids })
         return UserLikeThreads(data.requestUnix, data.pageTag, data.hasMore == 1, threads)
     }
 
@@ -147,7 +152,8 @@ class ExploreRepository @Inject constructor(
     suspend fun loadUserLike(pageTag: String, lastRequestUnix: Long): UserLikeThreads {
         val data = networkDataSource.loadMoreUserLikeThread(pageTag, lastRequestUnix)
         val showBothName = habitSettings.snapshot().showBothName
-        val threads = data.threadInfo.mapUiModel(showBothName, isBlocked = blockRepo::isBlocked)
+        val hiddenTids = hiddenRepo.hiddenTids.first()
+        val threads = data.threadInfo.mapUiModel(showBothName, isBlocked = blockRepo::isBlocked, isHidden = { it in hiddenTids })
         return UserLikeThreads(data.requestUnix, data.pageTag, data.hasMore == 1, threads)
     }
 
@@ -217,11 +223,13 @@ class ExploreRepository @Inject constructor(
          *
          * @param showBothName show both username and nickname
          * @param isBlocked check thread author, title or content is blocked
+         * @param isHidden check thread id is hidden by user
          * @param threadDislikeMap associated dislike resource map, used in personalized page
          * */
         suspend fun ThreadInfo.mapUiModel(
             showBothName: Boolean,
             isBlocked: suspend (uid: Long, content: Array<String>) -> Boolean,
+            isHidden: suspend (Long) -> Boolean,
             threadDislikeMap: Map<Long, List<Dislike>>?
         ): ThreadItem {
             val author = with(this.author!!) {
@@ -235,6 +243,7 @@ class ExploreRepository @Inject constructor(
                     firstPostId = this.firstPostId,
                     author = author,
                     blocked = isBlocked(author.id, arrayOf(title, abstractText)),
+                    hidden = isHidden(this.id),
                     content = buildThreadContent(title, abstractText, tabName, isGood = this.isGood == 1),
                     title = this.title,
                     lastTimeMill = DateTimeUtils.fixTimestamp(lastTimeInt.toLong()),
@@ -264,13 +273,14 @@ class ExploreRepository @Inject constructor(
         private suspend fun HotThreadListResponseData.mapUiModel(
             showBothName: Boolean,
             isBlocked: suspend (uid: Long, content: Array<String>) -> Boolean,
+            isHidden: suspend (Long) -> Boolean,
         ): HotTopicData {
             return withContext(Dispatchers.Default) {
                 HotTopicData(
                     topics = topicList.map { RecommendTopic(it.topicId, it.topicName, it.tag) },
                     tabs = hotThreadTabInfo.map { HotTab(name = it.tabName, tabCode = it.tabCode) },
                     threads = threadInfo.map {
-                        it.mapUiModel(showBothName, isBlocked, threadDislikeMap = null)
+                        it.mapUiModel(showBothName, isBlocked, isHidden, threadDislikeMap = null)
                     }
                 )
             }
@@ -280,6 +290,7 @@ class ExploreRepository @Inject constructor(
             showBothName: Boolean,
             blockVideo: Boolean,
             isBlocked: suspend (forumName: String, uid: Long, content: Array<String>) -> Boolean,
+            isHidden: suspend (Long) -> Boolean,
             dislikeProvider: (DislikeReason) -> Dislike
         ): List<ThreadItem> {
             // associate dislikeResource by thread id
@@ -298,6 +309,7 @@ class ExploreRepository @Inject constructor(
                                 // 4.0.0-beta.4.4: Add forum name filter
                                 isBlocked(it.forumName, uid, content)
                             },
+                            isHidden = isHidden,
                             threadDislikeMap = threadDislikeMap
                         )
                     }
@@ -307,11 +319,12 @@ class ExploreRepository @Inject constructor(
         private suspend fun List<ConcernData>.mapUiModel(
             showBothName: Boolean,
             isBlocked: suspend (uid: Long, content: Array<String>) -> Boolean,
+            isHidden: suspend (Long) -> Boolean,
         ): List<ThreadItem> {
             return withContext(Dispatchers.Default) {
                 mapNotNull {
                     if (it.recommendType == 1 && it.threadList != null) {
-                        it.threadList.mapUiModel(showBothName, isBlocked, threadDislikeMap = null)
+                        it.threadList.mapUiModel(showBothName, isBlocked, isHidden, threadDislikeMap = null)
                     } else {
                         null // recommend users
                     }

@@ -19,6 +19,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.buildThreadContent
 import com.huanchengfly.tieba.post.utils.DateTimeUtils
 import com.huanchengfly.tieba.post.utils.StringUtil
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -27,6 +28,7 @@ import javax.inject.Singleton
 class HotTopicRepository @Inject constructor(
     private val networkDataSource: HotTopicNetworkDataSource,
     private val blockRepo: BlockRepository,
+    private val hiddenRepo: HiddenThreadRepository,
     private val threadRepo: PbPageRepository,
     private val settingsRepo: SettingsRepository
 ) {
@@ -93,8 +95,13 @@ class HotTopicRepository @Inject constructor(
 
         return withContext(Dispatchers.Default) {
             val habit = habitSettings.snapshot()
+            val hiddenTids = hiddenRepo.hiddenTids.first()
             threads.map {
-                it.threadInfo.mapUiModel(showBothName = habit.showBothName, isBlocked = blockRepo::isBlocked)
+                it.threadInfo.mapUiModel(
+                    showBothName = habit.showBothName,
+                    isBlocked = blockRepo::isBlocked,
+                    isHidden = { tid -> tid in hiddenTids },
+                )
             }
         }
     }
@@ -119,11 +126,13 @@ class HotTopicRepository @Inject constructor(
          *
          * @param showBothName show both username and nickname
          * @param isBlocked check thread author, title or content is blocked
+         * @param isHidden check thread id is hidden by user
          * */
         @VisibleForTesting(otherwise = VisibleForTesting.PRIVATE)
         suspend fun ThreadInfoBean.mapUiModel(
             showBothName: Boolean,
             isBlocked: suspend (forumName: String, uid: Long, content: Array<String>) -> Boolean,
+            isHidden: suspend (Long) -> Boolean,
         ): ThreadItem {
             val author = with(author) {
                 val nameShow = StringUtil.getUserNameString(showBothName, name ?: nameShow, showNickName)
@@ -136,6 +145,7 @@ class HotTopicRepository @Inject constructor(
                 firstPostId = this.firstPostId,
                 author = author,
                 blocked = isBlocked(forumName, author.id, arrayOf(title, abstractText)),
+                hidden = isHidden(this.id),
                 content = buildThreadContent(title, abstractText),
                 title = title,
                 lastTimeMill = DateTimeUtils.fixTimestamp(lastTimeInt),

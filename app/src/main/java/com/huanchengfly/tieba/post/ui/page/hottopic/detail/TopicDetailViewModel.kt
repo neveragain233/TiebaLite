@@ -2,6 +2,7 @@ package com.huanchengfly.tieba.post.ui.page.hottopic.detail
 
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.SavedStateHandle
+import androidx.lifecycle.viewModelScope
 import androidx.navigation.toRoute
 import com.huanchengfly.tieba.post.api.models.TopicInfoBean
 import com.huanchengfly.tieba.post.arch.BaseStateViewModel
@@ -10,6 +11,8 @@ import com.huanchengfly.tieba.post.arch.TbLiteExceptionHandler
 import com.huanchengfly.tieba.post.arch.UiEvent
 import com.huanchengfly.tieba.post.arch.UiState
 import com.huanchengfly.tieba.post.arch.stateInViewModel
+import com.huanchengfly.tieba.post.models.database.HiddenThread
+import com.huanchengfly.tieba.post.repository.HiddenThreadRepository
 import com.huanchengfly.tieba.post.repository.HotTopicRepository
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
 import com.huanchengfly.tieba.post.ui.models.Like
@@ -20,6 +23,7 @@ import com.huanchengfly.tieba.post.ui.page.main.explore.concern.ConcernViewModel
 import com.huanchengfly.tieba.post.utils.extension.set
 import dagger.hilt.android.lifecycle.HiltViewModel
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.launch
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -30,6 +34,7 @@ import javax.inject.Inject
 @HiltViewModel
 class TopicDetailViewModel @Inject constructor(
     private val hotTopicRepo: HotTopicRepository,
+    private val hiddenRepo: HiddenThreadRepository,
     settingsRepo: SettingsRepository,
     savedStateHandle: SavedStateHandle
 ) : BaseStateViewModel<TopicDetailUiState>() {
@@ -112,6 +117,32 @@ class TopicDetailViewModel @Inject constructor(
             onEvent = ::sendUiEvent
         ) { threadId, liked, loading ->
             _uiState.update { it.copy(threads = it.threads.updateLikeStatus(threadId, liked, loading)) }
+        }
+    }
+
+    fun hideThread(thread: ThreadItem) {
+        viewModelScope.launch {
+            hiddenRepo.hide(
+                HiddenThread(
+                    tid = thread.id,
+                    forumName = thread.simpleForum.second,
+                    title = thread.title,
+                    authorName = thread.author.name,
+                    hiddenTime = System.currentTimeMillis(),
+                )
+            )
+            _uiState.update { state ->
+                state.copy(threads = state.threads.map { if (it.id == thread.id) it.copy(hidden = true) else it })
+            }
+        }
+    }
+
+    fun unhideThread(thread: ThreadItem) {
+        viewModelScope.launch {
+            hiddenRepo.unhide(thread.id)
+            _uiState.update { state ->
+                state.copy(threads = state.threads.map { if (it.id == thread.id) it.copy(hidden = false) else it })
+            }
         }
     }
 
