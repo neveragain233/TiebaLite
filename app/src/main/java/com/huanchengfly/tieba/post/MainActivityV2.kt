@@ -3,6 +3,8 @@ package com.huanchengfly.tieba.post
 import android.Manifest
 import android.content.Context
 import android.content.Intent
+import android.content.pm.ActivityInfo
+import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
@@ -113,6 +115,9 @@ class MainActivityV2 : BaseComposeActivity() {
 
     private var pendingDeepLink by mutableStateOf<NavDeepLinkRequest?>(null)
 
+    /** 上一次配置中的最小窗口宽度(dp), 用于判断内外屏折叠切换 */
+    private var lastSmallestWidthDp = 0
+
     private val viewModel: MainViewModel by viewModels()
 
     /** Used to control the initial welcome screen state in Macrobenchmark */
@@ -127,6 +132,7 @@ class MainActivityV2 : BaseComposeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        lastSmallestWidthDp = resources.configuration.smallestScreenWidthDp
         lifecycleScope.launch {
             ClientUtils.refreshActiveTimestamp()
             delay(2000L)
@@ -144,6 +150,31 @@ class MainActivityV2 : BaseComposeActivity() {
             }
             ShortcutInitializer.getTbShortcut(this)?.also { onNewShortcut(it) }
             data?.normalizeScheme()?.let { pendingAppLink = appLinkToNavRoute(uri = it) }
+        }
+    }
+
+    override fun onConfigurationChanged(newConfig: Configuration) {
+        super.onConfigurationChanged(newConfig)
+
+        val smallestWidth = newConfig.smallestScreenWidthDp
+        val wasInnerScreen = lastSmallestWidthDp >= FoldableInnerScreenMinWidthDp
+        lastSmallestWidthDp = smallestWidth
+
+        // 「折叠到外屏时自动竖屏」: 从内屏(>=600dp)折叠到外屏(<600dp)时锁定竖屏,
+        // 双列自动收起进入详情全屏; 展开回内屏恢复自由方向
+        if (viewModel.uiState.value.uiSettings?.foldToPortrait != true) return
+        when {
+            wasInnerScreen &&
+                smallestWidth < FoldableInnerScreenMinWidthDp &&
+                requestedOrientation != ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT -> {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_USER_PORTRAIT
+            }
+
+            !wasInnerScreen &&
+                smallestWidth >= FoldableInnerScreenMinWidthDp &&
+                requestedOrientation != ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED -> {
+                requestedOrientation = ActivityInfo.SCREEN_ORIENTATION_UNSPECIFIED
+            }
         }
     }
 
@@ -322,6 +353,9 @@ class MainActivityV2 : BaseComposeActivity() {
     }
 
     companion object {
+
+        /** 内屏最小宽度阈值(dp): 大于等于该值视为内屏(大屏), 小于视为外屏 */
+        private const val FoldableInnerScreenMinWidthDp = 600
 
         private fun Context.appLinkToNavRoute(uri: Uri): Destination? {
             return ClipBoardLinkDetector.parseDeepLink(uri)

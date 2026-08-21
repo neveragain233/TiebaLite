@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.SwipeVertical
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.material.icons.outlined.WatchLater
+import androidx.compose.material.icons.rounded.ScreenRotation
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -202,6 +203,13 @@ fun UISettingsPage(
                     ForumDetailMode.IMMEDIATE_SPLIT to R.string.forum_detail_mode_immediate_split,
                     ForumDetailMode.FULL_SCREEN to R.string.forum_detail_mode_full_screen,
                 ),
+            )
+
+            toggleablePreference(
+                property = UISettings::foldToPortrait,
+                title = R.string.settings_fold_to_portrait,
+                summary = R.string.summary_fold_to_portrait,
+                leadingIcon = Icons.Rounded.ScreenRotation,
             )
         }
     }

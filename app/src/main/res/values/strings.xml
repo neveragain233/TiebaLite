@@ -626,4 +626,6 @@
     <string name="forum_detail_mode_after_selection">选帖后分屏</string>
     <string name="forum_detail_mode_immediate_split">进入吧即分屏</string>
     <string name="forum_detail_mode_full_screen">吧内全屏打开帖子</string>
+    <string name="settings_fold_to_portrait">折叠到外屏时自动竖屏</string>
+    <string name="summary_fold_to_portrait">关闭后外屏可继续使用横屏双列</string>
 </resources>

@@ -53,6 +53,7 @@ enum class ForumDetailMode {
  * @param homeForumList 吧列表单列显示
  * @param showHistoryInHome 首页显示最近逛的吧
  * @param forumDetailMode 吧内详情显示方式
+ * @param foldToPortrait 折叠到外屏时自动切换竖屏(收起双列进入详情全屏)
  * */
 @Immutable
 data class UISettings(
@@ -71,4 +72,5 @@ data class UISettings(
     val homeForumList: Boolean = false,
     val showHistoryInHome: Boolean = true,
     val forumDetailMode: ForumDetailMode = ForumDetailMode.KEEP_DETAIL,
+    val foldToPortrait: Boolean = true,
 )

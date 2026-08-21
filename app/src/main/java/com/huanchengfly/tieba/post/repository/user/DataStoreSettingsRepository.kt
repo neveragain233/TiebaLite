@@ -265,6 +265,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             forumDetailMode = ForumDetailMode.entries.getOrElse(forumDetailModeOrdinal) {
                 ForumDetailMode.KEEP_DETAIL
             },
+            foldToPortrait = it[booleanPreferencesKey(KEY_FOLD_TO_PORTRAIT)] ?: true,
         )
     }
 
@@ -284,6 +285,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_HOME_SINGLE_FORUM_LIST)] = ui.homeForumList
         it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] = ui.showHistoryInHome
         it[intPreferencesKey(KEY_FORUM_DETAIL_MODE)] = ui.forumDetailMode.ordinal
+        it[booleanPreferencesKey(KEY_FOLD_TO_PORTRAIT)] = ui.foldToPortrait
     }
 
     private const val KEY_APP_ICON = "app_icon"
@@ -308,6 +310,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_HOME_SINGLE_FORUM_LIST = "ui_forum_list_in_home"
     private const val KEY_HOME_PAGE_SHOW_HISTORY = "ui_history_in_home"
     private const val KEY_FORUM_DETAIL_MODE = "ui_forum_detail_mode"
+    private const val KEY_FOLD_TO_PORTRAIT = "ui_fold_to_portrait"
 }
 
 private object BlockTransformer: PreferenceTransformer<BlockSettings> {
