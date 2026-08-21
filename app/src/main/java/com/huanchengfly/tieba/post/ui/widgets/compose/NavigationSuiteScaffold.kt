@@ -118,7 +118,7 @@ fun NavigationSuiteScaffoldLayout(
         val isNavigationBar = navigationSuiteType.isNavigationBar
         val layoutHeight = constraints.maxHeight
         val layoutWidth = constraints.maxWidth
-        val hideOffsetPx = with(density) { bottomOffset.toPx() }
+        val hideOffsetPx = with(density) { (bottomOffset + HideExtraMargin).toPx() }
 
         // Find the navigation suite composable through it's layoutId tag
         val navigationPlaceable =
@@ -275,6 +275,9 @@ internal val TallNavigationBarHeight = 80.dp
 internal val NavigationBarHeight = 64.dp
 private val PrimaryActionContentPadding = 16.dp
 private val AnimationSpec: SpringSpec<Float> = spring(dampingRatio = 0.9f, stiffness = 700f)
+
+/** 隐藏时额外多滑出的距离, 抵消取整误差与阴影, 避免底栏上边缘残留. */
+private val HideExtraMargin = 16.dp
 
 internal val NavigationSuiteType.isNavigationBar
     get() =
