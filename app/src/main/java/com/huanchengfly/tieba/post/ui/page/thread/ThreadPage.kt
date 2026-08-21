@@ -24,7 +24,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
-import androidx.compose.foundation.interaction.PressInteraction
 import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
@@ -78,6 +77,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clipToBounds
@@ -335,11 +335,14 @@ fun ThreadPage(
         }
     }
 
-    // 用户触碰列表: 重置导航锚点
-    LaunchedEffect(lazyListState) {
-        lazyListState.interactionSource.interactions.collect { interaction ->
-            if (interaction is PressInteraction.Press) {
-                lastNavAnchorPostId = null
+    // 用户手动滚动时, 将导航记忆锚点对齐到当前顶部可见楼层, 使 ▲▼ 从当前位置继续,
+    // 而不是回到上一次导航记忆的楼. 导航键触发的程序化滚动期间不更新, 保证连续导航.
+    LaunchedEffect(lazyListState, state) {
+        snapshotFlow {
+            lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
+        }.collect {
+            if (!navScrollActive) {
+                lastNavAnchorPostId = lazyListState.navigationAnchorPost(state)?.id
             }
         }
     }
