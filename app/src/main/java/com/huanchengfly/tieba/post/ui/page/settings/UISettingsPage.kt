@@ -205,7 +205,7 @@ fun UISettingsPage(
             )
         }
 
-        group(title = R.string.settings_group_dual_pane) {
+        group(title = R.string.settings_group_split_screen) {
             listPref(
                 property = UISettings::forumDetailMode,
                 title = R.string.settings_forum_detail_mode,
@@ -224,7 +224,9 @@ fun UISettingsPage(
                 summary = R.string.summary_fold_to_portrait,
                 leadingIcon = Icons.Rounded.ScreenRotation,
             )
+        }
 
+        group(title = R.string.settings_group_thread_detail) {
             listPref(
                 property = UISettings::fullscreenButtonStyle,
                 title = R.string.settings_fullscreen_button_style,
@@ -243,6 +245,13 @@ fun UISettingsPage(
                 leadingIcon = Icons.Rounded.KeyboardArrowDown,
             )
 
+            toggleablePreference(
+                property = UISettings::compactReplyBar,
+                title = R.string.settings_compact_reply_bar,
+                summary = R.string.summary_compact_reply_bar,
+                leadingIcon = Icons.Rounded.KeyboardArrowDown,
+            )
+
             listPref(
                 property = UISettings::compactReplyBarPosition,
                 title = R.string.settings_compact_reply_bar_position,
@@ -252,13 +261,6 @@ fun UISettingsPage(
                     CompactReplyBarPosition.RIGHT to R.string.compact_reply_bar_position_right,
                     CompactReplyBarPosition.LEFT to R.string.compact_reply_bar_position_left,
                 ),
-            )
-
-            toggleablePreference(
-                property = UISettings::compactReplyBar,
-                title = R.string.settings_compact_reply_bar,
-                summary = R.string.summary_compact_reply_bar,
-                leadingIcon = Icons.Rounded.KeyboardArrowDown,
             )
 
             toggleablePreference(

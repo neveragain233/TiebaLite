@@ -571,7 +571,7 @@
     <string name="settings_group_block_rule">屏蔽规则</string>
     <string name="settings_group_dark_mode">夜间模式</string>
     <string name="settings_group_display">显示与视觉效果</string>
-    <string name="settings_group_main_page">首页偏好</string>
+    <string name="settings_group_main_page">首页与导航</string>
     <string name="settings_group_media">多媒体</string>
     <string name="settings_group_oksign">签到设置</string>
     <string name="settings_group_forum">吧偏好</string>
@@ -642,7 +642,8 @@
     <string name="title_next_comment">下一楼</string>
     <string name="tip_no_more_comment">已到最后一楼</string>
     <string name="tip_no_prev_comment">已到第一楼</string>
-    <string name="settings_group_dual_pane">双栏布局</string>
+    <string name="settings_group_split_screen">分屏与大屏</string>
+    <string name="settings_group_thread_detail">帖子详情</string>
     <string name="settings_forum_detail_mode">吧内详情显示方式</string>
     <string name="forum_detail_mode_keep_detail">选帖后分屏，保持详情进入新吧</string>
     <string name="forum_detail_mode_after_selection">选帖后分屏</string>
