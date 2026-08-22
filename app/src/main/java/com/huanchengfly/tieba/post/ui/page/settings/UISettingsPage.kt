@@ -7,6 +7,8 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Compress
+import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.LabelImportant
@@ -205,27 +207,6 @@ fun UISettingsPage(
             )
         }
 
-        group(title = R.string.settings_group_split_screen) {
-            listPref(
-                property = UISettings::forumDetailMode,
-                title = R.string.settings_forum_detail_mode,
-                leadingIcon = Icons.Outlined.ViewColumn,
-                options = persistentMapOf(
-                    ForumDetailMode.KEEP_DETAIL to R.string.forum_detail_mode_keep_detail,
-                    ForumDetailMode.AFTER_SELECTION to R.string.forum_detail_mode_after_selection,
-                    ForumDetailMode.IMMEDIATE_SPLIT to R.string.forum_detail_mode_immediate_split,
-                    ForumDetailMode.FULL_SCREEN to R.string.forum_detail_mode_full_screen,
-                ),
-            )
-
-            toggleablePreference(
-                property = UISettings::foldToPortrait,
-                title = R.string.settings_fold_to_portrait,
-                summary = R.string.summary_fold_to_portrait,
-                leadingIcon = Icons.Rounded.ScreenRotation,
-            )
-        }
-
         group(title = R.string.settings_group_thread_detail) {
             listPref(
                 property = UISettings::fullscreenButtonStyle,
@@ -249,13 +230,13 @@ fun UISettingsPage(
                 property = UISettings::compactReplyBar,
                 title = R.string.settings_compact_reply_bar,
                 summary = R.string.summary_compact_reply_bar,
-                leadingIcon = Icons.Rounded.KeyboardArrowDown,
+                leadingIcon = Icons.Rounded.Compress,
             )
 
             listPref(
                 property = UISettings::compactReplyBarPosition,
                 title = R.string.settings_compact_reply_bar_position,
-                leadingIcon = Icons.Rounded.KeyboardArrowDown,
+                leadingIcon = Icons.Rounded.PictureInPictureAlt,
                 enabled = currentPreference.compactReplyBar,
                 options = persistentMapOf(
                     CompactReplyBarPosition.RIGHT to R.string.compact_reply_bar_position_right,
@@ -269,6 +250,27 @@ fun UISettingsPage(
                 summary = R.string.summary_compact_show_collect,
                 leadingIcon = Icons.Rounded.Star,
                 enabled = currentPreference.compactReplyBar,
+            )
+        }
+
+        group(title = R.string.settings_group_split_screen) {
+            listPref(
+                property = UISettings::forumDetailMode,
+                title = R.string.settings_forum_detail_mode,
+                leadingIcon = Icons.Outlined.ViewColumn,
+                options = persistentMapOf(
+                    ForumDetailMode.KEEP_DETAIL to R.string.forum_detail_mode_keep_detail,
+                    ForumDetailMode.AFTER_SELECTION to R.string.forum_detail_mode_after_selection,
+                    ForumDetailMode.IMMEDIATE_SPLIT to R.string.forum_detail_mode_immediate_split,
+                    ForumDetailMode.FULL_SCREEN to R.string.forum_detail_mode_full_screen,
+                ),
+            )
+
+            toggleablePreference(
+                property = UISettings::foldToPortrait,
+                title = R.string.settings_fold_to_portrait,
+                summary = R.string.summary_fold_to_portrait,
+                leadingIcon = Icons.Rounded.ScreenRotation,
             )
         }
     }
