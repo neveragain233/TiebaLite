@@ -36,6 +36,7 @@ import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
 import com.huanchengfly.tieba.post.ui.models.settings.NavigationLabel
 import com.huanchengfly.tieba.post.ui.models.settings.PrivacySettings
+import com.huanchengfly.tieba.post.ui.models.settings.ReplyBarMode
 import com.huanchengfly.tieba.post.ui.models.settings.SignConfig
 import com.huanchengfly.tieba.post.ui.models.settings.Theme
 import com.huanchengfly.tieba.post.ui.models.settings.ThemeSettings
@@ -270,6 +271,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] ?: FullscreenButtonStyle.FAB.ordinal
         val compactReplyBarPositionOrdinal =
             it[intPreferencesKey(KEY_COMPACT_REPLY_BAR_POSITION)] ?: CompactReplyBarPosition.RIGHT.ordinal
+        val replyBarModeOrdinal =
+            it[intPreferencesKey(KEY_REPLY_BAR_MODE)] ?: ReplyBarMode.FULL.ordinal
 
         UISettings(
             appIcon = LauncherIcons.entries[appIconOrdinal],
@@ -299,6 +302,10 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             compactReplyBarPosition = CompactReplyBarPosition.entries.getOrElse(compactReplyBarPositionOrdinal) {
                 CompactReplyBarPosition.RIGHT
             },
+            replyBarMode = ReplyBarMode.entries.getOrElse(replyBarModeOrdinal) {
+                ReplyBarMode.FULL
+            },
+            compactShowCollect = it[booleanPreferencesKey(KEY_COMPACT_SHOW_COLLECT)] ?: true,
         )
     }
 
@@ -324,6 +331,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] = ui.fullscreenButtonStyle.ordinal
         it[booleanPreferencesKey(KEY_COMMENT_NAV_ENABLED)] = ui.commentNavEnabled
         it[intPreferencesKey(KEY_COMPACT_REPLY_BAR_POSITION)] = ui.compactReplyBarPosition.ordinal
+        it[intPreferencesKey(KEY_REPLY_BAR_MODE)] = ui.replyBarMode.ordinal
+        it[booleanPreferencesKey(KEY_COMPACT_SHOW_COLLECT)] = ui.compactShowCollect
     }
 
     private const val KEY_APP_ICON = "app_icon"
@@ -354,6 +363,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_FULLSCREEN_BUTTON_STYLE = "ui_fullscreen_button_style"
     private const val KEY_COMMENT_NAV_ENABLED = "ui_comment_nav_enabled"
     private const val KEY_COMPACT_REPLY_BAR_POSITION = "ui_compact_reply_bar_position"
+    private const val KEY_REPLY_BAR_MODE = "ui_reply_bar_mode"
+    private const val KEY_COMPACT_SHOW_COLLECT = "ui_compact_show_collect"
 }
 
 private object BlockTransformer: PreferenceTransformer<BlockSettings> {

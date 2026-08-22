@@ -7,6 +7,7 @@ import androidx.compose.animation.graphics.vector.AnimatedImageVector
 import androidx.compose.foundation.Image
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.LabelImportant
 import androidx.compose.material.icons.automirrored.outlined.LabelOff
@@ -41,6 +42,7 @@ import com.huanchengfly.tieba.post.ui.models.settings.DarkPreference
 import com.huanchengfly.tieba.post.ui.models.settings.ForumDetailMode
 import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
 import com.huanchengfly.tieba.post.ui.models.settings.NavigationLabel
+import com.huanchengfly.tieba.post.ui.models.settings.ReplyBarMode
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.page.settings.SettingsDestination.AppFont
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
@@ -250,6 +252,23 @@ fun UISettingsPage(
                     CompactReplyBarPosition.RIGHT to R.string.compact_reply_bar_position_right,
                     CompactReplyBarPosition.LEFT to R.string.compact_reply_bar_position_left,
                 ),
+            )
+
+            listPref(
+                property = UISettings::replyBarMode,
+                title = R.string.settings_reply_bar_mode,
+                leadingIcon = Icons.Rounded.KeyboardArrowDown,
+                options = persistentMapOf(
+                    ReplyBarMode.FULL to R.string.reply_bar_mode_full,
+                    ReplyBarMode.COMPACT to R.string.reply_bar_mode_compact,
+                ),
+            )
+
+            toggleablePreference(
+                property = UISettings::compactShowCollect,
+                title = R.string.settings_compact_show_collect,
+                summary = R.string.summary_compact_show_collect,
+                leadingIcon = Icons.Rounded.Star,
             )
         }
     }

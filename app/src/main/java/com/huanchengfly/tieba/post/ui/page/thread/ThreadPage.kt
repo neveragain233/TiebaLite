@@ -46,6 +46,7 @@ import androidx.compose.material.icons.rounded.RocketLaunch
 import androidx.compose.material.icons.rounded.Share
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.StarBorder
+import androidx.compose.material.icons.automirrored.rounded.Send
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.material3.BadgedBox
 import androidx.compose.material3.BottomSheetDefaults
@@ -129,6 +130,7 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.common.theme.compose.withNonNull
 import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
 import com.huanchengfly.tieba.post.ui.models.settings.CompactReplyBarPosition
+import com.huanchengfly.tieba.post.ui.models.settings.ReplyBarMode
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.LikeZero
 import com.huanchengfly.tieba.post.ui.models.PostData
@@ -336,6 +338,19 @@ fun ThreadPage(
             lazyListState.scrollToItem(0)
             navScrollActive = false
             resetCommentNavDock()
+        }
+    }
+
+    // 收藏/取消收藏当前楼 (与「更多」菜单一致, 供紧凑回复栏收藏按钮复用)
+    val collectClick: () -> Unit = {
+        if (state.user == null) {
+            context.toastShort(R.string.title_not_logged_in)
+        } else if (state.thread!!.collected) {
+            viewModel.removeFromCollections()
+        } else {
+            lazyListState.middleVisiblePost(state)?.let { post ->
+                viewModel.updateCollections(markedPost = post)
+            }
         }
     }
 
@@ -677,7 +692,7 @@ fun ThreadPage(
                 }
             },
             bottomBar = {
-                if (viewModel.hideReply) {
+                if (LocalUISettings.current.replyBarMode == ReplyBarMode.COMPACT) {
                     val isLeft =
                         LocalUISettings.current.compactReplyBarPosition == CompactReplyBarPosition.LEFT
                     Box(
@@ -686,22 +701,31 @@ fun ThreadPage(
                             .windowInsetsPadding(WindowInsets.navigationBars)
                             .offset(y = -ThreadToolbarScreenOffset),
                     ) {
-                        ThreadFloatingToolbar(
-                            compact = true,
+                        Box(
                             modifier = Modifier
-                                .align(if (isLeft) Alignment.BottomStart else Alignment.BottomEnd)
-                                .padding(horizontal = CardHorizontalSpacing)
-                                .animateEnterExit(
-                                    animatedVisibilityScope = LocalAnimatedVisibilityScope.current,
-                                    sharedTransitionScope = LocalSharedTransitionScope.current,
-                                    enter = defaultVerticalEnterTransition(topToBottom = false),
-                                    exit = defaultVerticalExitTransition(topToBottom = false),
-                                ),
-                            onClickMore = openBottomSheet,
-                            like = state.thread?.like ?: LikeZero,
-                            onLiked = viewModel::onThreadLikeClicked,
-                            scrollBehavior = toolbarScrollBehavior,
-                        )
+                                .align(if (isLeft) Alignment.BottomStart else Alignment.BottomEnd),
+                        ) {
+                            ThreadFloatingToolbar(
+                                compact = true,
+                                modifier = Modifier
+                                    .padding(horizontal = CardHorizontalSpacing)
+                                    .animateEnterExit(
+                                        animatedVisibilityScope =
+                                            LocalAnimatedVisibilityScope.current,
+                                        sharedTransitionScope = LocalSharedTransitionScope.current,
+                                        enter = defaultVerticalEnterTransition(topToBottom = false),
+                                        exit = defaultVerticalExitTransition(topToBottom = false),
+                                    ),
+                                onClickReply =
+                                    viewModel::onReplyThread.takeUnless { viewModel.hideReply },
+                                onClickMore = openBottomSheet,
+                                like = state.thread?.like ?: LikeZero,
+                                onLiked = viewModel::onThreadLikeClicked,
+                                collected = state.thread?.collected == true,
+                                onCollect = collectClick,
+                                scrollBehavior = toolbarScrollBehavior,
+                            )
+                        }
                     }
                 } else {
                     Container {
@@ -1121,6 +1145,8 @@ private fun ThreadFloatingToolbar(
     onJumpPage: () -> Unit = {},
     like: Like = LikeZero,
     onLiked: () -> Unit = {},
+    collected: Boolean = false,
+    onCollect: () -> Unit = {},
     scrollBehavior: FloatingToolbarScrollBehavior? = null,
     shadowElevation: Dp = FloatingToolbarDefaults.ContainerExpandedElevationWithFab,
     compact: Boolean = false,
@@ -1131,7 +1157,7 @@ private fun ThreadFloatingToolbar(
         if (!colorScheme.isTranslucent && !LocalUISettings.current.reduceEffect) it.copy(alpha = 0.7f) else it
     }
 
-    ProvideContentColor(colorScheme.onPrimaryContainer) {
+    val toolbarRow: @Composable () -> Unit = {
         Row(
             modifier = modifier
                 .onNotNull(scrollBehavior) {
@@ -1185,12 +1211,43 @@ private fun ThreadFloatingToolbar(
 
             LikeAction(like = like, onClick = onLiked)
 
+            if (compact && onClickReply != null) {
+                ActionItem(
+                    icon = Icons.AutoMirrored.Rounded.Send,
+                    contentDescription = stringResource(R.string.title_reply),
+                    positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                    onClick = onClickReply,
+                )
+            }
+
+            if (compact && LocalUISettings.current.compactShowCollect) {
+                ActionItem(
+                    icon = if (collected) Icons.Rounded.Star else Icons.Rounded.StarBorder,
+                    contentDescription = stringResource(
+                        id = if (collected) R.string.title_collected else R.string.title_uncollected
+                    ),
+                    positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                    onClick = onCollect,
+                )
+            }
+
             ActionItem(
                 icon = Icons.Rounded.MoreVert,
                 contentDescription = stringResource(id = R.string.btn_more),
                 positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                 onClick = onClickMore
             )
+        }
+    }
+
+    ProvideContentColor(colorScheme.onPrimaryContainer) {
+        if (compact) {
+            // 用 clip 保证紧凑胶囊向下划动时完全隐藏, 不残留
+            Box(modifier = Modifier.clipToBounds()) {
+                toolbarRow()
+            }
+        } else {
+            toolbarRow()
         }
     }
 }
