@@ -130,7 +130,6 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.common.theme.compose.withNonNull
 import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
 import com.huanchengfly.tieba.post.ui.models.settings.CompactReplyBarPosition
-import com.huanchengfly.tieba.post.ui.models.settings.ReplyBarMode
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.LikeZero
 import com.huanchengfly.tieba.post.ui.models.PostData
@@ -692,7 +691,7 @@ fun ThreadPage(
                 }
             },
             bottomBar = {
-                if (LocalUISettings.current.replyBarMode == ReplyBarMode.COMPACT) {
+                if (LocalUISettings.current.compactReplyBar) {
                     val isLeft =
                         LocalUISettings.current.compactReplyBarPosition == CompactReplyBarPosition.LEFT
                     Box(

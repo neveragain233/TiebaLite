@@ -42,7 +42,6 @@ import com.huanchengfly.tieba.post.ui.models.settings.DarkPreference
 import com.huanchengfly.tieba.post.ui.models.settings.ForumDetailMode
 import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
 import com.huanchengfly.tieba.post.ui.models.settings.NavigationLabel
-import com.huanchengfly.tieba.post.ui.models.settings.ReplyBarMode
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.page.settings.SettingsDestination.AppFont
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
@@ -248,20 +247,18 @@ fun UISettingsPage(
                 property = UISettings::compactReplyBarPosition,
                 title = R.string.settings_compact_reply_bar_position,
                 leadingIcon = Icons.Rounded.KeyboardArrowDown,
+                enabled = currentPreference.compactReplyBar,
                 options = persistentMapOf(
                     CompactReplyBarPosition.RIGHT to R.string.compact_reply_bar_position_right,
                     CompactReplyBarPosition.LEFT to R.string.compact_reply_bar_position_left,
                 ),
             )
 
-            listPref(
-                property = UISettings::replyBarMode,
-                title = R.string.settings_reply_bar_mode,
+            toggleablePreference(
+                property = UISettings::compactReplyBar,
+                title = R.string.settings_compact_reply_bar,
+                summary = R.string.summary_compact_reply_bar,
                 leadingIcon = Icons.Rounded.KeyboardArrowDown,
-                options = persistentMapOf(
-                    ReplyBarMode.FULL to R.string.reply_bar_mode_full,
-                    ReplyBarMode.COMPACT to R.string.reply_bar_mode_compact,
-                ),
             )
 
             toggleablePreference(
@@ -269,6 +266,7 @@ fun UISettingsPage(
                 title = R.string.settings_compact_show_collect,
                 summary = R.string.summary_compact_show_collect,
                 leadingIcon = Icons.Rounded.Star,
+                enabled = currentPreference.compactReplyBar,
             )
         }
     }

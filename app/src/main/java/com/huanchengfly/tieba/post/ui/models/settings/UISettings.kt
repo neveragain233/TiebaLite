@@ -61,17 +61,6 @@ enum class CompactReplyBarPosition {
 }
 
 /**
- * 帖子详情回复栏布局模式
- */
-enum class ReplyBarMode {
-    /** 完整回复栏 (头像 + 回复文字 + 跳页 + 点赞 + 更多) */
-    FULL,
-
-    /** 紧凑胶囊 (图标按钮), 可含回复/收藏, 与是否隐藏回贴入口解耦 */
-    COMPACT,
-}
-
-/**
  * User UI Settings
  *
  * @param appIcon 应用图标
@@ -94,7 +83,7 @@ enum class ReplyBarMode {
  * @param fullscreenButtonStyle 详情全屏按钮样式
  * @param commentNavEnabled 帖子详情页启用评论上/下导航
  * @param compactReplyBarPosition 回复栏紧凑模式胶囊停靠位置
- * @param replyBarMode 回复栏布局模式
+ * @param compactReplyBar 回复栏使用紧凑布局
  * @param compactShowCollect 紧凑模式是否显示收藏按钮
  * */
 @Immutable
@@ -119,6 +108,6 @@ data class UISettings(
     val fullscreenButtonStyle: FullscreenButtonStyle = FullscreenButtonStyle.FAB,
     val commentNavEnabled: Boolean = true,
     val compactReplyBarPosition: CompactReplyBarPosition = CompactReplyBarPosition.RIGHT,
-    val replyBarMode: ReplyBarMode = ReplyBarMode.FULL,
+    val compactReplyBar: Boolean = false,
     val compactShowCollect: Boolean = true,
 )

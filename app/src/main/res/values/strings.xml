@@ -659,9 +659,8 @@
     <string name="settings_compact_reply_bar_position">紧凑回复栏位置</string>
     <string name="compact_reply_bar_position_right">右下</string>
     <string name="compact_reply_bar_position_left">左下</string>
-    <string name="settings_reply_bar_mode">回复栏布局</string>
-    <string name="reply_bar_mode_full">完整</string>
-    <string name="reply_bar_mode_compact">紧凑</string>
+    <string name="settings_compact_reply_bar">回复栏紧凑布局</string>
+    <string name="summary_compact_reply_bar">开启后底部回复栏使用紧凑胶囊布局</string>
     <string name="settings_compact_show_collect">紧凑模式显示收藏</string>
     <string name="summary_compact_show_collect">在紧凑回复栏中显示收藏按钮</string>
 </resources>
