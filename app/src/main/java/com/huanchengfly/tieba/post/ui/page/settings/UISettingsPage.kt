@@ -36,6 +36,7 @@ import androidx.compose.ui.res.painterResource
 import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.repository.user.Settings
+import com.huanchengfly.tieba.post.ui.models.settings.CompactReplyBarPosition
 import com.huanchengfly.tieba.post.ui.models.settings.DarkPreference
 import com.huanchengfly.tieba.post.ui.models.settings.ForumDetailMode
 import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
@@ -239,6 +240,16 @@ fun UISettingsPage(
                 title = R.string.settings_comment_nav_enabled,
                 summary = R.string.summary_comment_nav_enabled,
                 leadingIcon = Icons.Rounded.KeyboardArrowDown,
+            )
+
+            listPref(
+                property = UISettings::compactReplyBarPosition,
+                title = R.string.settings_compact_reply_bar_position,
+                leadingIcon = Icons.Rounded.KeyboardArrowDown,
+                options = persistentMapOf(
+                    CompactReplyBarPosition.RIGHT to R.string.compact_reply_bar_position_right,
+                    CompactReplyBarPosition.LEFT to R.string.compact_reply_bar_position_left,
+                ),
             )
         }
     }

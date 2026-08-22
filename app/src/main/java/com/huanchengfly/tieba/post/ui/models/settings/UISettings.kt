@@ -50,6 +50,17 @@ enum class FullscreenButtonStyle {
 }
 
 /**
+ * 回复栏紧凑模式(隐藏回贴入口)下, 点赞/更多胶囊的停靠位置
+ */
+enum class CompactReplyBarPosition {
+    /** 右下角 (默认, 与右侧评论导航坞同侧, 位于其下方) */
+    RIGHT,
+
+    /** 左下角 (与评论导航坞对侧) */
+    LEFT,
+}
+
+/**
  * User UI Settings
  *
  * @param appIcon 应用图标
@@ -71,6 +82,7 @@ enum class FullscreenButtonStyle {
  * @param foldToPortrait 折叠到外屏时自动切换竖屏(收起双列进入详情全屏)
  * @param fullscreenButtonStyle 详情全屏按钮样式
  * @param commentNavEnabled 帖子详情页启用评论上/下导航
+ * @param compactReplyBarPosition 回复栏紧凑模式胶囊停靠位置
  * */
 @Immutable
 data class UISettings(
@@ -93,4 +105,5 @@ data class UISettings(
     val foldToPortrait: Boolean = true,
     val fullscreenButtonStyle: FullscreenButtonStyle = FullscreenButtonStyle.FAB,
     val commentNavEnabled: Boolean = true,
+    val compactReplyBarPosition: CompactReplyBarPosition = CompactReplyBarPosition.RIGHT,
 )

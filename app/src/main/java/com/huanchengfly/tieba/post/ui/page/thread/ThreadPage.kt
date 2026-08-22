@@ -128,6 +128,7 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.common.theme.compose.withNonNull
 import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
+import com.huanchengfly.tieba.post.ui.models.settings.CompactReplyBarPosition
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.LikeZero
 import com.huanchengfly.tieba.post.ui.models.PostData
@@ -676,26 +677,54 @@ fun ThreadPage(
                 }
             },
             bottomBar = {
-                Container {
-                    ThreadFloatingToolbar(
+                if (viewModel.hideReply) {
+                    val isLeft =
+                        LocalUISettings.current.compactReplyBarPosition == CompactReplyBarPosition.LEFT
+                    Box(
                         modifier = Modifier
+                            .fillMaxWidth()
                             .windowInsetsPadding(WindowInsets.navigationBars)
-                            .offset(y = -ThreadToolbarScreenOffset)
-                            .padding(horizontal = CardHorizontalSpacing)
-                            .animateEnterExit(
-                                animatedVisibilityScope = LocalAnimatedVisibilityScope.current,
-                                sharedTransitionScope = LocalSharedTransitionScope.current,
-                                enter = defaultVerticalEnterTransition(topToBottom = false),
-                                exit = defaultVerticalExitTransition(topToBottom = false),
-                            ),
-                        user = state.user,
-                        onClickReply = viewModel::onReplyThread.takeUnless { viewModel.hideReply },
-                        onClickMore =  openBottomSheet,
-                        onJumpPage = jumpToPageDialogState::show,
-                        like = state.thread?.like ?: LikeZero,
-                        onLiked = viewModel::onThreadLikeClicked,
-                        scrollBehavior = toolbarScrollBehavior
-                    )
+                            .offset(y = -ThreadToolbarScreenOffset),
+                    ) {
+                        ThreadFloatingToolbar(
+                            compact = true,
+                            modifier = Modifier
+                                .align(if (isLeft) Alignment.BottomStart else Alignment.BottomEnd)
+                                .padding(horizontal = CardHorizontalSpacing)
+                                .animateEnterExit(
+                                    animatedVisibilityScope = LocalAnimatedVisibilityScope.current,
+                                    sharedTransitionScope = LocalSharedTransitionScope.current,
+                                    enter = defaultVerticalEnterTransition(topToBottom = false),
+                                    exit = defaultVerticalExitTransition(topToBottom = false),
+                                ),
+                            onClickMore = openBottomSheet,
+                            like = state.thread?.like ?: LikeZero,
+                            onLiked = viewModel::onThreadLikeClicked,
+                            scrollBehavior = toolbarScrollBehavior,
+                        )
+                    }
+                } else {
+                    Container {
+                        ThreadFloatingToolbar(
+                            modifier = Modifier
+                                .windowInsetsPadding(WindowInsets.navigationBars)
+                                .offset(y = -ThreadToolbarScreenOffset)
+                                .padding(horizontal = CardHorizontalSpacing)
+                                .animateEnterExit(
+                                    animatedVisibilityScope = LocalAnimatedVisibilityScope.current,
+                                    sharedTransitionScope = LocalSharedTransitionScope.current,
+                                    enter = defaultVerticalEnterTransition(topToBottom = false),
+                                    exit = defaultVerticalExitTransition(topToBottom = false),
+                                ),
+                            user = state.user,
+                            onClickReply = viewModel::onReplyThread.takeUnless { viewModel.hideReply },
+                            onClickMore =  openBottomSheet,
+                            onJumpPage = jumpToPageDialogState::show,
+                            like = state.thread?.like ?: LikeZero,
+                            onLiked = viewModel::onThreadLikeClicked,
+                            scrollBehavior = toolbarScrollBehavior
+                        )
+                    }
                 }
             },
             bottomHazeBlock = { blurEnabled = false },
@@ -1094,6 +1123,7 @@ private fun ThreadFloatingToolbar(
     onLiked: () -> Unit = {},
     scrollBehavior: FloatingToolbarScrollBehavior? = null,
     shadowElevation: Dp = FloatingToolbarDefaults.ContainerExpandedElevationWithFab,
+    compact: Boolean = false,
 ) {
     val colorScheme = MaterialTheme.colorScheme
     // Default: FloatingToolbarTokens.VibrantContainerColor
@@ -1118,38 +1148,40 @@ private fun ThreadFloatingToolbar(
                 .padding(horizontal = 4.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
-            val avatarContentDescription = user?.name ?: stringResource(R.string.title_not_logged_in)
-            PlainTooltipBox(
-                positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                contentDescription = avatarContentDescription
-            ) {
-                Avatar(
-                    modifier = Modifier.size(40.dp),
-                    data = user?.avatarUrl ?: R.drawable.ic_launcher_new_round,
+            if (!compact) {
+                val avatarContentDescription = user?.name ?: stringResource(R.string.title_not_logged_in)
+                PlainTooltipBox(
+                    positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
                     contentDescription = avatarContentDescription
+                ) {
+                    Avatar(
+                        modifier = Modifier.size(40.dp),
+                        data = user?.avatarUrl ?: R.drawable.ic_launcher_new_round,
+                        contentDescription = avatarContentDescription
+                    )
+                }
+
+                if (onClickReply != null) {
+                    Text(
+                        text = stringResource(id = R.string.tip_reply_thread),
+                        modifier = Modifier
+                            .padding(horizontal = 8.dp)
+                            .weight(1.0f)
+                            .clickableNoIndication(onClick = onClickReply),
+                        color = LocalContentColor.current.copy(alpha = 0.85f),
+                        style = MaterialTheme.typography.bodyMedium,
+                    )
+                } else {
+                    Spacer(modifier = Modifier.weight(1f))
+                }
+
+                ActionItem(
+                    icon = Icons.Rounded.RocketLaunch,
+                    contentDescription = stringResource(R.string.title_jump_page),
+                    positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
+                    onClick = onJumpPage,
                 )
             }
-
-            if (onClickReply != null) {
-                Text(
-                    text = stringResource(id = R.string.tip_reply_thread),
-                    modifier = Modifier
-                        .padding(horizontal = 8.dp)
-                        .weight(1.0f)
-                        .clickableNoIndication(onClick = onClickReply),
-                    color = LocalContentColor.current.copy(alpha = 0.85f),
-                    style = MaterialTheme.typography.bodyMedium,
-                )
-            } else {
-                Spacer(modifier = Modifier.weight(1f))
-            }
-
-            ActionItem(
-                icon = Icons.Rounded.RocketLaunch,
-                contentDescription = stringResource(R.string.title_jump_page),
-                positionProvider = rememberTooltipPositionProvider(TooltipAnchorPosition.Above),
-                onClick = onJumpPage,
-            )
 
             LikeAction(like = like, onClick = onLiked)
 

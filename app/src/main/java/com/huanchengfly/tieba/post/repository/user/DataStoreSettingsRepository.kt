@@ -28,6 +28,7 @@ import com.huanchengfly.tieba.post.putString
 import com.huanchengfly.tieba.post.theme.TiebaBlue
 import com.huanchengfly.tieba.post.ui.models.settings.BlockSettings
 import com.huanchengfly.tieba.post.ui.models.settings.ClientConfig
+import com.huanchengfly.tieba.post.ui.models.settings.CompactReplyBarPosition
 import com.huanchengfly.tieba.post.ui.models.settings.DarkPreference
 import com.huanchengfly.tieba.post.ui.models.settings.ForumDetailMode
 import com.huanchengfly.tieba.post.ui.models.settings.ForumSortType
@@ -267,6 +268,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             it[intPreferencesKey(KEY_FORUM_DETAIL_MODE)] ?: ForumDetailMode.KEEP_DETAIL.ordinal
         val fullscreenButtonStyleOrdinal =
             it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] ?: FullscreenButtonStyle.FAB.ordinal
+        val compactReplyBarPositionOrdinal =
+            it[intPreferencesKey(KEY_COMPACT_REPLY_BAR_POSITION)] ?: CompactReplyBarPosition.RIGHT.ordinal
 
         UISettings(
             appIcon = LauncherIcons.entries[appIconOrdinal],
@@ -293,6 +296,9 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
                 FullscreenButtonStyle.FAB
             },
             commentNavEnabled = it[booleanPreferencesKey(KEY_COMMENT_NAV_ENABLED)] ?: true,
+            compactReplyBarPosition = CompactReplyBarPosition.entries.getOrElse(compactReplyBarPositionOrdinal) {
+                CompactReplyBarPosition.RIGHT
+            },
         )
     }
 
@@ -317,6 +323,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_FOLD_TO_PORTRAIT)] = ui.foldToPortrait
         it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] = ui.fullscreenButtonStyle.ordinal
         it[booleanPreferencesKey(KEY_COMMENT_NAV_ENABLED)] = ui.commentNavEnabled
+        it[intPreferencesKey(KEY_COMPACT_REPLY_BAR_POSITION)] = ui.compactReplyBarPosition.ordinal
     }
 
     private const val KEY_APP_ICON = "app_icon"
@@ -346,6 +353,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_FOLD_TO_PORTRAIT = "ui_fold_to_portrait"
     private const val KEY_FULLSCREEN_BUTTON_STYLE = "ui_fullscreen_button_style"
     private const val KEY_COMMENT_NAV_ENABLED = "ui_comment_nav_enabled"
+    private const val KEY_COMPACT_REPLY_BAR_POSITION = "ui_compact_reply_bar_position"
 }
 
 private object BlockTransformer: PreferenceTransformer<BlockSettings> {

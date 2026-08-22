@@ -656,4 +656,7 @@
     <string name="fullscreen_button_style_none">不显示</string>
     <string name="settings_comment_nav_enabled">评论上/下导航</string>
     <string name="summary_comment_nav_enabled">在帖子详情页显示上一楼/下一楼按钮</string>
+    <string name="settings_compact_reply_bar_position">紧凑回复栏位置</string>
+    <string name="compact_reply_bar_position_right">右下</string>
+    <string name="compact_reply_bar_position_left">左下</string>
 </resources>
