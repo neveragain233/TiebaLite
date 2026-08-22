@@ -143,14 +143,10 @@ fun ListDetailPaneHost(
     }
 
     val openThread: (Destination.Thread) -> Unit = { thread ->
-        if (isCompact) {
-            // 紧凑宽度: 与旧版一致, 整页打开帖子
-            navigator.navigateDebounced(thread)
-        } else {
-            // 清掉旧的详情 entry, 保证每次选中帖子都是新的 ViewModel
-            detailNavController.navigate(thread) {
-                popUpTo<ListDetailPanePlaceholder>()
-            }
+        // 统一放入分屏详情面板: 紧凑宽度下面板详情全屏, 展开/旋转到大屏后自动变分屏,
+        // 保证「全屏/收起」键始终可用. 仅列表来源帖子走这里; 链接/通知仍走根路由整页.
+        detailNavController.navigate(thread) {
+            popUpTo<ListDetailPanePlaceholder>()
         }
     }
 
