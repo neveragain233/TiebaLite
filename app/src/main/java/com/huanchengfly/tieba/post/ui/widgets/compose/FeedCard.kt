@@ -397,19 +397,43 @@ fun ThreadMedia(
                     modifier = Modifier.fillMaxWidth()
                 )
             } else {
-                FeedVideoPreview(
-                    modifier = Modifier
-                        .fillMaxWidth(frac)
-                        .align(Alignment.Center)
-                        .aspectRatio(ratio = videoInfo.item.aspectRatio().coerceIn(0.75f, 2f))
-                        .clip(MaterialTheme.shapes.small),
-                    url = videoInfo.item.videoUrl,
-                    thumbnailUrl = videoInfo.item.thumbnailUrl,
-                    mediaId = videoInfo.item.videoMD5,
-                    onClick = { positionMs ->
-                        VideoViewActivity.launch(context, videoInfo.item, positionMs)
-                    }
-                )
+                val videoAsGridCell = mode == MediaDisplayMode.COMPACT &&
+                        habitSettings.compactSingleAsGridCell &&
+                        !habitSettings.videoAutoplay
+                if (videoAsGridCell) {
+                    val gridWidth = maxWidth * frac
+                    val columns = (gridWidth.value / CompactMediaGridTileTarget.value)
+                        .roundToInt()
+                        .coerceIn(2, 5)
+                    val cellWidth = gridWidth / columns.toFloat()
+                    FeedVideoPreview(
+                        modifier = Modifier
+                            .align(Alignment.CenterStart)
+                            .width(cellWidth)
+                            .aspectRatio(1f)
+                            .clip(MaterialTheme.shapes.small),
+                        url = videoInfo.item.videoUrl,
+                        thumbnailUrl = videoInfo.item.thumbnailUrl,
+                        mediaId = videoInfo.item.videoMD5,
+                        onClick = { positionMs ->
+                            VideoViewActivity.launch(context, videoInfo.item, positionMs)
+                        }
+                    )
+                } else {
+                    FeedVideoPreview(
+                        modifier = Modifier
+                            .fillMaxWidth(frac)
+                            .align(Alignment.Center)
+                            .aspectRatio(ratio = videoInfo.item.aspectRatio().coerceIn(0.75f, 2f))
+                            .clip(MaterialTheme.shapes.small),
+                        url = videoInfo.item.videoUrl,
+                        thumbnailUrl = videoInfo.item.thumbnailUrl,
+                        mediaId = videoInfo.item.videoMD5,
+                        onClick = { positionMs ->
+                            VideoViewActivity.launch(context, videoInfo.item, positionMs)
+                        }
+                    )
+                }
             }
         } else {
             if (mode == MediaDisplayMode.HIDE) {
@@ -441,7 +465,7 @@ fun ThreadMedia(
 
                 if (isSinglePhoto && mode == MediaDisplayMode.COMPACT && habitSettings.compactSingleAsGridCell) {
                     CompactMediaGrid(
-                        modifier = Modifier.align(Alignment.Center),
+                        modifier = Modifier.align(Alignment.CenterStart),
                         medias = medias,
                         widthFraction = frac,
                         forumId = forumId,
@@ -490,7 +514,7 @@ fun ThreadMedia(
                     }
                 } else if (mode == MediaDisplayMode.COMPACT) {
                     CompactMediaGrid(
-                        modifier = Modifier.align(Alignment.Center),
+                        modifier = Modifier.align(Alignment.CenterStart),
                         medias = medias,
                         widthFraction = frac,
                         forumId = forumId,
