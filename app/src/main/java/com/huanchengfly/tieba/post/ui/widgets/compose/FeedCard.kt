@@ -111,6 +111,7 @@ import kotlinx.collections.immutable.persistentListOf
 import kotlinx.collections.immutable.toImmutableList
 import kotlin.math.max
 import kotlin.math.min
+import kotlin.math.roundToInt
 
 enum class FeedType {
     Top, PlainText, SingleMedia, MultiMedia, Video
@@ -431,7 +432,6 @@ fun ThreadMedia(
             } else if (medias.first().isExpired) {
                 ErrorImage(tip = stringResource(R.string.desc_expired_image))
             } else {
-                val hasMoreMedia = medias.size > MAX_PHOTO_IN_ROW
                 val isLongPic = isSinglePhoto && medias.first().isLongPic == 1
                 val singleAspectRatio = if (isLongPic) 2f else {
                     val w = medias.first().width
@@ -439,19 +439,18 @@ fun ThreadMedia(
                     if (w > 0 && h > 0) (w.toFloat() / h).coerceIn(0.75f, 2f) else 2f
                 }
 
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(frac)
-                        .align(Alignment.Center)
-                        .aspectRatio(if (isSinglePhoto) singleAspectRatio else 3f)
-                ) {
-                    Row(
+                if (isSinglePhoto) {
+                    Box(
                         modifier = Modifier
-                            .matchParentSize()
-                            .clip(MaterialTheme.shapes.small),
-                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                            .fillMaxWidth(frac)
+                            .align(Alignment.Center)
+                            .aspectRatio(singleAspectRatio)
                     ) {
-                        for (index in 0 until min(medias.size, MAX_PHOTO_IN_ROW)) {
+                        Row(
+                            modifier = Modifier
+                                .matchParentSize()
+                                .clip(MaterialTheme.shapes.small),
+                        ) {
                             Box(
                                 modifier = Modifier
                                     .fillMaxHeight()
@@ -460,32 +459,184 @@ fun ThreadMedia(
                             ) {
                                 NetworkImage(
                                     modifier = Modifier.matchParentSize(),
-                                    imageUrl = medias[index].getPicUrl(habitSettings.imageLoadType),
-                                    dimensions = IntSize(width = medias[index].width, height = medias[index].height),
+                                    imageUrl = medias[0].getPicUrl(habitSettings.imageLoadType),
+                                    dimensions = IntSize(width = medias[0].width, height = medias[0].height),
                                     photoViewDataProvider = {
                                         getPhotoViewData(
                                             medias = medias.toImmutableList(),
                                             forumId = forumId,
                                             forumName = forumName,
                                             threadId = threadId,
-                                            index = index
+                                            index = 0
                                         )
                                     },
                                 )
-                                if (medias[index].isLongPic == 1) {
+                                if (medias[0].isLongPic == 1) {
                                     LongPicChip(modifier = Modifier.padding(6.dp))
                                 }
                             }
                         }
                     }
-                    if (hasMoreMedia) {
-                        MediaSizeBadge(
+                } else if (mode == MediaDisplayMode.COMPACT) {
+                    CompactMediaGrid(
+                        modifier = Modifier.align(Alignment.Center),
+                        medias = medias,
+                        widthFraction = frac,
+                        forumId = forumId,
+                        forumName = forumName,
+                        threadId = threadId,
+                        imageLoadType = habitSettings.imageLoadType,
+                    )
+                } else {
+                    val hasMoreMedia = medias.size > MAX_PHOTO_IN_ROW
+                    Box(
+                        modifier = Modifier
+                            .fillMaxWidth(frac)
+                            .align(Alignment.Center)
+                            .aspectRatio(3f)
+                    ) {
+                        Row(
                             modifier = Modifier
-                                .align(Alignment.BottomEnd)
-                                .padding(8.dp),
-                            size = medias.size,
-                        )
+                                .matchParentSize()
+                                .clip(MaterialTheme.shapes.small),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            for (index in 0 until min(medias.size, MAX_PHOTO_IN_ROW)) {
+                                Box(
+                                    modifier = Modifier
+                                        .fillMaxHeight()
+                                        .weight(1f),
+                                    contentAlignment = Alignment.TopEnd
+                                ) {
+                                    NetworkImage(
+                                        modifier = Modifier.matchParentSize(),
+                                        imageUrl = medias[index].getPicUrl(habitSettings.imageLoadType),
+                                        dimensions = IntSize(width = medias[index].width, height = medias[index].height),
+                                        photoViewDataProvider = {
+                                            getPhotoViewData(
+                                                medias = medias.toImmutableList(),
+                                                forumId = forumId,
+                                                forumName = forumName,
+                                                threadId = threadId,
+                                                index = index
+                                            )
+                                        },
+                                    )
+                                    if (medias[index].isLongPic == 1) {
+                                        LongPicChip(modifier = Modifier.padding(6.dp))
+                                    }
+                                }
+                            }
+                        }
+                        if (hasMoreMedia) {
+                            MediaSizeBadge(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .padding(8.dp),
+                                size = medias.size,
+                            )
+                        }
                     }
+                }
+            }
+        }
+    }
+}
+
+private val CompactMediaGridTileTarget = 110.dp
+private val CompactMediaGridMaxRows = 2
+
+/**
+ * 紧凑档多图: 按可用宽度自动排成方格网格, 超出部分以「+N」角标呈现.
+ */
+@Composable
+private fun CompactMediaGrid(
+    modifier: Modifier = Modifier,
+    medias: List<Media>,
+    widthFraction: Float,
+    forumId: Long,
+    forumName: String,
+    threadId: Long,
+    imageLoadType: Int,
+) {
+    val context = LocalContext.current
+    BoxWithConstraints(modifier = modifier.fillMaxWidth(widthFraction)) {
+        val columns = (maxWidth.value / CompactMediaGridTileTarget.value)
+            .roundToInt()
+            .coerceIn(2, 5)
+        val maxTiles = columns * CompactMediaGridMaxRows
+        val plusN = (medias.size - maxTiles).coerceAtLeast(0)
+        val visibleCount = if (plusN > 0) maxTiles else medias.size
+
+        Box(modifier = Modifier.fillMaxWidth()) {
+            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                medias.take(visibleCount).chunked(columns).forEachIndexed { rowIndex, rowMedias ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.spacedBy(4.dp)
+                    ) {
+                        rowMedias.forEachIndexed { colIndex, media ->
+                            val index = rowIndex * columns + colIndex
+                            Box(
+                                modifier = Modifier
+                                    .weight(1f)
+                                    .aspectRatio(1f)
+                                    .clip(MaterialTheme.shapes.small),
+                                contentAlignment = Alignment.TopEnd,
+                            ) {
+                                NetworkImage(
+                                    modifier = Modifier.matchParentSize(),
+                                    imageUrl = media.getPicUrl(imageLoadType),
+                                    dimensions = IntSize(width = media.width, height = media.height),
+                                    photoViewDataProvider = {
+                                        getPhotoViewData(
+                                            medias = medias.toImmutableList(),
+                                            forumId = forumId,
+                                            forumName = forumName,
+                                            threadId = threadId,
+                                            index = index,
+                                        )
+                                    },
+                                )
+                                if (media.isLongPic == 1) {
+                                    LongPicChip(modifier = Modifier.padding(6.dp))
+                                }
+                            }
+                        }
+                        repeat(columns - rowMedias.size) {
+                            Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
+                        }
+                    }
+                }
+            }
+            if (plusN > 0) {
+                Box(
+                    modifier = Modifier
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp)
+                        .clip(MaterialTheme.shapes.small)
+                        .background(Color.Black.copy(alpha = 0.55f))
+                        .clickable {
+                            PhotoViewActivity.launch(
+                                context,
+                                getPhotoViewData(
+                                    medias = medias.toImmutableList(),
+                                    forumId = forumId,
+                                    forumName = forumName,
+                                    threadId = threadId,
+                                    index = maxTiles,
+                                )
+                            )
+                        },
+                    contentAlignment = Alignment.Center,
+                ) {
+                    Text(
+                        text = "+$plusN",
+                        color = Color.White,
+                        fontSize = 11.sp,
+                        fontWeight = FontWeight.Bold,
+                        modifier = Modifier.padding(horizontal = 8.dp, vertical = 4.dp),
+                    )
                 }
             }
         }
