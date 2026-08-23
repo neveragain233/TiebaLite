@@ -440,11 +440,12 @@ fun ThreadMedia(
                 }
 
                 if (isSinglePhoto) {
+                    val singleRatio = if (mode == MediaDisplayMode.COMPACT) 1f else singleAspectRatio
                     Box(
                         modifier = Modifier
                             .fillMaxWidth(frac)
                             .align(Alignment.Center)
-                            .aspectRatio(singleAspectRatio)
+                            .aspectRatio(singleRatio)
                     ) {
                         Row(
                             modifier = Modifier
