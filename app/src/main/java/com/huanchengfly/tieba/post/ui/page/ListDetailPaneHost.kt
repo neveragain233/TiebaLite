@@ -149,10 +149,14 @@ fun ListDetailPaneHost(
     }
 
     val openThread: (Destination.Thread) -> Unit = { thread ->
-        // 统一放入分屏详情面板: 紧凑宽度下面板详情全屏, 展开/旋转到大屏后自动变分屏,
-        // 保证「全屏/收起」键始终可用. 仅列表来源帖子走这里; 链接/通知仍走根路由整页.
-        detailNavController.navigate(thread) {
-            popUpTo<ListDetailPanePlaceholder>()
+        if (isCompact) {
+            // 紧凑宽度(手机/折叠外屏): 走根路由整页, 保留原有跳转动画, 不经过分屏占位
+            navigator.navigateDebounced(thread)
+        } else {
+            // 大屏(平板/折叠内屏): 放入分屏详情面板, 保证「全屏/收起」键始终可用
+            detailNavController.navigate(thread) {
+                popUpTo<ListDetailPanePlaceholder>()
+            }
         }
     }
 
