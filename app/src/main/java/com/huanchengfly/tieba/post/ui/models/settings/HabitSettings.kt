@@ -41,13 +41,27 @@ annotation class WaterType {
 }
 
 /**
+ * 列表内媒体显示方式
+ */
+enum class MediaDisplayMode {
+    /** 隐藏贴子列表里的图片和视频 */
+    HIDE,
+
+    /** 缩略紧凑显示 */
+    COMPACT,
+
+    /** 常规显示 (默认) */
+    STANDARD,
+}
+
+/**
  * User habit
  *
  * @param collectedDesc 收藏贴倒序浏览
  * @param favoriteDesc 收藏贴自动开启倒序浏览
  * @param favoriteSeeLz 从收藏进入的贴子将自动切换至只看楼主
  * @param forumSortType 吧页面默认排序方式
- * @param hideMedia 隐藏贴子列表的图片和视频
+ * @param mediaDisplayMode 列表媒体显示方式
  * @param hideReply 隐藏回贴入口
  * @param hideReplyWarning 隐藏回贴风险提示
  * @param imageLoadType 图片加载设置
@@ -62,7 +76,7 @@ data class HabitSettings(
     val favoriteDesc: Boolean = false,
     val favoriteSeeLz: Boolean = true,
     @ForumSortType val forumSortType: Int = ForumSortType.BY_REPLY,
-    val hideMedia: Boolean = false,
+    val mediaDisplayMode: MediaDisplayMode = MediaDisplayMode.STANDARD,
     val hideReply: Boolean = false,
     val hideReplyWarning: Boolean = false,
     val imageLoadType: Int = ImageUtil.SETTINGS_SMART_ORIGIN,

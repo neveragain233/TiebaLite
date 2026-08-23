@@ -6,6 +6,7 @@ import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
@@ -50,6 +51,7 @@ import androidx.compose.ui.text.input.ImeAction
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
+import com.huanchengfly.tieba.post.ui.models.settings.MediaDisplayMode
 import com.huanchengfly.tieba.post.LocalHabitSettings
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.activities.VideoViewActivity
@@ -152,7 +154,7 @@ fun SearchThreadItem(
             )
 
             val medias: @Composable () -> Unit = {
-                if (!LocalHabitSettings.current.hideMedia) {
+                if (LocalHabitSettings.current.mediaDisplayMode != MediaDisplayMode.HIDE) {
                     if (item.pictures != null) {
                         SearchPhoto(pics = item.pictures)
                     } else if (item.video != null) {
@@ -203,16 +205,22 @@ fun SearchThreadItem(
 @Composable
 private fun SearchVideo(modifier: Modifier = Modifier, video: SearchMedia.Video) {
     val context = LocalContext.current
-    VideoThumbnail(
-        modifier = modifier
-            .fillMaxWidth(singleMediaFraction)
-            .aspectRatio(ratio = 2.0f)
-            .clip(MaterialTheme.shapes.small),
-        thumbnailUrl = video.thumbnail,
-        onClick = {
-            VideoViewActivity.launch(context, videoUrl = video.url, thumbnailUrl = video.thumbnail)
-        }
-    )
+    val mode = LocalHabitSettings.current.mediaDisplayMode
+    val cap = if (mode == MediaDisplayMode.COMPACT) MediaListMaxWidthCompact else MediaListMaxWidth
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val frac = mediaWidthFraction(maxWidth, cap)
+        VideoThumbnail(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(frac)
+                .aspectRatio(ratio = video.aspectRatio().coerceIn(0.75f, 2f))
+                .clip(MaterialTheme.shapes.small),
+            thumbnailUrl = video.thumbnail,
+            onClick = {
+                VideoViewActivity.launch(context, videoUrl = video.url, thumbnailUrl = video.thumbnail)
+            }
+        )
+    }
 }
 
 @Composable
@@ -223,14 +231,17 @@ private fun SearchPhoto(modifier: Modifier = Modifier, pics: List<SearchMedia.Pi
 
     val picCount = pics.size
     val isSinglePhoto = picCount == 1
-    val mediaWidthFraction = if (isSinglePhoto) singleMediaFraction else 1f
-    val mediaAspectRatio = if (isSinglePhoto) 2f else 3f
+    val mode = LocalHabitSettings.current.mediaDisplayMode
+    val cap = if (mode == MediaDisplayMode.COMPACT) MediaListMaxWidthCompact else MediaListMaxWidth
+    val mediaAspectRatio = if (isSinglePhoto) pics.first().aspectRatio().coerceIn(0.75f, 2f) else 3f
     val hasMoreMedia = picCount > MAX_PHOTO_IN_ROW
 
-    Box(modifier = modifier) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val frac = mediaWidthFraction(maxWidth, cap)
         Row(
             modifier = Modifier
-                .fillMaxWidth(mediaWidthFraction)
+                .align(Alignment.Center)
+                .fillMaxWidth(frac)
                 .aspectRatio(mediaAspectRatio)
                 .clip(MaterialTheme.shapes.small),
             horizontalArrangement = Arrangement.spacedBy(4.dp)

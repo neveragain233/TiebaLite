@@ -5,6 +5,7 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ColumnScope
 import androidx.compose.foundation.layout.IntrinsicSize
@@ -95,6 +96,7 @@ import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompac
 import com.huanchengfly.tieba.post.ui.models.Author
 import com.huanchengfly.tieba.post.ui.models.SimpleForum
 import com.huanchengfly.tieba.post.ui.models.ThreadItem
+import com.huanchengfly.tieba.post.ui.models.settings.MediaDisplayMode
 import com.huanchengfly.tieba.post.ui.page.photoview.PhotoViewActivity
 import com.huanchengfly.tieba.post.ui.utils.getPhotoViewData
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.LocalVideoPreviewState
@@ -346,8 +348,18 @@ private fun MediaPlaceholder(
 
 const val MAX_PHOTO_IN_ROW = 3
 
-val singleMediaFraction: Float
-    @Composable @ReadOnlyComposable get() = if (isWindowWidthCompact()) 1.0f else 0.5f
+/** 列表/详情内媒体最大宽度(dp), 超过则封顶并居中. */
+val MediaListMaxWidth = 360.dp
+
+/** 紧凑档媒体最大宽度(dp). */
+val MediaListMaxWidthCompact = 300.dp
+
+/** 依据可用宽度返回媒体应占的宽度比例; 可用宽度不超过 [max] 时填满. */
+fun mediaWidthFraction(maxWidth: Dp, max: Dp = MediaListMaxWidth): Float {
+    if (maxWidth.value <= 0f) return 1f
+    if (maxWidth.value <= max.value) return 1f
+    return (max.value / maxWidth.value).coerceAtMost(1f)
+}
 
 @Composable
 fun ThreadMedia(
@@ -365,9 +377,12 @@ fun ThreadMedia(
     val mediaCount = medias.size
     val isSinglePhoto = mediaCount == 1
 
-    Box(modifier = modifier) {
+    BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
+        val mode = habitSettings.mediaDisplayMode
+        val cap = if (mode == MediaDisplayMode.COMPACT) MediaListMaxWidthCompact else MediaListMaxWidth
+        val frac = mediaWidthFraction(maxWidth, cap)
         if (videoInfo != null) {
-            if (habitSettings.hideMedia) {
+            if (mode == MediaDisplayMode.HIDE) {
                 MediaPlaceholder(
                     icon = {
                         Icon(
@@ -383,8 +398,9 @@ fun ThreadMedia(
             } else {
                 FeedVideoPreview(
                     modifier = Modifier
-                        .fillMaxWidth(singleMediaFraction)
-                        .aspectRatio(ratio = max(videoInfo.item.aspectRatio(), 16f / 9))
+                        .fillMaxWidth(frac)
+                        .align(Alignment.Center)
+                        .aspectRatio(ratio = videoInfo.item.aspectRatio().coerceIn(0.75f, 2f))
                         .clip(MaterialTheme.shapes.small),
                     url = videoInfo.item.videoUrl,
                     thumbnailUrl = videoInfo.item.thumbnailUrl,
@@ -395,7 +411,7 @@ fun ThreadMedia(
                 )
             }
         } else {
-            if (habitSettings.hideMedia) {
+            if (mode == MediaDisplayMode.HIDE) {
                 MediaPlaceholder(
                     icon = {
                         Icon(
@@ -416,12 +432,18 @@ fun ThreadMedia(
                 ErrorImage(tip = stringResource(R.string.desc_expired_image))
             } else {
                 val hasMoreMedia = medias.size > MAX_PHOTO_IN_ROW
-                val mediaWidthFraction = if (isSinglePhoto) singleMediaFraction else 1f
+                val isLongPic = isSinglePhoto && medias.first().isLongPic == 1
+                val singleAspectRatio = if (isLongPic) 2f else {
+                    val w = medias.first().width
+                    val h = medias.first().height
+                    if (w > 0 && h > 0) (w.toFloat() / h).coerceIn(0.75f, 2f) else 2f
+                }
 
                 Box(
                     modifier = Modifier
-                        .fillMaxWidth(mediaWidthFraction)
-                        .aspectRatio(if (isSinglePhoto) 2f else 3f)
+                        .fillMaxWidth(frac)
+                        .align(Alignment.Center)
+                        .aspectRatio(if (isSinglePhoto) singleAspectRatio else 3f)
                 ) {
                     Row(
                         modifier = Modifier

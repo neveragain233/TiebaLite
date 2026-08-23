@@ -19,6 +19,7 @@ import com.huanchengfly.tieba.post.ui.icons.Autoplay
 import com.huanchengfly.tieba.post.ui.icons.PageHeader
 import com.huanchengfly.tieba.post.ui.models.settings.ForumSortType
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
+import com.huanchengfly.tieba.post.ui.models.settings.MediaDisplayMode
 import com.huanchengfly.tieba.post.ui.models.settings.WaterType
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.SettingsSegmentedPrefsScope
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.preference
@@ -52,17 +53,22 @@ fun HabitSettingsPage(
                 leadingIcon = Icons.AutoMirrored.Outlined.BrandingWatermark
             )
 
-            toggleablePreference(
-                property = HabitSettings::hideMedia,
-                title = R.string.title_hide_media,
-                leadingIcon = Icons.Rounded.UnfoldLess
+            listPref(
+                property = HabitSettings::mediaDisplayMode,
+                title = R.string.settings_media_display_mode,
+                leadingIcon = Icons.Rounded.UnfoldLess,
+                options = persistentMapOf(
+                    MediaDisplayMode.HIDE to R.string.media_display_mode_hide,
+                    MediaDisplayMode.COMPACT to R.string.media_display_mode_compact,
+                    MediaDisplayMode.STANDARD to R.string.media_display_mode_standard,
+                ),
             )
 
             toggleablePreference(
                 property = HabitSettings::videoAutoplay,
                 title = R.string.settings_video_autoplay,
                 leadingIcon = Icons.Rounded.Autoplay,
-                enabled = !currentPreference.hideMedia,
+                enabled = currentPreference.mediaDisplayMode != MediaDisplayMode.HIDE,
             )
         }
 

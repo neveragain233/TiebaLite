@@ -2,12 +2,14 @@ package com.huanchengfly.tieba.post.ui.common
 
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.aspectRatio
+import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.remember
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
@@ -33,7 +35,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.FeedVideoShutter
 import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
 import com.huanchengfly.tieba.post.ui.widgets.compose.PbContentText
 import com.huanchengfly.tieba.post.ui.widgets.compose.VoicePlayer
-import com.huanchengfly.tieba.post.ui.widgets.compose.singleMediaFraction
+import com.huanchengfly.tieba.post.ui.widgets.compose.mediaWidthFraction
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.LocalVideoPreviewState
 import com.huanchengfly.tieba.post.utils.ThemeUtil
 
@@ -131,14 +133,23 @@ value class TextContentRender(val value: AnnotatedString) : PbContentRender {
 
     @Composable
     override fun Render() {
-        NetworkImage(
-            modifier = Modifier
-                .clip(shape = MaterialTheme.shapes.small)
-                .fillMaxWidth(singleMediaFraction)
-                .aspectRatio(ratio = dimensions?.run { width * 1f / height } ?: 1.0f),
-            imageUrl = picUrl,
-            photoViewDataProvider = { photoViewData },
-        )
+        val ratio = if (dimensions != null && dimensions.width > 0 && dimensions.height > 0) {
+            (dimensions.width.toFloat() / dimensions.height).coerceIn(0.75f, 2f)
+        } else {
+            1.0f
+        }
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val frac = mediaWidthFraction(maxWidth)
+            NetworkImage(
+                modifier = Modifier
+                    .clip(shape = MaterialTheme.shapes.small)
+                    .align(Alignment.Center)
+                    .fillMaxWidth(frac)
+                    .aspectRatio(ratio = ratio),
+                imageUrl = picUrl,
+                photoViewDataProvider = { photoViewData },
+            )
+        }
     }
 
     fun copy(
@@ -187,33 +198,40 @@ class VideoContentRender(
 
     @Composable
     override fun Render() {
-        val widthFraction = if (isWindowWidthCompact()) 1f else 0.5f
-
-        val picModifier = Modifier
-            .fillMaxWidth(widthFraction)
-            .aspectRatio(ratio = dimensions?.run { width * 1f / height } ?: 1.0f)
-            .clip(shape = MaterialTheme.shapes.small)
-
-        if (videoUrl.isNotBlank()) {
-            val context = LocalContext.current
-            val previewState = LocalVideoPreviewState.current
-            FeedVideoShutter(
-                modifier = picModifier.clickableNoIndication {
-                    VideoViewActivity.launch(context, videoUrl, picUrl)
-                },
-                thumbnailUrl = picUrl,
-                isPipMode = previewState?.videoViewMediaId == mediaId && previewState.isInPipMode
-            )
+        val ratio = if (dimensions != null && dimensions.width > 0 && dimensions.height > 0) {
+            (dimensions.width.toFloat() / dimensions.height).coerceIn(0.75f, 2f)
         } else {
-            val navigator = LocalNavController.current
-            AsyncImage(
-                model  = picUrl,
-                contentDescription = stringResource(id = R.string.desc_video),
-                modifier = picModifier.clickable {
-                    navigator.navigateDebounced(Destination.WebView(webUrl))
-                },
-                contentScale = ContentScale.Crop
-            )
+            1.0f
+        }
+        BoxWithConstraints(modifier = Modifier.fillMaxWidth()) {
+            val frac = mediaWidthFraction(maxWidth)
+            val picModifier = Modifier
+                .align(Alignment.Center)
+                .fillMaxWidth(frac)
+                .aspectRatio(ratio = ratio)
+                .clip(shape = MaterialTheme.shapes.small)
+
+            if (videoUrl.isNotBlank()) {
+                val context = LocalContext.current
+                val previewState = LocalVideoPreviewState.current
+                FeedVideoShutter(
+                    modifier = picModifier.clickableNoIndication {
+                        VideoViewActivity.launch(context, videoUrl, picUrl)
+                    },
+                    thumbnailUrl = picUrl,
+                    isPipMode = previewState?.videoViewMediaId == mediaId && previewState.isInPipMode
+                )
+            } else {
+                val navigator = LocalNavController.current
+                AsyncImage(
+                    model  = picUrl,
+                    contentDescription = stringResource(id = R.string.desc_video),
+                    modifier = picModifier.clickable {
+                        navigator.navigateDebounced(Destination.WebView(webUrl))
+                    },
+                    contentScale = ContentScale.Crop
+                )
+            }
         }
     }
 

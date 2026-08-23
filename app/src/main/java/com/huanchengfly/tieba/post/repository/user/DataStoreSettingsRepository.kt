@@ -34,6 +34,8 @@ import com.huanchengfly.tieba.post.ui.models.settings.ForumDetailMode
 import com.huanchengfly.tieba.post.ui.models.settings.ForumSortType
 import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
+import com.huanchengfly.tieba.post.ui.models.settings.MediaDisplayMode
+import com.huanchengfly.tieba.post.ui.models.settings.NavRailPosition
 import com.huanchengfly.tieba.post.ui.models.settings.NavigationLabel
 import com.huanchengfly.tieba.post.ui.models.settings.PrivacySettings
 import com.huanchengfly.tieba.post.ui.models.settings.SignConfig
@@ -157,7 +159,16 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
             favoriteDesc = it[booleanPreferencesKey(KEY_FAVORITE_DESC)] == true,
             favoriteSeeLz = it[booleanPreferencesKey(KEY_FAVORITE_SEE_LZ)] ?: true,
             forumSortType = it[intPreferencesKey(KEY_FORUM_SORT_DEFAULT)] ?: ForumSortType.BY_REPLY,
-            hideMedia = it[booleanPreferencesKey(KEY_POST_HIDE_MEDIA)] == true,
+            mediaDisplayMode = MediaDisplayMode.entries.getOrElse(
+                it[intPreferencesKey(KEY_MEDIA_DISPLAY_MODE)]
+                    ?: if (it[booleanPreferencesKey(KEY_POST_HIDE_MEDIA)] == true) {
+                        MediaDisplayMode.HIDE.ordinal
+                    } else {
+                        MediaDisplayMode.STANDARD.ordinal
+                    }
+            ) {
+                MediaDisplayMode.STANDARD
+            },
             hideReply = it[booleanPreferencesKey(KEY_REPLY_HIDE)] == true,
             hideReplyWarning = it[booleanPreferencesKey(KEY_REPLY_HIDE_WARNING)] == true,
             imageLoadType = it[intPreferencesKey(KEY_IMAGE_LOAD_TYPE)] ?: ImageUtil.SETTINGS_SMART_ORIGIN,
@@ -173,7 +184,8 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
         it[booleanPreferencesKey(KEY_FAVORITE_DESC)] = habit.favoriteDesc
         it[booleanPreferencesKey(KEY_FAVORITE_SEE_LZ)] = habit.favoriteSeeLz
         it[intPreferencesKey(KEY_FORUM_SORT_DEFAULT)] = habit.forumSortType
-        it[booleanPreferencesKey(KEY_POST_HIDE_MEDIA)] = habit.hideMedia
+        it[intPreferencesKey(KEY_MEDIA_DISPLAY_MODE)] = habit.mediaDisplayMode.ordinal
+        it[booleanPreferencesKey(KEY_POST_HIDE_MEDIA)] = habit.mediaDisplayMode == MediaDisplayMode.HIDE
         it[booleanPreferencesKey(KEY_REPLY_HIDE)] = habit.hideReply
         it[booleanPreferencesKey(KEY_REPLY_HIDE_WARNING)] = habit.hideReplyWarning
         it[intPreferencesKey(KEY_IMAGE_LOAD_TYPE)] = habit.imageLoadType
@@ -198,6 +210,7 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
     private const val KEY_FORUM_SORT_DEFAULT = "forum_sort_type"
     private const val KEY_IMAGE_LOAD_TYPE = "img_load_type"
     private const val KEY_IMAGE_WATERMARK_TYPE = "img_watermark"
+    private const val KEY_MEDIA_DISPLAY_MODE = "ui_media_display_mode"
     private const val KEY_POST_HIDE_MEDIA = "ui_post_hide_media"
     private const val KEY_REPLY_HIDE = "ui_reply_hide"
     private const val KEY_REPLY_HIDE_WARNING = "ui_reply_hide_warn"
@@ -270,6 +283,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] ?: FullscreenButtonStyle.FAB.ordinal
         val compactReplyBarPositionOrdinal =
             it[intPreferencesKey(KEY_COMPACT_REPLY_BAR_POSITION)] ?: CompactReplyBarPosition.RIGHT.ordinal
+        val appNavRailPositionOrdinal =
+            it[intPreferencesKey(KEY_APP_NAV_RAIL_POSITION)] ?: NavRailPosition.CENTER.ordinal
         UISettings(
             appIcon = LauncherIcons.entries[appIconOrdinal],
             appIconThemed = it[booleanPreferencesKey(KEY_APP_THEMED_ICON)] == true,
@@ -291,6 +306,9 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
                 ForumDetailMode.KEEP_DETAIL
             },
             foldToPortrait = it[booleanPreferencesKey(KEY_FOLD_TO_PORTRAIT)] ?: true,
+            appNavRailPosition = NavRailPosition.entries.getOrElse(appNavRailPositionOrdinal) {
+                NavRailPosition.CENTER
+            },
             fullscreenButtonStyle = FullscreenButtonStyle.entries.getOrElse(fullscreenButtonStyleOrdinal) {
                 FullscreenButtonStyle.FAB
             },
@@ -322,6 +340,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] = ui.showHistoryInHome
         it[intPreferencesKey(KEY_FORUM_DETAIL_MODE)] = ui.forumDetailMode.ordinal
         it[booleanPreferencesKey(KEY_FOLD_TO_PORTRAIT)] = ui.foldToPortrait
+        it[intPreferencesKey(KEY_APP_NAV_RAIL_POSITION)] = ui.appNavRailPosition.ordinal
         it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] = ui.fullscreenButtonStyle.ordinal
         it[booleanPreferencesKey(KEY_COMMENT_NAV_ENABLED)] = ui.commentNavEnabled
         it[intPreferencesKey(KEY_COMPACT_REPLY_BAR_POSITION)] = ui.compactReplyBarPosition.ordinal
@@ -354,6 +373,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_HOME_PAGE_SHOW_HISTORY = "ui_history_in_home"
     private const val KEY_FORUM_DETAIL_MODE = "ui_forum_detail_mode"
     private const val KEY_FOLD_TO_PORTRAIT = "ui_fold_to_portrait"
+    private const val KEY_APP_NAV_RAIL_POSITION = "ui_app_nav_rail_position"
     private const val KEY_FULLSCREEN_BUTTON_STYLE = "ui_fullscreen_button_style"
     private const val KEY_COMMENT_NAV_ENABLED = "ui_comment_nav_enabled"
     private const val KEY_COMPACT_REPLY_BAR_POSITION = "ui_compact_reply_bar_position"

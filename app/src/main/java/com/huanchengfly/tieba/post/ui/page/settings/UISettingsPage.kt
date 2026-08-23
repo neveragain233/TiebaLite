@@ -32,6 +32,7 @@ import androidx.compose.material.icons.outlined.WatchLater
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.ScreenRotation
+import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -43,6 +44,7 @@ import com.huanchengfly.tieba.post.ui.models.settings.CompactReplyBarPosition
 import com.huanchengfly.tieba.post.ui.models.settings.DarkPreference
 import com.huanchengfly.tieba.post.ui.models.settings.ForumDetailMode
 import com.huanchengfly.tieba.post.ui.models.settings.FullscreenButtonStyle
+import com.huanchengfly.tieba.post.ui.models.settings.NavRailPosition
 import com.huanchengfly.tieba.post.ui.models.settings.NavigationLabel
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.page.settings.SettingsDestination.AppFont
@@ -271,6 +273,17 @@ fun UISettingsPage(
                 title = R.string.settings_fold_to_portrait,
                 summary = R.string.summary_fold_to_portrait,
                 leadingIcon = Icons.Rounded.ScreenRotation,
+            )
+
+            listPref(
+                property = UISettings::appNavRailPosition,
+                title = R.string.settings_app_nav_rail_position,
+                leadingIcon = Icons.Rounded.VerticalAlignTop,
+                options = persistentMapOf(
+                    NavRailPosition.TOP to R.string.nav_rail_position_top,
+                    NavRailPosition.CENTER to R.string.nav_rail_position_center,
+                    NavRailPosition.BOTTOM to R.string.nav_rail_position_bottom,
+                ),
             )
         }
     }

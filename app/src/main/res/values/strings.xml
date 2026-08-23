@@ -468,6 +468,10 @@
     <string name="btn_open_photos">查看图片 (%d)</string>
     <string name="title_hide_explore">隐藏「动态」入口</string>
     <string name="title_hide_media">收起贴子列表的图片和视频</string>
+    <string name="settings_media_display_mode">列表媒体显示</string>
+    <string name="media_display_mode_hide">隐藏</string>
+    <string name="media_display_mode_compact">紧凑</string>
+    <string name="media_display_mode_standard">标准</string>
     <string name="button_open">打开</string>
     <string name="button_restart">重启</string>
     <string name="desc_search_sug">搜索联想：%s</string>
@@ -651,6 +655,10 @@
     <string name="forum_detail_mode_full_screen">吧内全屏打开帖子</string>
     <string name="settings_fold_to_portrait">折叠到外屏时自动竖屏</string>
     <string name="summary_fold_to_portrait">关闭后外屏可继续使用横屏双列</string>
+    <string name="settings_app_nav_rail_position">侧栏按钮位置</string>
+    <string name="nav_rail_position_top">顶部</string>
+    <string name="nav_rail_position_center">居中</string>
+    <string name="nav_rail_position_bottom">底部</string>
     <string name="settings_fullscreen_button_style">全屏按钮样式</string>
     <string name="fullscreen_button_style_fab">右下角 FAB</string>
     <string name="fullscreen_button_style_top_bar">顶栏图标</string>

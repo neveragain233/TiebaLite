@@ -64,6 +64,7 @@ import com.huanchengfly.tieba.post.ui.common.PbInlineContentCache.Companion.reme
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onCase
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
+import com.huanchengfly.tieba.post.ui.models.settings.MediaDisplayMode
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.main.AppLevelNavigationRail
@@ -355,7 +356,7 @@ class MainActivityV2 : BaseComposeActivity() {
         content: @Composable () -> Unit
     ) {
         val currentAccount by viewModel.account.collectAsStateWithLifecycle(initialValue = null)
-        val videoPreviewState = if (!habit.hideMedia && habit.videoAutoplay) {
+        val videoPreviewState = if (habit.mediaDisplayMode != MediaDisplayMode.HIDE && habit.videoAutoplay) {
             rememberVideoPreviewState(viewModel.playerPool)
         } else {
             null
