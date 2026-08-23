@@ -255,7 +255,7 @@ fun UISettingsPage(
             )
         }
 
-        group(title = R.string.settings_group_split_screen) {
+        group(title = R.string.settings_group_large_screen) {
             listPref(
                 property = UISettings::forumDetailMode,
                 title = R.string.settings_forum_detail_mode,
@@ -283,13 +283,6 @@ fun UISettingsPage(
                 enabled = currentPreference.forumDetailMode != ForumDetailMode.FULL_SCREEN,
             )
 
-            toggleablePreference(
-                property = UISettings::foldToPortrait,
-                title = R.string.settings_fold_to_portrait,
-                summary = R.string.summary_fold_to_portrait,
-                leadingIcon = Icons.Rounded.ScreenRotation,
-            )
-
             listPref(
                 property = UISettings::appNavRailPosition,
                 title = R.string.settings_app_nav_rail_position,
@@ -299,6 +292,15 @@ fun UISettingsPage(
                     NavRailPosition.CENTER to R.string.nav_rail_position_center,
                     NavRailPosition.BOTTOM to R.string.nav_rail_position_bottom,
                 ),
+            )
+        }
+
+        group(title = R.string.settings_group_foldable) {
+            toggleablePreference(
+                property = UISettings::foldToPortrait,
+                title = R.string.settings_fold_to_portrait,
+                summary = R.string.summary_fold_to_portrait,
+                leadingIcon = Icons.Rounded.ScreenRotation,
             )
         }
     }
