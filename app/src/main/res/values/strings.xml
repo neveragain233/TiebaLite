@@ -472,6 +472,8 @@
     <string name="media_display_mode_hide">隐藏</string>
     <string name="media_display_mode_compact">紧凑</string>
     <string name="media_display_mode_standard">标准</string>
+    <string name="settings_compact_single_as_grid">紧凑单图用网格格</string>
+    <string name="summary_compact_single_as_grid">仅一张图时, 紧凑档显示为小方格(与多图一致); 关闭则显示为封顶宽度的大方格</string>
     <string name="button_open">打开</string>
     <string name="button_restart">重启</string>
     <string name="desc_search_sug">搜索联想：%s</string>

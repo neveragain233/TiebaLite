@@ -439,7 +439,17 @@ fun ThreadMedia(
                     if (w > 0 && h > 0) (w.toFloat() / h).coerceIn(0.75f, 2f) else 2f
                 }
 
-                if (isSinglePhoto) {
+                if (isSinglePhoto && mode == MediaDisplayMode.COMPACT && habitSettings.compactSingleAsGridCell) {
+                    CompactMediaGrid(
+                        modifier = Modifier.align(Alignment.Center),
+                        medias = medias,
+                        widthFraction = frac,
+                        forumId = forumId,
+                        forumName = forumName,
+                        threadId = threadId,
+                        imageLoadType = habitSettings.imageLoadType,
+                    )
+                } else if (isSinglePhoto) {
                     val singleRatio = if (mode == MediaDisplayMode.COMPACT) 1f else singleAspectRatio
                     Box(
                         modifier = Modifier

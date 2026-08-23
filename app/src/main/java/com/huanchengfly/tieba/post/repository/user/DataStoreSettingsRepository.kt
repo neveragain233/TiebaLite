@@ -169,6 +169,7 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
             ) {
                 MediaDisplayMode.STANDARD
             },
+            compactSingleAsGridCell = it[booleanPreferencesKey(KEY_COMPACT_SINGLE_AS_GRID)] ?: false,
             hideReply = it[booleanPreferencesKey(KEY_REPLY_HIDE)] == true,
             hideReplyWarning = it[booleanPreferencesKey(KEY_REPLY_HIDE_WARNING)] == true,
             imageLoadType = it[intPreferencesKey(KEY_IMAGE_LOAD_TYPE)] ?: ImageUtil.SETTINGS_SMART_ORIGIN,
@@ -186,6 +187,7 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
         it[intPreferencesKey(KEY_FORUM_SORT_DEFAULT)] = habit.forumSortType
         it[intPreferencesKey(KEY_MEDIA_DISPLAY_MODE)] = habit.mediaDisplayMode.ordinal
         it[booleanPreferencesKey(KEY_POST_HIDE_MEDIA)] = habit.mediaDisplayMode == MediaDisplayMode.HIDE
+        it[booleanPreferencesKey(KEY_COMPACT_SINGLE_AS_GRID)] = habit.compactSingleAsGridCell
         it[booleanPreferencesKey(KEY_REPLY_HIDE)] = habit.hideReply
         it[booleanPreferencesKey(KEY_REPLY_HIDE_WARNING)] = habit.hideReplyWarning
         it[intPreferencesKey(KEY_IMAGE_LOAD_TYPE)] = habit.imageLoadType
@@ -212,6 +214,7 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
     private const val KEY_IMAGE_WATERMARK_TYPE = "img_watermark"
     private const val KEY_MEDIA_DISPLAY_MODE = "ui_media_display_mode"
     private const val KEY_POST_HIDE_MEDIA = "ui_post_hide_media"
+    private const val KEY_COMPACT_SINGLE_AS_GRID = "ui_compact_single_as_grid"
     private const val KEY_REPLY_HIDE = "ui_reply_hide"
     private const val KEY_REPLY_HIDE_WARNING = "ui_reply_hide_warn"
     private const val KEY_SHOW_NICKNAME = "ui_show_both_name"

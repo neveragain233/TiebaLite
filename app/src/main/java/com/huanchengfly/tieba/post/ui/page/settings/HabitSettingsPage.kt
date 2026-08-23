@@ -65,6 +65,14 @@ fun HabitSettingsPage(
             )
 
             toggleablePreference(
+                property = HabitSettings::compactSingleAsGridCell,
+                title = R.string.settings_compact_single_as_grid,
+                summary = R.string.summary_compact_single_as_grid,
+                leadingIcon = Icons.Outlined.PhotoSizeSelectActual,
+                enabled = currentPreference.mediaDisplayMode == MediaDisplayMode.COMPACT,
+            )
+
+            toggleablePreference(
                 property = HabitSettings::videoAutoplay,
                 title = R.string.settings_video_autoplay,
                 leadingIcon = Icons.Rounded.Autoplay,

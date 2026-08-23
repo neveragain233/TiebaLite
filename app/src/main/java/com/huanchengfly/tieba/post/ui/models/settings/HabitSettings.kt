@@ -62,6 +62,7 @@ enum class MediaDisplayMode {
  * @param favoriteSeeLz 从收藏进入的贴子将自动切换至只看楼主
  * @param forumSortType 吧页面默认排序方式
  * @param mediaDisplayMode 列表媒体显示方式
+ * @param compactSingleAsGridCell 紧凑档单图显示为网格格
  * @param hideReply 隐藏回贴入口
  * @param hideReplyWarning 隐藏回贴风险提示
  * @param imageLoadType 图片加载设置
@@ -77,6 +78,7 @@ data class HabitSettings(
     val favoriteSeeLz: Boolean = true,
     @ForumSortType val forumSortType: Int = ForumSortType.BY_REPLY,
     val mediaDisplayMode: MediaDisplayMode = MediaDisplayMode.STANDARD,
+    val compactSingleAsGridCell: Boolean = false,
     val hideReply: Boolean = false,
     val hideReplyWarning: Boolean = false,
     val imageLoadType: Int = ImageUtil.SETTINGS_SMART_ORIGIN,
