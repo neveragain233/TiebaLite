@@ -578,8 +578,12 @@ fun ThreadMedia(
     }
 }
 
-private val CompactMediaGridTileTarget = 110.dp
-private val CompactMediaGridMaxRows = 2
+val CompactMediaGridTileTarget = 110.dp
+val CompactMediaGridMaxRows = 2
+
+/** 紧凑网格列数: 以目标单格约为 [CompactMediaGridTileTarget] 反推, 夹在 2~5. */
+fun compactGridColumns(gridWidth: Dp): Int =
+    (gridWidth.value / CompactMediaGridTileTarget.value).roundToInt().coerceIn(2, 5)
 
 /**
  * 紧凑档多图: 按可用宽度自动排成方格网格, 超出部分以「+N」角标呈现.
@@ -596,9 +600,7 @@ private fun CompactMediaGrid(
 ) {
     val context = LocalContext.current
     BoxWithConstraints(modifier = modifier.fillMaxWidth(widthFraction)) {
-        val columns = (maxWidth.value / CompactMediaGridTileTarget.value)
-            .roundToInt()
-            .coerceIn(2, 5)
+        val columns = compactGridColumns(maxWidth)
         val maxTiles = columns * CompactMediaGridMaxRows
         val plusN = (medias.size - maxTiles).coerceAtLeast(0)
         val visibleCount = if (plusN > 0) maxTiles else medias.size

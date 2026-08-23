@@ -10,12 +10,14 @@ import androidx.compose.foundation.layout.BoxWithConstraints
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.ime
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardActions
 import androidx.compose.foundation.text.KeyboardOptions
@@ -205,21 +207,42 @@ fun SearchThreadItem(
 @Composable
 private fun SearchVideo(modifier: Modifier = Modifier, video: SearchMedia.Video) {
     val context = LocalContext.current
-    val mode = LocalHabitSettings.current.mediaDisplayMode
+    val habit = LocalHabitSettings.current
+    val mode = habit.mediaDisplayMode
     val cap = if (mode == MediaDisplayMode.COMPACT) MediaListMaxWidthCompact else MediaListMaxWidth
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val frac = mediaWidthFraction(maxWidth, cap)
-        VideoThumbnail(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth(frac)
-                .aspectRatio(ratio = video.aspectRatio().coerceIn(0.75f, 2f))
-                .clip(MaterialTheme.shapes.small),
-            thumbnailUrl = video.thumbnail,
-            onClick = {
-                VideoViewActivity.launch(context, videoUrl = video.url, thumbnailUrl = video.thumbnail)
-            }
-        )
+        val videoAsGridCell = mode == MediaDisplayMode.COMPACT &&
+                habit.compactSingleAsGridCell &&
+                !habit.videoAutoplay
+        if (videoAsGridCell) {
+            val gridWidth = maxWidth * frac
+            val columns = compactGridColumns(gridWidth)
+            val cellWidth = gridWidth / columns.toFloat()
+            VideoThumbnail(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .width(cellWidth)
+                    .aspectRatio(1f)
+                    .clip(MaterialTheme.shapes.small),
+                thumbnailUrl = video.thumbnail,
+                onClick = {
+                    VideoViewActivity.launch(context, videoUrl = video.url, thumbnailUrl = video.thumbnail)
+                }
+            )
+        } else {
+            VideoThumbnail(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(frac)
+                    .aspectRatio(ratio = video.aspectRatio().coerceIn(0.75f, 2f))
+                    .clip(MaterialTheme.shapes.small),
+                thumbnailUrl = video.thumbnail,
+                onClick = {
+                    VideoViewActivity.launch(context, videoUrl = video.url, thumbnailUrl = video.thumbnail)
+                }
+            )
+        }
     }
 }
 
@@ -231,38 +254,102 @@ private fun SearchPhoto(modifier: Modifier = Modifier, pics: List<SearchMedia.Pi
 
     val picCount = pics.size
     val isSinglePhoto = picCount == 1
-    val mode = LocalHabitSettings.current.mediaDisplayMode
+    val habit = LocalHabitSettings.current
+    val mode = habit.mediaDisplayMode
     val cap = if (mode == MediaDisplayMode.COMPACT) MediaListMaxWidthCompact else MediaListMaxWidth
-    val mediaAspectRatio = if (isSinglePhoto) pics.first().aspectRatio().coerceIn(0.75f, 2f) else 3f
-    val hasMoreMedia = picCount > MAX_PHOTO_IN_ROW
 
     BoxWithConstraints(modifier = modifier.fillMaxWidth()) {
         val frac = mediaWidthFraction(maxWidth, cap)
-        Row(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .fillMaxWidth(frac)
-                .aspectRatio(mediaAspectRatio)
-                .clip(MaterialTheme.shapes.small),
-            horizontalArrangement = Arrangement.spacedBy(4.dp)
-        ) {
-            for (i in 0 until min(picCount, MAX_PHOTO_IN_ROW)) {
-                NetworkImage(
+        if (isSinglePhoto && mode == MediaDisplayMode.COMPACT && habit.compactSingleAsGridCell) {
+            val gridWidth = maxWidth * frac
+            val columns = compactGridColumns(gridWidth)
+            val cellWidth = gridWidth / columns.toFloat()
+            NetworkImage(
+                modifier = Modifier
+                    .align(Alignment.CenterStart)
+                    .width(cellWidth)
+                    .aspectRatio(1f)
+                    .clip(MaterialTheme.shapes.small),
+                imageUrl = pics[0].url,
+            )
+        } else if (isSinglePhoto) {
+            val ratio = if (mode == MediaDisplayMode.COMPACT) {
+                1f
+            } else {
+                pics[0].aspectRatio().coerceIn(0.75f, 2f)
+            }
+            NetworkImage(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(frac)
+                    .aspectRatio(ratio)
+                    .clip(MaterialTheme.shapes.small),
+                imageUrl = pics[0].url,
+            )
+        } else if (mode == MediaDisplayMode.COMPACT) {
+            val gridWidth = maxWidth * frac
+            val columns = compactGridColumns(gridWidth)
+            val maxTiles = columns * CompactMediaGridMaxRows
+            val plusN = (picCount - maxTiles).coerceAtLeast(0)
+            val visibleCount = if (plusN > 0) maxTiles else picCount
+            Box(modifier = Modifier.fillMaxWidth(frac).align(Alignment.CenterStart)) {
+                Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                    pics.take(visibleCount).chunked(columns).forEachIndexed { rowIndex, rowPics ->
+                        Row(
+                            modifier = Modifier.fillMaxWidth(),
+                            horizontalArrangement = Arrangement.spacedBy(4.dp)
+                        ) {
+                            rowPics.forEachIndexed { colIndex, pic ->
+                                NetworkImage(
+                                    modifier = Modifier
+                                        .weight(1f)
+                                        .aspectRatio(1f)
+                                        .clip(MaterialTheme.shapes.small),
+                                    imageUrl = pic.url,
+                                )
+                            }
+                            repeat(columns - rowPics.size) {
+                                Spacer(modifier = Modifier.weight(1f).aspectRatio(1f))
+                            }
+                        }
+                    }
+                }
+                if (plusN > 0) {
+                    MediaSizeBadge(
+                        modifier = Modifier
+                            .align(Alignment.BottomEnd)
+                            .padding(8.dp),
+                        size = picCount,
+                    )
+                }
+            }
+        } else {
+            val hasMoreMedia = picCount > MAX_PHOTO_IN_ROW
+            Row(
+                modifier = Modifier
+                    .align(Alignment.Center)
+                    .fillMaxWidth(frac)
+                    .aspectRatio(3f)
+                    .clip(MaterialTheme.shapes.small),
+                horizontalArrangement = Arrangement.spacedBy(4.dp)
+            ) {
+                for (i in 0 until min(picCount, MAX_PHOTO_IN_ROW)) {
+                    NetworkImage(
+                        modifier = Modifier
+                            .fillMaxHeight()
+                            .weight(1f),
+                        imageUrl = pics[i].url,
+                    )
+                }
+            }
+            if (hasMoreMedia) {
+                MediaSizeBadge(
                     modifier = Modifier
-                        .fillMaxHeight()
-                        .weight(1f),
-                    imageUrl = pics[i].url,
+                        .align(Alignment.BottomEnd)
+                        .padding(8.dp),
+                    size = picCount,
                 )
             }
-        }
-
-        if (hasMoreMedia) {
-            MediaSizeBadge(
-                modifier = Modifier
-                    .align(Alignment.BottomEnd)
-                    .padding(8.dp),
-                size = picCount,
-            )
         }
     }
 }
