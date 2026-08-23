@@ -36,9 +36,11 @@ fun ForumDetailPanePage(
 
     ListDetailPaneHost(
         navigator = navigator,
-        startSplit = uiSettings.forumDetailMode == ForumDetailMode.IMMEDIATE_SPLIT,
+        startSplit = uiSettings.forumDefaultSplit ||
+                uiSettings.forumDetailMode == ForumDetailMode.IMMEDIATE_SPLIT,
         initialThread = if (uiSettings.forumDetailMode == ForumDetailMode.KEEP_DETAIL) initialThread else null,
         detailForumName = forumName,
+        respectLargeScreenDefaultSplit = false,
     ) { onOpenThread ->
         ForumPage(forumName, avatarUrl, transitionKey, navigator, onOpenThread = onOpenThread)
     }

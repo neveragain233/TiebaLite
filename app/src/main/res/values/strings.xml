@@ -655,6 +655,10 @@
     <string name="forum_detail_mode_full_screen">吧内全屏打开帖子</string>
     <string name="settings_fold_to_portrait">折叠到外屏时自动竖屏</string>
     <string name="summary_fold_to_portrait">关闭后外屏可继续使用横屏双列</string>
+    <string name="settings_large_screen_default_split">大屏默认分栏</string>
+    <string name="summary_large_screen_default_split">非紧凑窗口下, 动态/通知等列表页默认左右分栏</string>
+    <string name="settings_forum_default_split">贴吧默认分栏</string>
+    <string name="summary_forum_default_split">大屏下进入贴吧默认左右分栏; 吧内全屏打开时无效</string>
     <string name="settings_app_nav_rail_position">侧栏按钮位置</string>
     <string name="nav_rail_position_top">顶部</string>
     <string name="nav_rail_position_center">居中</string>

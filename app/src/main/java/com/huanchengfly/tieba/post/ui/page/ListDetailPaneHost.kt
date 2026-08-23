@@ -33,6 +33,7 @@ import androidx.navigation.compose.currentBackStackEntryAsState
 import androidx.navigation.compose.rememberNavController
 import androidx.navigation.toRoute
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
@@ -63,6 +64,7 @@ private data object ListDetailPanePlaceholder
  * @param startSplit 进入时是否直接分屏(右侧显示占位), 用于「进入吧即分屏」模式
  * @param initialThread 进入时预置的帖子, 用于「从详情进入新吧保持右侧详情」模式
  * @param detailForumName 当前面板所属的吧名, 详情顶栏吧名 chip 指向同吧时关闭详情
+ * @param respectLargeScreenDefaultSplit 是否遵循「大屏默认分栏」全局设置; 贴吧页有其独立开关故传 false
  *
  * 详情 NavHost 始终在同一个组合位置, 避免移动位置导致 setGraph 重建
  * 而清空嵌套返回栈, 保证折叠/展开切换时详情状态不丢.
@@ -74,6 +76,7 @@ fun ListDetailPaneHost(
     startSplit: Boolean = false,
     initialThread: Destination.Thread? = null,
     detailForumName: String? = null,
+    respectLargeScreenDefaultSplit: Boolean = true,
     listPane: @Composable (onOpenThread: (Destination.Thread) -> Unit) -> Unit,
 ) {
     val isCompact = isWindowWidthCompact()
@@ -81,8 +84,11 @@ fun ListDetailPaneHost(
     val detailEntry by detailNavController.currentBackStackEntryAsState()
     val isDetailShowing = detailEntry?.destination?.hasRoute<Destination.Thread>() == true
     var detailExpanded by rememberSaveable { mutableStateOf(false) }
+    val uiSettings = LocalUISettings.current
+    val effectiveStartSplit =
+        startSplit || (respectLargeScreenDefaultSplit && uiSettings.largeScreenDefaultSplit)
     // 大屏下是否处于分屏布局: 已有选中帖子, 或设置了进入即分屏
-    val showSplit = !isCompact && (isDetailShowing || startSplit)
+    val showSplit = !isCompact && (isDetailShowing || effectiveStartSplit)
 
     // 折叠到紧凑宽度后, 面板详情全屏展示时通知 MainPage 隐藏底栏, 避免遮挡回复框
     val mainNavState = LocalMainNavState.current

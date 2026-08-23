@@ -269,6 +269,21 @@ fun UISettingsPage(
             )
 
             toggleablePreference(
+                property = UISettings::largeScreenDefaultSplit,
+                title = R.string.settings_large_screen_default_split,
+                summary = R.string.summary_large_screen_default_split,
+                leadingIcon = Icons.Outlined.ViewColumn,
+            )
+
+            toggleablePreference(
+                property = UISettings::forumDefaultSplit,
+                title = R.string.settings_forum_default_split,
+                summary = R.string.summary_forum_default_split,
+                leadingIcon = Icons.Outlined.ViewAgenda,
+                enabled = currentPreference.forumDetailMode != ForumDetailMode.FULL_SCREEN,
+            )
+
+            toggleablePreference(
                 property = UISettings::foldToPortrait,
                 title = R.string.settings_fold_to_portrait,
                 summary = R.string.summary_fold_to_portrait,

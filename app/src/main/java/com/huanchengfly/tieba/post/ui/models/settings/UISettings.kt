@@ -93,6 +93,8 @@ enum class NavRailPosition {
  * @param homeForumList 吧列表单列显示
  * @param showHistoryInHome 首页显示最近逛的吧
  * @param forumDetailMode 吧内详情显示方式
+ * @param largeScreenDefaultSplit 大屏(非紧凑窗口)下列表页默认分栏
+ * @param forumDefaultSplit 大屏下贴吧页默认分栏
  * @param foldToPortrait 折叠到外屏时自动切换竖屏(收起双列进入详情全屏)
  * @param appNavRailPosition 应用级侧栏按钮组停靠位置
  * @param fullscreenButtonStyle 详情全屏按钮样式
@@ -119,6 +121,8 @@ data class UISettings(
     val homeForumList: Boolean = false,
     val showHistoryInHome: Boolean = true,
     val forumDetailMode: ForumDetailMode = ForumDetailMode.KEEP_DETAIL,
+    val largeScreenDefaultSplit: Boolean = true,
+    val forumDefaultSplit: Boolean = true,
     val foldToPortrait: Boolean = true,
     val appNavRailPosition: NavRailPosition = NavRailPosition.CENTER,
     val fullscreenButtonStyle: FullscreenButtonStyle = FullscreenButtonStyle.FAB,

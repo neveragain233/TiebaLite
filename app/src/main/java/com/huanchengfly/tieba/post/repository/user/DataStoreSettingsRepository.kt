@@ -305,6 +305,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             forumDetailMode = ForumDetailMode.entries.getOrElse(forumDetailModeOrdinal) {
                 ForumDetailMode.KEEP_DETAIL
             },
+            largeScreenDefaultSplit = it[booleanPreferencesKey(KEY_LARGE_SCREEN_DEFAULT_SPLIT)] ?: true,
+            forumDefaultSplit = it[booleanPreferencesKey(KEY_FORUM_DEFAULT_SPLIT)] ?: true,
             foldToPortrait = it[booleanPreferencesKey(KEY_FOLD_TO_PORTRAIT)] ?: true,
             appNavRailPosition = NavRailPosition.entries.getOrElse(appNavRailPositionOrdinal) {
                 NavRailPosition.CENTER
@@ -339,6 +341,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_HOME_SINGLE_FORUM_LIST)] = ui.homeForumList
         it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] = ui.showHistoryInHome
         it[intPreferencesKey(KEY_FORUM_DETAIL_MODE)] = ui.forumDetailMode.ordinal
+        it[booleanPreferencesKey(KEY_LARGE_SCREEN_DEFAULT_SPLIT)] = ui.largeScreenDefaultSplit
+        it[booleanPreferencesKey(KEY_FORUM_DEFAULT_SPLIT)] = ui.forumDefaultSplit
         it[booleanPreferencesKey(KEY_FOLD_TO_PORTRAIT)] = ui.foldToPortrait
         it[intPreferencesKey(KEY_APP_NAV_RAIL_POSITION)] = ui.appNavRailPosition.ordinal
         it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] = ui.fullscreenButtonStyle.ordinal
@@ -372,6 +376,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_HOME_SINGLE_FORUM_LIST = "ui_forum_list_in_home"
     private const val KEY_HOME_PAGE_SHOW_HISTORY = "ui_history_in_home"
     private const val KEY_FORUM_DETAIL_MODE = "ui_forum_detail_mode"
+    private const val KEY_LARGE_SCREEN_DEFAULT_SPLIT = "ui_large_screen_default_split"
+    private const val KEY_FORUM_DEFAULT_SPLIT = "ui_forum_default_split"
     private const val KEY_FOLD_TO_PORTRAIT = "ui_fold_to_portrait"
     private const val KEY_APP_NAV_RAIL_POSITION = "ui_app_nav_rail_position"
     private const val KEY_FULLSCREEN_BUTTON_STYLE = "ui_fullscreen_button_style"
