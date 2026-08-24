@@ -30,6 +30,19 @@ fun isWindowWidthCompact(): Boolean {
     return !windowSize.isWidthAtLeastBreakpoint(WIDTH_DP_MEDIUM_LOWER_BOUND)
 }
 
+/**
+ * 依据设备的最小屏幕宽度判定是否为「手机」.
+ *
+ * 与 [isWindowWidthCompact] 只关心当前窗口宽度不同, 这里用 `smallestScreenWidthDp`
+ * 判定设备: 手机/折叠屏(外屏小)即使横屏或展开内屏(当前宽度 ≥ 600dp)仍是手机,
+ * 应按整页跳转处理; 真正的平板最小宽度 ≥ 600dp, 才使用分栏.
+ */
+@ReadOnlyComposable
+@Composable
+fun isPhoneDevice(): Boolean {
+    return LocalConfiguration.current.smallestScreenWidthDp < WIDTH_DP_MEDIUM_LOWER_BOUND
+}
+
 @ReadOnlyComposable
 @Composable
 fun isWindowHeightCompact(): Boolean {

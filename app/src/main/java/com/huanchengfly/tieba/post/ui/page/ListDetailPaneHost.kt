@@ -36,7 +36,7 @@ import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
 import com.huanchengfly.tieba.post.navigateDebounced
-import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isWindowWidthCompact
+import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isPhoneDevice
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadPage
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadViewModel
 import com.huanchengfly.tieba.post.ui.page.main.LocalMainNavState
@@ -79,7 +79,9 @@ fun ListDetailPaneHost(
     respectLargeScreenDefaultSplit: Boolean = true,
     listPane: @Composable (onOpenThread: (Destination.Thread) -> Unit) -> Unit,
 ) {
-    val isCompact = isWindowWidthCompact()
+    // 用「是否手机」而非当前窗口宽度判定分栏: 手机(含折叠屏外屏/竖屏大屏)始终整页跳转,
+    // 避免宽度 ≥ 600dp 时误入分栏(占位+面板转场+往返回顶); 平板最小宽度 ≥ 600dp 才分栏.
+    val isCompact = isPhoneDevice()
     val detailNavController = rememberNavController()
     val detailEntry by detailNavController.currentBackStackEntryAsState()
     val isDetailShowing = detailEntry?.destination?.hasRoute<Destination.Thread>() == true
