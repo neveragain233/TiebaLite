@@ -64,7 +64,8 @@ fun AccountManagePage(
 
     SettingsScaffold(
         titleRes = R.string.title_account_manage,
-        onBack = navigator::navigateUp
+        onBack = navigator::navigateUp,
+        destination = SettingsDestination.AccountManage,
     ) {
         group(verticalPadding = 16.dp) {
             if (accounts.size > 1) {

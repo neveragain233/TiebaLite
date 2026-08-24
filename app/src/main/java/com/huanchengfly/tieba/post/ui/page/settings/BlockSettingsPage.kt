@@ -105,6 +105,7 @@ fun BlockSettingsPage(
         onBack = navigator::navigateUp,
         settings = settings,
         initialValue = BlockSettings(),
+        destination = SettingsDestination.BlockSettings,
         snackbarHostState = snackbarHostState,
         snackbarHost = { SwipeToDismissSnackbarHost(snackbarHostState) },
     ) {

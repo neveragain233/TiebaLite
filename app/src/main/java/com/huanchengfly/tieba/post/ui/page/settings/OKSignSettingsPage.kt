@@ -95,6 +95,7 @@ fun OKSignSettingsPage(settings: Settings<SignConfig>, onBack: () -> Unit) {
         onBack = onBack,
         settings = settings,
         initialValue = SignConfig(),
+        destination = SettingsDestination.OKSign,
     ) {
         val okSignAvailable = currentPreference.autoSign && !batteryOpEnabled
 

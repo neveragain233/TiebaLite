@@ -1,5 +1,9 @@
 package com.huanchengfly.tieba.post.ui.page.settings
 
+import androidx.activity.compose.BackHandler
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.shrinkVertically
 import androidx.annotation.StringRes
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Box
@@ -18,6 +22,7 @@ import androidx.compose.material.icons.rounded.AccountCircle
 import androidx.compose.material.icons.rounded.Checklist
 import androidx.compose.material.icons.rounded.DoNotDisturbOff
 import androidx.compose.material.icons.rounded.MoreHoriz
+import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
@@ -28,12 +33,17 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.ReadOnlyComposable
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.Dp
@@ -56,6 +66,7 @@ import com.huanchengfly.tieba.post.ui.page.Destination.Login
 import com.huanchengfly.tieba.post.ui.page.settings.SettingsDestination.About
 import com.huanchengfly.tieba.post.ui.page.settings.SettingsDestination.AccountManage
 import com.huanchengfly.tieba.post.ui.widgets.compose.Avatar
+import com.huanchengfly.tieba.post.ui.widgets.compose.ActionItem
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.CollapsingTopAppBar
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalSnackbarHostState
@@ -106,92 +117,147 @@ private fun SegmentedPrefsScope.accountPreference(
 @Composable
 fun SettingsPage(navigator: NavController) {
     val account = LocalAccount.current
+    val context = LocalContext.current
+    var searchActive by rememberSaveable { mutableStateOf(false) }
+    var keyword by rememberSaveable { mutableStateOf("") }
+
+    val query = keyword.trim()
+    val searchResult = remember(query, context) {
+        if (query.isEmpty()) {
+            emptyList()
+        } else {
+            val q = query.lowercase()
+            SettingsSearchIndex.all.filter { entry ->
+                val title = context.getString(entry.titleRes).lowercase()
+                val summary = entry.summaryRes?.let { context.getString(it).lowercase() }
+                title.contains(q) || (summary?.contains(q) == true)
+            }
+        }
+    }
+
+    val closeSearch: () -> Unit = {
+        searchActive = false
+        keyword = ""
+    }
+
+    // 系统返回优先关闭搜索
+    BackHandler(enabled = searchActive, onBack = closeSearch)
 
     SettingsScaffold(
         titleRes = R.string.title_settings,
         titleHorizontalAlignment = Alignment.CenterHorizontally,
-        onBack = navigator::navigateUp,
+        onBack = { if (searchActive) closeSearch() else navigator.navigateUp() },
+        actions = {
+            if (!searchActive) {
+                ActionItem(
+                    icon = Icons.Rounded.Search,
+                    contentDescription = R.string.title_settings_search,
+                ) { searchActive = true }
+            }
+        },
     ) {
-        group(verticalPadding = SettingsGroupVerticalPadding) {
-            accountPreference(
-                account = account,
-                onManageAccountClicked = {
-                    navigator.navigateDebounced(route = AccountManage)
+        customPreference(key = "settings_search_box") { _ ->
+            AnimatedVisibility(
+                visible = searchActive,
+                enter = expandVertically(expandFrom = Alignment.Top),
+                exit = shrinkVertically(shrinkTowards = Alignment.Top),
+            ) {
+                SettingsSearchBar(
+                    keyword = keyword,
+                    onKeywordChange = { keyword = it },
+                )
+            }
+        }
+        if (searchActive && query.isNotEmpty()) {
+            settingsSearchResults(
+                result = searchResult,
+                onOpenResult = { entry ->
+                    SettingsSearchTarget.set(entry.destination, entry.itemKey)
+                    navigator.navigateDebounced(entry.destination)
                 },
-                onLoginClicked = { navigator.navigateDebounced(route = Login) },
-                iconTint = Purple700,
             )
+        } else {
+            group(verticalPadding = SettingsGroupVerticalPadding) {
+                accountPreference(
+                    account = account,
+                    onManageAccountClicked = {
+                        navigator.navigateDebounced(route = AccountManage)
+                    },
+                    onLoginClicked = { navigator.navigateDebounced(route = Login) },
+                    iconTint = Purple700,
+                )
 
-            mainPreference(
-                title = R.string.title_oksign,
-                summary = R.string.summary_settings_oksign,
-                icon = Icons.Rounded.Checklist,
-                iconContainer = Purple700,
-                enabled = account != null
-            ) {
-                navigator.navigateDebounced(SettingsDestination.OKSign)
-            }
-        }
-
-        group(verticalPadding = SettingsGroupVerticalPadding) {
-            mainPreference(
-                title = R.string.title_block_settings,
-                summary = R.string.summary_block_settings,
-                icon = Icons.Rounded.DoNotDisturbOff,
-                iconContainer = Red700,
-            ) {
-                navigator.navigateDebounced(SettingsDestination.BlockSettings)
-            }
-        }
-
-        group(verticalPadding = SettingsGroupVerticalPadding) {
-            mainPreference(
-                title = R.string.title_settings_custom,
-                summary = R.string.summary_settings_custom,
-                icon = Icons.Outlined.FormatPaint,
-                iconContainer = Green700,
-            ) {
-                navigator.navigateDebounced(SettingsDestination.UI)
+                mainPreference(
+                    title = R.string.title_oksign,
+                    summary = R.string.summary_settings_oksign,
+                    icon = Icons.Rounded.Checklist,
+                    iconContainer = Purple700,
+                    enabled = account != null
+                ) {
+                    navigator.navigateDebounced(SettingsDestination.OKSign)
+                }
             }
 
-            mainPreference(
-                title = R.string.title_settings_read_habit,
-                summary = R.string.summary_settings_habit,
-                icon = Icons.Outlined.DashboardCustomize,
-                iconContainer = Green700,
-            ) {
-                navigator.navigateDebounced(SettingsDestination.Habit)
-            }
-        }
-
-        group(verticalPadding = SettingsGroupVerticalPadding) {
-            mainPreference(
-                title = R.string.title_settings_privacy,
-                summary = R.string.summary_settings_privacy,
-                icon = Icons.Outlined.Shield,
-                iconContainer = Cyan700,
-            ) {
-                navigator.navigateDebounced(SettingsDestination.Privacy)
-            }
-        }
-
-        group(verticalPadding = SettingsGroupVerticalPadding) {
-            mainPreference(
-                title = R.string.title_settings_more,
-                summary = R.string.summary_settings_more,
-                icon =  Icons.Rounded.MoreHoriz,
-                iconContainer = BlueGrey700
-            ) {
-                navigator.navigateDebounced(SettingsDestination.More)
+            group(verticalPadding = SettingsGroupVerticalPadding) {
+                mainPreference(
+                    title = R.string.title_block_settings,
+                    summary = R.string.summary_block_settings,
+                    icon = Icons.Rounded.DoNotDisturbOff,
+                    iconContainer = Red700,
+                ) {
+                    navigator.navigateDebounced(SettingsDestination.BlockSettings)
+                }
             }
 
-            mainPreference(
-                title = R.string.title_about,
-                summary = R.string.summary_settings_about,
-                icon = Icons.Outlined.Info,
-                iconContainer = BlueGrey700
-            ) {
-                navigator.navigate(About)
+            group(verticalPadding = SettingsGroupVerticalPadding) {
+                mainPreference(
+                    title = R.string.title_settings_custom,
+                    summary = R.string.summary_settings_custom,
+                    icon = Icons.Outlined.FormatPaint,
+                    iconContainer = Green700,
+                ) {
+                    navigator.navigateDebounced(SettingsDestination.UI)
+                }
+
+                mainPreference(
+                    title = R.string.title_settings_read_habit,
+                    summary = R.string.summary_settings_habit,
+                    icon = Icons.Outlined.DashboardCustomize,
+                    iconContainer = Green700,
+                ) {
+                    navigator.navigateDebounced(SettingsDestination.Habit)
+                }
+            }
+
+            group(verticalPadding = SettingsGroupVerticalPadding) {
+                mainPreference(
+                    title = R.string.title_settings_privacy,
+                    summary = R.string.summary_settings_privacy,
+                    icon = Icons.Outlined.Shield,
+                    iconContainer = Cyan700,
+                ) {
+                    navigator.navigateDebounced(SettingsDestination.Privacy)
+                }
+            }
+
+            group(verticalPadding = SettingsGroupVerticalPadding) {
+                mainPreference(
+                    title = R.string.title_settings_more,
+                    summary = R.string.summary_settings_more,
+                    icon = Icons.Rounded.MoreHoriz,
+                    iconContainer = BlueGrey700
+                ) {
+                    navigator.navigateDebounced(SettingsDestination.More)
+                }
+
+                mainPreference(
+                    title = R.string.title_about,
+                    summary = R.string.summary_settings_about,
+                    icon = Icons.Outlined.Info,
+                    iconContainer = BlueGrey700
+                ) {
+                    navigator.navigate(About)
+                }
             }
         }
     }
@@ -299,11 +365,21 @@ fun <T> SettingsScaffold(
     onBack: () -> Unit,
     settings: Settings<T>,
     initialValue: T,
+    destination: SettingsDestination? = null,
     snackbarHostState: SnackbarHostState = rememberSnackbarHostState(),
     snackbarHost: @Composable () -> Unit = { SwipeToDismissSnackbarHost(LocalSnackbarHostState.current) },
     content: SettingsSegmentedPrefsScope<T>.() -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    // 来自设置搜索的定位请求: 仅当目标页与该 destination 匹配时消费, 并滚动到对应条目
+    val scrollToItemKey = remember(destination) {
+        val match = SettingsSearchTarget.destination == destination
+        if (match) {
+            SettingsSearchTarget.itemKey.also { SettingsSearchTarget.clear() }
+        } else {
+            null
+        }
+    }
 
     MyScaffold(
         modifier = modifier,
@@ -325,6 +401,7 @@ fun <T> SettingsScaffold(
             settings = settings,
             initialValue = initialValue,
             contentPadding = contentPadding + SettingsContentPadding,
+            scrollToItemKey = scrollToItemKey,
             content = content
         )
     }
@@ -336,11 +413,21 @@ fun SettingsScaffold(
     @StringRes titleRes: Int,
     titleHorizontalAlignment: Alignment.Horizontal = Alignment.Start,
     onBack: () -> Unit,
+    destination: SettingsDestination? = null,
+    actions: @Composable RowScope.() -> Unit = {},
     snackbarHostState: SnackbarHostState = rememberSnackbarHostState(),
     snackbarHost: @Composable () -> Unit = { SwipeToDismissSnackbarHost(LocalSnackbarHostState.current) },
     content: SegmentedPrefsScope.() -> Unit
 ) {
     val scrollBehavior = TopAppBarDefaults.exitUntilCollapsedScrollBehavior()
+    val scrollToItemKey = remember(destination) {
+        val match = SettingsSearchTarget.destination == destination
+        if (match) {
+            SettingsSearchTarget.itemKey.also { SettingsSearchTarget.clear() }
+        } else {
+            null
+        }
+    }
 
     MyScaffold(
         modifier = modifier,
@@ -349,6 +436,7 @@ fun SettingsScaffold(
                 titleRes = titleRes,
                 titleHorizontalAlignment = titleHorizontalAlignment,
                 navigationIcon = { BackNavigationIcon(onBackPressed = onBack) },
+                actions = actions,
                 scrollBehavior = scrollBehavior,
             )
         },
@@ -360,6 +448,7 @@ fun SettingsScaffold(
                 .fillMaxHeight()
                 .nestedScroll(scrollBehavior.nestedScrollConnection),
             contentPadding = contentPadding + SettingsContentPadding,
+            scrollToItemKey = scrollToItemKey,
             content = content
         )
     }

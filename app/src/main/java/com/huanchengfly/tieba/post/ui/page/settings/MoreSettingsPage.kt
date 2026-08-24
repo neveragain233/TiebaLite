@@ -54,6 +54,7 @@ fun MoreSettingsPage(
         onBack = navigator::navigateUp,
         settings = updateSettings,
         initialValue = UpdateSettings(),
+        destination = SettingsDestination.More,
     ) {
         group(title = R.string.summary_settings_more) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

@@ -24,6 +24,7 @@ fun PrivacySettingsPage(settings: Settings<PrivacySettings>, onBack: () -> Unit)
         onBack = onBack,
         settings = settings,
         initialValue = PrivacySettings(),
+        destination = SettingsDestination.Privacy,
     ) {
         appLinkPreference()
 

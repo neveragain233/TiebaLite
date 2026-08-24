@@ -37,7 +37,8 @@ fun HabitSettingsPage(
         titleRes = R.string.title_settings_read_habit,
         onBack = onBack,
         settings = habitSettings,
-        initialValue = HabitSettings()
+        initialValue = HabitSettings(),
+        destination = SettingsDestination.Habit,
     ) {
         group(title = R.string.settings_group_media) {
             imageLoadPreference()

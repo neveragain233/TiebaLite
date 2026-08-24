@@ -68,6 +68,7 @@ fun UISettingsPage(
         onBack = navigator::navigateUp,
         settings = settings,
         initialValue = UISettings(),
+        destination = SettingsDestination.UI,
     ) {
         group(title = R.string.settings_group_display) {
             preference(

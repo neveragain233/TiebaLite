@@ -10,17 +10,21 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.LazyItemScope
 import androidx.compose.foundation.lazy.LazyListScope
+import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.ListItemShapes
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.State
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberUpdatedState
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
@@ -68,6 +72,7 @@ interface SegmentedPrefsScope{
         icon: @Composable (() -> Unit)? = null,
         trailingContent: @Composable (() -> Unit)? = null,
         enabled: Boolean = true,
+        key: Any? = null,
     )
 
     fun preference(
@@ -77,6 +82,7 @@ interface SegmentedPrefsScope{
         icon: ImageVector? = null,
         trailingIcon: ImageVector? = null,
         enabled: Boolean = true,
+        key: Any? = null,
     )
 
     /**
@@ -129,6 +135,7 @@ interface SegmentedPrefsScope{
         dialogTitle: @Composable (() -> Unit)? = null,
         leadingIcon: ImageVector? = null,
         enabled: Boolean = true,
+        key: Any? = null,
     )
 
     /**
@@ -212,6 +219,8 @@ private sealed interface ItemType {
 
 private open class SegmentedPrefsScopeImpl(
     lazyListScope: LazyListScope,
+    private val scrollToItemKey: Any? = null,
+    private val onScrollItemIndex: (Int) -> Unit = {},
 ): SegmentedPrefsScope, LazyListScope by lazyListScope {
 
     /** For ListItemShapes type tracking, see [segmentedShapes] */
@@ -226,6 +235,9 @@ private open class SegmentedPrefsScopeImpl(
         crossinline content: @Composable LazyItemScope.(shapes: ListItemShapes) -> Unit
     ) {
         val index = itemsCount
+        if (key == scrollToItemKey) {
+            onScrollItemIndex(index)
+        }
         item(key, contentType) {
             content(this@SegmentedPrefsScopeImpl.segmentedShapes(index))
         }
@@ -242,9 +254,10 @@ private open class SegmentedPrefsScopeImpl(
         summary: @Composable (() -> Unit)?,
         icon: @Composable (() -> Unit)?,
         trailingContent: @Composable (() -> Unit)?,
-        enabled: Boolean
+        enabled: Boolean,
+        key: Any?,
     ) {
-        prefsItem(contentType = ItemType.Clickable) { shapes ->
+        prefsItem(key = key, contentType = ItemType.Clickable) { shapes ->
             SegmentedPreference(
                 title = title,
                 shapes = shapes,
@@ -264,6 +277,7 @@ private open class SegmentedPrefsScopeImpl(
         icon: ImageVector?,
         trailingIcon: ImageVector?,
         enabled: Boolean,
+        key: Any?,
     ) {
         preference(
             onClick = onClick,
@@ -276,6 +290,7 @@ private open class SegmentedPrefsScopeImpl(
                 { Icon(imageVector, contentDescription = null) }
             },
             enabled = enabled,
+            key = key,
         )
     }
 
@@ -311,9 +326,10 @@ private open class SegmentedPrefsScopeImpl(
         summary: @Composable (() -> Unit)?,
         dialogTitle: @Composable (() -> Unit)?,
         leadingIcon: ImageVector?,
-        enabled: Boolean
+        enabled: Boolean,
+        key: Any?,
     ) {
-        prefsItem(contentType = ItemType.Clickable) { shapes ->
+        prefsItem(key = key, contentType = ItemType.Clickable) { shapes ->
             val dialogState = rememberDialogState()
 
             SegmentedPreference(
@@ -400,7 +416,9 @@ private class SettingsSegmentedPrefsScopeImpl<T>(
     lazyListScope: LazyListScope,
     private val state: State<T>,
     private val saver: SettingsSaver<T>,
-): SettingsSegmentedPrefsScope<T>, SegmentedPrefsScopeImpl(lazyListScope) {
+    scrollToItemKey: Any? = null,
+    onScrollItemIndex: (Int) -> Unit = {},
+): SettingsSegmentedPrefsScope<T>, SegmentedPrefsScopeImpl(lazyListScope, scrollToItemKey, onScrollItemIndex) {
 
     override val currentPreference: T
         get() = state.value
@@ -495,6 +513,7 @@ fun SegmentedPrefsScope.preference(
             { Icon(imageVector, contentDescription = null) }
         },
         enabled = enabled,
+        key = title,
     )
 
 fun <T> SettingsSegmentedPrefsScope<T>.toggleablePreference(
@@ -520,9 +539,12 @@ fun <T> SegmentedPrefsScreen(
     initialValue: T,
     contentPadding: PaddingValues = PaddingValues.Zero,
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(2.dp),
+    scrollToItemKey: Any? = null,
     content: SettingsSegmentedPrefsScope<T>.() -> Unit
 ) {
     val latestContent by rememberUpdatedState(content)
+    val listState = rememberLazyListState()
+    var scrollToIndex by remember { mutableStateOf<Int?>(null) }
 
     val settingsSaver = remember { SettingsSaver(initialValue, settings) }
     val settingsState = settings.collectAsStateWithLifecycle(
@@ -534,16 +556,23 @@ fun <T> SegmentedPrefsScreen(
     Container {
         LazyColumn(
             modifier = modifier,
+            state = listState,
             contentPadding = contentPadding,
             verticalArrangement = verticalArrangement,
         ) {
             val scope = SettingsSegmentedPrefsScopeImpl(
                 lazyListScope = this,
                 state = settingsState,
-                saver = settingsSaver
+                saver = settingsSaver,
+                scrollToItemKey = scrollToItemKey,
+                onScrollItemIndex = { scrollToIndex = it },
             )
             scope.latestContent()
         }
+    }
+
+    LaunchedEffect(scrollToItemKey) {
+        scrollToIndex?.let { listState.animateScrollToItem(it) }
     }
 }
 
@@ -552,18 +581,30 @@ fun SegmentedTextPrefsScreen(
     modifier: Modifier = Modifier,
     contentPadding: PaddingValues = PaddingValues.Zero,
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(2.dp),
+    scrollToItemKey: Any? = null,
     content: SegmentedPrefsScope.() -> Unit
 ) {
     val latestContent by rememberUpdatedState(content)
+    val listState = rememberLazyListState()
+    var scrollToIndex by remember { mutableStateOf<Int?>(null) }
 
     Container {
         LazyColumn(
             modifier = modifier,
+            state = listState,
             contentPadding = contentPadding,
             verticalArrangement = verticalArrangement,
         ) {
-            SegmentedPrefsScopeImpl(lazyListScope = this).latestContent()
+            SegmentedPrefsScopeImpl(
+                lazyListScope = this,
+                scrollToItemKey = scrollToItemKey,
+                onScrollItemIndex = { scrollToIndex = it },
+            ).latestContent()
         }
+    }
+
+    LaunchedEffect(scrollToItemKey) {
+        scrollToIndex?.let { listState.animateScrollToItem(it) }
     }
 }
 

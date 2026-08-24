@@ -138,6 +138,7 @@ fun AboutPage(
         titleRes = R.string.title_about,
         titleHorizontalAlignment = Alignment.CenterHorizontally,
         onBack = onBackClicked,
+        destination = SettingsDestination.About,
     ) {
         customPreference {
             Column(
