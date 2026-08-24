@@ -55,62 +55,71 @@ fun ThreadNavigationDock(
     onToggleDetailPane: (() -> Unit)? = null,
     detailPaneExpanded: Boolean = false,
 ) {
-    Surface(
+    val showFullscreen = onToggleDetailPane != null
+    val hasContent = (showCommentNav && !hideCommentNav) || showFullscreen
+    // 没有评论导航按钮且没有全屏按键时(手机滚动隐藏), 连同外壳一起淡出, 避免右下角残留空圆形容器
+    AnimatedVisibility(
+        visible = hasContent,
         modifier = modifier,
-        shape = RoundedCornerShape(24.dp),
-        color = MaterialTheme.colorScheme.surfaceContainerHigh,
-        tonalElevation = 3.dp,
-        shadowElevation = 6.dp,
+        enter = fadeIn(),
+        exit = fadeOut(),
     ) {
-        Column(
-            modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-            horizontalAlignment = Alignment.CenterHorizontally,
+        Surface(
+            shape = RoundedCornerShape(24.dp),
+            color = MaterialTheme.colorScheme.surfaceContainerHigh,
+            tonalElevation = 3.dp,
+            shadowElevation = 6.dp,
         ) {
-            AnimatedVisibility(
-                visible = showCommentNav && !hideCommentNav,
-                enter = fadeIn(),
-                exit = fadeOut(),
+            Column(
+                modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                horizontalAlignment = Alignment.CenterHorizontally,
             ) {
-                Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                    // 上一楼: 点击跳上一楼, 长按回顶
-                    Box(
-                        modifier = Modifier
-                            .size(NavDockButtonSize)
-                            .combinedClickable(
-                                onClick = onPrev,
-                                onLongClick = onPrevLongPress,
-                            ),
-                        contentAlignment = Alignment.Center,
-                    ) {
-                        Icon(
-                            imageVector = Icons.Rounded.KeyboardArrowUp,
-                            contentDescription = stringResource(R.string.title_prev_comment),
-                        )
-                    }
-                    IconButton(onClick = onNext) {
-                        Icon(
-                            imageVector = Icons.Rounded.KeyboardArrowDown,
-                            contentDescription = stringResource(R.string.title_next_comment),
-                        )
+                AnimatedVisibility(
+                    visible = showCommentNav && !hideCommentNav,
+                    enter = fadeIn(),
+                    exit = fadeOut(),
+                ) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        // 上一楼: 点击跳上一楼, 长按回顶
+                        Box(
+                            modifier = Modifier
+                                .size(NavDockButtonSize)
+                                .combinedClickable(
+                                    onClick = onPrev,
+                                    onLongClick = onPrevLongPress,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = Icons.Rounded.KeyboardArrowUp,
+                                contentDescription = stringResource(R.string.title_prev_comment),
+                            )
+                        }
+                        IconButton(onClick = onNext) {
+                            Icon(
+                                imageVector = Icons.Rounded.KeyboardArrowDown,
+                                contentDescription = stringResource(R.string.title_next_comment),
+                            )
+                        }
                     }
                 }
-            }
-            if (onToggleDetailPane != null) {
-                IconButton(onClick = onToggleDetailPane) {
-                    Icon(
-                        imageVector = if (detailPaneExpanded) {
-                            Icons.Rounded.FullscreenExit
-                        } else {
-                            Icons.Rounded.Fullscreen
-                        },
-                        contentDescription = stringResource(
-                            id = if (detailPaneExpanded) {
-                                R.string.desc_collapse_detail
+                if (showFullscreen) {
+                    IconButton(onClick = onToggleDetailPane) {
+                        Icon(
+                            imageVector = if (detailPaneExpanded) {
+                                Icons.Rounded.FullscreenExit
                             } else {
-                                R.string.desc_expand_detail
-                            }
-                        ),
-                    )
+                                Icons.Rounded.Fullscreen
+                            },
+                            contentDescription = stringResource(
+                                id = if (detailPaneExpanded) {
+                                    R.string.desc_collapse_detail
+                                } else {
+                                    R.string.desc_expand_detail
+                                }
+                            ),
+                        )
+                    }
                 }
             }
         }
