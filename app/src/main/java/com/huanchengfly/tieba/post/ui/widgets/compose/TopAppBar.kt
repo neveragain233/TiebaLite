@@ -1599,7 +1599,11 @@ private fun Modifier.adjustHeightOffsetLimit(scrollBehavior: TopAppBarScrollBeha
     scrollBehavior?.state?.let {
         onSizeChanged { size ->
             val offset = size.height.toFloat() - it.heightOffset
-            it.heightOffsetLimit = -offset
+            // Material3 的 TopAppBarState.heightOffset setter 直接
+            // coerceIn(heightOffsetLimit, 0f)，heightOffsetLimit 一旦为正就会抛
+            // "Cannot coerce value to an empty range"（AppBar.kt:2063）。
+            // 布局瞬态下这里的测量可能使 limit 为正，源头钳制到 <= 0 防止崩溃。
+            it.heightOffsetLimit = (-offset).coerceAtMost(0f)
         }
     } ?: this
 
@@ -1608,7 +1612,9 @@ private fun Modifier.adjustPinnedHeightOffsetLimit(scrollBehavior: TopAppBarScro
     scrollBehavior?.state?.let {
         onSizeChanged { size ->
             val offset = size.height.toFloat() - it.heightOffset - collapsedHeight
-            it.heightOffsetLimit = -offset
+            // 同上；带 collapsedHeight 的公式在 size.height 瞬时小于
+            // collapsedHeight 时最容易算出正的 limit，必须钳制到 <= 0。
+            it.heightOffsetLimit = (-offset).coerceAtMost(0f)
         }
     } ?: this
 
