@@ -265,7 +265,7 @@ private fun AccountSettingCard(
                     modifier = Modifier.size(SettingsLeadingIconSize),
                 )
             },
-            shapes = ListItemDefaults.shapes(),
+            shapes = ListItemDefaults.shapes().run { copy(shape = selectedShape) },
             contentPadding = PreferenceItemPadding,
             onClick = onManageAccountClicked,
         )
@@ -308,7 +308,7 @@ private fun SettingsCategoryItem(
                 )
             }
         },
-        shapes = ListItemDefaults.shapes(),
+        shapes = ListItemDefaults.shapes().run { copy(shape = selectedShape) },
         enabled = enabled,
         onClick = onClick,
     )

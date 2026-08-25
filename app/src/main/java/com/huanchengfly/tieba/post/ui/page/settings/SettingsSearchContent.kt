@@ -133,7 +133,7 @@ fun LazyListScope.settingsSearchResultsList(
                     SegmentedPreference(
                         title = stringResource(entry.titleRes),
                         summary = summaryText,
-                        shapes = ListItemDefaults.shapes(),
+                        shapes = ListItemDefaults.shapes().run { copy(shape = selectedShape) },
                         trailingContent = {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
