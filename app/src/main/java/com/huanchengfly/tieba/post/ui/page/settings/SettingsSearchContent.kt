@@ -7,12 +7,14 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListScope
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.BasicTextField
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.rounded.KeyboardArrowRight
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material3.Icon
+import androidx.compose.material3.ListItemDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
@@ -26,7 +28,6 @@ import androidx.compose.ui.text.style.TextAlign
 import androidx.compose.ui.unit.dp
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.SegmentedPreference
-import com.huanchengfly.tieba.post.ui.widgets.compose.preference.SegmentedPrefsScope
 
 /**
  * 参考截图样式的设置页顶部搜索条: 圆角浅色底 + 左侧放大镜 + 输入占位.
@@ -92,14 +93,14 @@ fun SettingsSearchBar(
 }
 
 /**
- * 设置搜索匹配结果(按子页分组), 追加到当前设置列表.
+ * 设置搜索匹配结果(按子页分组), 追加到主控 LazyColumn.
  */
-fun SegmentedPrefsScope.settingsSearchResults(
+fun LazyListScope.settingsSearchResultsList(
     result: List<SettingsSearchEntry>,
     onOpenResult: (SettingsSearchEntry) -> Unit,
 ) {
     if (result.isEmpty()) {
-        customPreference(key = "search_empty") { _ ->
+        item(key = "search_empty") {
             Text(
                 text = stringResource(R.string.tip_search_settings_no_result),
                 modifier = Modifier
@@ -111,7 +112,7 @@ fun SegmentedPrefsScope.settingsSearchResults(
         }
     } else {
         result.groupBy { it.destination }.forEach { group ->
-            customPreference(key = "header_${group.key}") { _ ->
+            item(key = "header_${group.key}") {
                 Text(
                     text = stringResource(destinationLabelRes(group.key)),
                     modifier = Modifier
@@ -123,7 +124,7 @@ fun SegmentedPrefsScope.settingsSearchResults(
                 )
             }
             group.value.forEach { entry ->
-                customPreference(key = entry.titleRes) { shapes ->
+                item(key = entry.titleRes) {
                     val summaryText = if (entry.summaryRes != null) {
                         stringResource(entry.summaryRes)
                     } else {
@@ -132,7 +133,7 @@ fun SegmentedPrefsScope.settingsSearchResults(
                     SegmentedPreference(
                         title = stringResource(entry.titleRes),
                         summary = summaryText,
-                        shapes = shapes,
+                        shapes = ListItemDefaults.shapes(),
                         trailingContent = {
                             Icon(
                                 imageVector = Icons.AutoMirrored.Rounded.KeyboardArrowRight,
