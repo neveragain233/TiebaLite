@@ -13,6 +13,8 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.gestures.detectTapGestures
+import androidx.compose.foundation.Image
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.ExpandLess
 import androidx.compose.material.icons.rounded.ExpandMore
@@ -21,22 +23,31 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
+import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.models.PhotoViewData
+import com.huanchengfly.tieba.post.ui.page.photoview.PhotoViewActivity
 import com.huanchengfly.tieba.post.ui.widgets.compose.LongPicChip
 import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
+import coil3.compose.AsyncImagePainter
+import coil3.compose.rememberAsyncImagePainter
+import coil3.request.ImageRequest
 import kotlinx.coroutines.launch
 
 /** 当前渲染图片组所在的 LazyColumn, 供展开/收起时保持滚动位置. */
@@ -142,25 +153,58 @@ private fun ExpandedLongImage(
     pic: PicContentRender,
     photoViewDataProvider: ((List<PicContentRender>, Int) -> PhotoViewData?)? = null,
 ) {
-    val ratio = pic.dimensions?.let {
-        if (it.width > 0 && it.height > 0) it.width.toFloat() / it.height else null
-    } ?: 0.5f
+    val context = LocalContext.current
+    // 用图片加载后的真实宽高比撑开盒子, 避免 bsize 与原图比例不符导致 Fit 后左右留白
+    var ratio by remember(pic) {
+        mutableStateOf(
+            pic.dimensions?.let {
+                if (it.width > 0 && it.height > 0) it.width.toFloat() / it.height else null
+            } ?: 0.5f,
+        )
+    }
+    val painter = rememberAsyncImagePainter(
+        model = ImageRequest.Builder(context)
+            .data(pic.originUrl.ifEmpty { pic.picUrl })
+            .build(),
+        contentScale = ContentScale.Fit,
+    )
+    val painterState by painter.state.collectAsState()
+    LaunchedEffect(painterState) {
+        if (painterState is AsyncImagePainter.State.Success) {
+            val size = painter.intrinsicSize
+            if (size.width > 0f && size.height > 0f) {
+                ratio = size.width / size.height
+            }
+        }
+    }
     Box(
         modifier = Modifier
-            .fillMaxWidth(),
+            .fillMaxWidth()
+            .pointerInput(pic) {
+                detectTapGestures {
+                    val photos = photoViewDataProvider?.invoke(listOf(pic), 0) ?: pic.photoViewData
+                        ?: return@detectTapGestures
+                    PhotoViewActivity.launch(context, photos)
+                }
+            },
         contentAlignment = Alignment.TopEnd,
     ) {
-        NetworkImage(
-            modifier = Modifier
-                .fillMaxWidth()
-                .aspectRatio(ratio),
-            imageUrl = pic.picUrl,
-            dimensions = pic.dimensions,
-            contentScale = ContentScale.Crop,
-            photoViewDataProvider = {
-                photoViewDataProvider?.invoke(listOf(pic), 0) ?: pic.photoViewData
-            },
-        )
+        if (painterState is AsyncImagePainter.State.Success) {
+            Image(
+                painter = painter,
+                contentDescription = null,
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(ratio),
+                contentScale = ContentScale.Fit,
+            )
+        } else {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .aspectRatio(ratio),
+            )
+        }
     }
 }
 
