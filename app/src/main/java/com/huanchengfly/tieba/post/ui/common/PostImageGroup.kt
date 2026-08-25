@@ -10,16 +10,37 @@ import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.ExpandLess
+import androidx.compose.material.icons.rounded.ExpandMore
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.compositionLocalOf
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.models.PhotoViewData
 import com.huanchengfly.tieba.post.ui.widgets.compose.LongPicChip
 import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
+import kotlinx.coroutines.launch
+
+/** 当前渲染图片组所在的 LazyColumn, 供展开/收起时保持滚动位置. */
+internal val LocalLazyColumnState = compositionLocalOf<LazyListState?> { null }
 
 private val GridSpacing = 4.dp
 
@@ -72,7 +93,97 @@ fun PostImageGroup(
     if (pics.size == 1) {
         SinglePostImage(pic = pics[0], photoViewDataProvider = photoViewDataProvider)
     } else {
-        PostImageGrid(pics = pics, photoViewDataProvider = photoViewDataProvider)
+        val scope = rememberCoroutineScope()
+        val listState = LocalLazyColumnState.current
+        val hasLong = pics.any { it.isLongImage() }
+        var expanded by rememberSaveable(pics) { mutableStateOf(false) }
+        Column {
+            if (hasLong && expanded) {
+                // 展开态: 长图全宽封顶显示, 非长图保持各自比例, 恢复为展开前的纵向排列
+                Column(verticalArrangement = Arrangement.spacedBy(GridSpacing)) {
+                    pics.forEachIndexed { index, pic ->
+                        if (pic.isLongImage()) {
+                            ExpandedLongImage(pic = pic, photoViewDataProvider = photoViewDataProvider)
+                        } else {
+                            pic.Render()
+                        }
+                    }
+                }
+                PostImageToggleButton(
+                    expand = false,
+                    onClick = {
+                        expanded = false
+                        // 收起后跳回所在帖项, 避免被长图高度变化甩到列表末尾
+                        listState?.let {
+                            scope.launch {
+                                it.animateScrollToItem(it.firstVisibleItemIndex)
+                            }
+                        }
+                    },
+                )
+            } else {
+                PostImageGrid(pics = pics, photoViewDataProvider = photoViewDataProvider)
+                if (hasLong) {
+                    PostImageToggleButton(
+                        expand = true,
+                        onClick = { expanded = true },
+                    )
+                }
+            }
+        }
+    }
+}
+
+/**
+ * 展开态下的长图: 按真实宽高比全宽显示, 不封顶高度, 随页面滚动查看完整内容.
+ */
+@Composable
+private fun ExpandedLongImage(
+    pic: PicContentRender,
+    photoViewDataProvider: ((List<PicContentRender>, Int) -> PhotoViewData?)? = null,
+) {
+    val ratio = pic.dimensions?.let {
+        if (it.width > 0 && it.height > 0) it.width.toFloat() / it.height else null
+    } ?: 0.5f
+    Box(
+        modifier = Modifier
+            .fillMaxWidth(),
+        contentAlignment = Alignment.TopEnd,
+    ) {
+        NetworkImage(
+            modifier = Modifier
+                .fillMaxWidth()
+                .aspectRatio(ratio),
+            imageUrl = pic.picUrl,
+            dimensions = pic.dimensions,
+            contentScale = ContentScale.Crop,
+            photoViewDataProvider = {
+                photoViewDataProvider?.invoke(listOf(pic), 0) ?: pic.photoViewData
+            },
+        )
+    }
+}
+
+@Composable
+private fun PostImageToggleButton(
+    expand: Boolean,
+    onClick: () -> Unit,
+) {
+    TextButton(
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
+    ) {
+        Icon(
+            imageVector = if (expand) Icons.Rounded.ExpandMore else Icons.Rounded.ExpandLess,
+            contentDescription = null,
+            modifier = Modifier.size(16.dp),
+        )
+        Spacer(Modifier.width(4.dp))
+        Text(
+            text = stringResource(
+                id = if (expand) R.string.btn_expand_long_image else R.string.btn_collapse_long_image,
+            ),
+        )
     }
 }
 

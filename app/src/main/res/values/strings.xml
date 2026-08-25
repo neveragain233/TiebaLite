@@ -32,6 +32,8 @@
     <string name="hint_search_settings">搜索设置</string>
     <string name="tip_search_settings">输入关键字查找设置</string>
     <string name="tip_search_settings_no_result">没有找到匹配的设置</string>
+    <string name="btn_expand_long_image">展开长图</string>
+    <string name="btn_collapse_long_image">收起长图</string>
     <string name="title_settings_custom">个性化</string>
     <string name="title_settings_privacy">隐私</string>
     <string name="tip_signed">已签</string>

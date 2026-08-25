@@ -39,6 +39,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBarScrollBehavior
 import androidx.compose.material3.VerticalDivider
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
@@ -67,6 +68,7 @@ import com.huanchengfly.tieba.post.api.models.protos.PollOption
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.common.PostContentRenders
+import com.huanchengfly.tieba.post.ui.common.LocalLazyColumnState
 import com.huanchengfly.tieba.post.ui.widgets.compose.PbContentText
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
@@ -308,23 +310,24 @@ fun StateScreenScope.ThreadContent(
     }
 
     // Container {
-        SwipeUpLazyLoadColumn(
-            modifier = modifier
-                .fillMaxSize()
-                .testColumn(),
-            state = lazyListState,
-            contentPadding = contentPadding,
-            isLoading = isLoadingMore,
-            onLoad = onSwipeUpRefresh,
-            onLazyLoad = viewModel::requestLoadMore.takeIf { hasMore && state.data.isNotEmpty() },
-            bottomIndicator = {
-                if (onSwipeUpRefresh == null) {
-                    defaultBottomIndicator(this, it)
-                } else {
-                    LoadMoreIndicator(noMore = !hasMore, onThreshold = it)
+        CompositionLocalProvider(LocalLazyColumnState provides lazyListState) {
+            SwipeUpLazyLoadColumn(
+                modifier = modifier
+                    .fillMaxSize()
+                    .testColumn(),
+                state = lazyListState,
+                contentPadding = contentPadding,
+                isLoading = isLoadingMore,
+                onLoad = onSwipeUpRefresh,
+                onLazyLoad = viewModel::requestLoadMore.takeIf { hasMore && state.data.isNotEmpty() },
+                bottomIndicator = {
+                    if (onSwipeUpRefresh == null) {
+                        defaultBottomIndicator(this, it)
+                    } else {
+                        LoadMoreIndicator(noMore = !hasMore, onThreshold = it)
+                    }
                 }
-            }
-        ) {
+            ) {
             layout.segments.forEach { segment ->
                 when (segment) {
                     ThreadListSegment.FirstPost -> item(key = Type.FirstPost.key, contentType = Type.FirstPost) {
@@ -407,6 +410,7 @@ fun StateScreenScope.ThreadContent(
                     }
                 }
             }
+        }
         }
     // }
 }
