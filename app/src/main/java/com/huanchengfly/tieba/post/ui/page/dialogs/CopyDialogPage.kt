@@ -50,6 +50,7 @@ import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
 import com.huanchengfly.tieba.post.ui.widgets.compose.BackNavigationIcon
 import com.huanchengfly.tieba.post.ui.widgets.compose.ExtendedFabHeight
 import com.huanchengfly.tieba.post.ui.widgets.compose.PlainTooltipBox
+import com.huanchengfly.tieba.post.ui.widgets.compose.rememberSafeFloatingToolbarState
 import com.huanchengfly.tieba.post.ui.widgets.compose.ToolbarToFabGap
 import com.huanchengfly.tieba.post.utils.TiebaUtil
 
@@ -61,7 +62,8 @@ fun CopyTextDialogPage(
     val context = LocalContext.current
     val scrollBehavior = TopAppBarDefaults.pinnedScrollBehavior()
     val toolbarScrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(
-        exitDirection = FloatingToolbarExitDirection.Bottom
+        exitDirection = FloatingToolbarExitDirection.Bottom,
+        state = rememberSafeFloatingToolbarState(),
     )
 
     Scaffold(

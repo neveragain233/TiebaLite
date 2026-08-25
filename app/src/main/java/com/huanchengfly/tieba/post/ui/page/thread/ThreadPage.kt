@@ -155,6 +155,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.LocalHazeState
 import com.huanchengfly.tieba.post.ui.widgets.compose.PlainTooltipBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.PromptDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.ProvideContentColor
+import com.huanchengfly.tieba.post.ui.widgets.compose.rememberSafeFloatingToolbarState
 import com.huanchengfly.tieba.post.ui.widgets.compose.StickyHeaderOverlay
 import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.SwipeToDismissSnackbarHost
@@ -296,7 +297,10 @@ fun ThreadPage(
     } else {
         TopAppBarDefaults.enterAlwaysScrollBehavior()
     }
-    val toolbarScrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(exitDirection = Bottom)
+    val toolbarScrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(
+        exitDirection = Bottom,
+        state = rememberSafeFloatingToolbarState(),
+    )
 
     val layout = remember(state) { buildThreadListLayout(state) }
     var pendingCommentNav by remember { mutableStateOf<PendingCommentNav?>(null) }
