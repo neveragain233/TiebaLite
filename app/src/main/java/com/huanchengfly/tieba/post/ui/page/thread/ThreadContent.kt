@@ -4,6 +4,7 @@ import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.foundation.border
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.foundation.layout.PaddingValues
@@ -43,13 +44,17 @@ import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.mutableStateSetOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontWeight
@@ -69,6 +74,8 @@ import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.common.PostContentRenders
 import com.huanchengfly.tieba.post.ui.common.LocalLazyColumnState
+import com.huanchengfly.tieba.post.ui.common.LongImageNavContext
+import com.huanchengfly.tieba.post.ui.common.LocalLongImageNavContext
 import com.huanchengfly.tieba.post.ui.widgets.compose.PbContentText
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.common.theme.compose.onNotNull
@@ -296,7 +303,8 @@ fun StateScreenScope.ThreadContent(
     contentPadding: PaddingValues = PaddingNone,
     topAppBarScrollBehavior: TopAppBarScrollBehavior,
     layout: ThreadListLayout,
-    useStickyHeader: Boolean // Bug: StickyHeader doesn't respect content padding
+    useStickyHeader: Boolean, // Bug: StickyHeader doesn't respect content padding
+    onImageNavWaypoints: ((Long, List<Int>) -> Unit)? = null,
 ) {
     val navigator = LocalNavController.current
     val state by viewModel.uiState.collectAsStateWithLifecycle()
@@ -333,7 +341,7 @@ fun StateScreenScope.ThreadContent(
                     ThreadListSegment.FirstPost -> item(key = Type.FirstPost.key, contentType = Type.FirstPost) {
                         val firstPost = state.firstPost ?: return@item
                         Column {
-                            PostCardItem(viewModel, firstPost, localUid, collectPid)
+                            PostCardItem(viewModel, firstPost, localUid, collectPid, onImageNavWaypoints)
 
                             state.thread?.originThreadInfo?.let { info ->
                                 OriginThreadCard(
@@ -400,11 +408,11 @@ fun StateScreenScope.ThreadContent(
                         val posts = segment.posts
                         if (segment.source == PostSource.DATA) {
                             items(items = posts, key = { it.id }, contentType = { Type.Post }) { post ->
-                                PostCardItem(viewModel, post, localUid, collectPid)
+                                PostCardItem(viewModel, post, localUid, collectPid, onImageNavWaypoints)
                             }
                         } else {
                             items(items = posts, key = { post -> "LatestPost_${post.id}" }) { post ->
-                                PostCardItem(viewModel, post, localUid, collectPid)
+                                PostCardItem(viewModel, post, localUid, collectPid, onImageNavWaypoints)
                             }
                         }
                     }
@@ -465,7 +473,13 @@ private fun LazyListScope.postTipItem(isDesc: Boolean) = this.item("LatestPostsT
 }
 
 @Composable
-private fun PostCardItem(viewModel: ThreadViewModel, post: PostData, localUid: Long?, collectPid: Long) {
+private fun PostCardItem(
+    viewModel: ThreadViewModel,
+    post: PostData,
+    localUid: Long?,
+    collectPid: Long,
+    onImageNavWaypoints: ((Long, List<Int>) -> Unit)? = null,
+) {
     val navigator = LocalNavController.current
     val loggedIn = localUid != null
     val onUserClickedListener: () -> Unit = {
@@ -473,43 +487,52 @@ private fun PostCardItem(viewModel: ThreadViewModel, post: PostData, localUid: L
             route = UserProfile(user = post.author, transitionKey = post.id.toString())
         )
     }
+    val itemTopY = remember { mutableStateOf(0) }
 
-    if (loggedIn) {
-        PostCard(
-            post = post,
-            immersiveMode = viewModel.isImmersiveMode,
-            isCollected = post.id == collectPid,
-            onUserClick = onUserClickedListener,
-            onLikeClick = viewModel::onPostLikeClicked,
-            onReplyClick = viewModel::onReplyClicked.takeUnless { viewModel.hideReply },
-            onSubPostReplyClick = viewModel::onReplySubPost.takeUnless { viewModel.hideReply },
-            onOpenSubPosts = { subPostId ->
-                viewModel.onOpenSubPost(post, subPostId)
-            },
-            onMenuCopyClick = {
-                navigator.navigate(CopyText(it))
-            },
-            onMenuFavoriteClick = {
-                val isPostCollected = post.id == collectPid
-                if (isPostCollected) {
-                    viewModel.removeFromCollections()
-                } else {
-                    viewModel.updateCollections(markedPost = post)
-                }
-            },
-            onMenuDeleteClick = { viewModel.onDeletePost(post) }.takeIf { post.author.id == localUid }
-        )
-    } else {
-        PostCard(
-            post = post,
-            immersiveMode = viewModel.isImmersiveMode,
-            onUserClick = onUserClickedListener,
-            onLikeClick = viewModel::onPostLikeClicked,
-            onOpenSubPosts = { subPostId -> viewModel.onOpenSubPost(post, subPostId) },
-            onMenuCopyClick = {
-                navigator.navigate(CopyText(it))
+    CompositionLocalProvider(
+        LocalLongImageNavContext provides onImageNavWaypoints?.let {
+            LongImageNavContext(post.id, { itemTopY.value }, { waypoints -> it(post.id, waypoints) })
+        },
+    ) {
+        Box(Modifier.onGloballyPositioned { itemTopY.value = it.positionInWindow().y.toInt() }) {
+            if (loggedIn) {
+                PostCard(
+                    post = post,
+                    immersiveMode = viewModel.isImmersiveMode,
+                    isCollected = post.id == collectPid,
+                    onUserClick = onUserClickedListener,
+                    onLikeClick = viewModel::onPostLikeClicked,
+                    onReplyClick = viewModel::onReplyClicked.takeUnless { viewModel.hideReply },
+                    onSubPostReplyClick = viewModel::onReplySubPost.takeUnless { viewModel.hideReply },
+                    onOpenSubPosts = { subPostId ->
+                        viewModel.onOpenSubPost(post, subPostId)
+                    },
+                    onMenuCopyClick = {
+                        navigator.navigate(CopyText(it))
+                    },
+                    onMenuFavoriteClick = {
+                        val isPostCollected = post.id == collectPid
+                        if (isPostCollected) {
+                            viewModel.removeFromCollections()
+                        } else {
+                            viewModel.updateCollections(markedPost = post)
+                        }
+                    },
+                    onMenuDeleteClick = { viewModel.onDeletePost(post) }.takeIf { post.author.id == localUid }
+                )
+            } else {
+                PostCard(
+                    post = post,
+                    immersiveMode = viewModel.isImmersiveMode,
+                    onUserClick = onUserClickedListener,
+                    onLikeClick = viewModel::onPostLikeClicked,
+                    onOpenSubPosts = { subPostId -> viewModel.onOpenSubPost(post, subPostId) },
+                    onMenuCopyClick = {
+                        navigator.navigate(CopyText(it))
+                    }
+                )
             }
-        )
+        }
     }
 }
 

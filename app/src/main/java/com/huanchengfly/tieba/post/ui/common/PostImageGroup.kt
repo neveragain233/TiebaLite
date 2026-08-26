@@ -1,5 +1,6 @@
 package com.huanchengfly.tieba.post.ui.common
 
+import androidx.compose.animation.animateContentSize
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -26,17 +27,22 @@ import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.withFrameNanos
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.layout.ContentScale
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.layout.positionInWindow
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
@@ -45,6 +51,10 @@ import com.huanchengfly.tieba.post.models.PhotoViewData
 import com.huanchengfly.tieba.post.ui.page.photoview.PhotoViewActivity
 import com.huanchengfly.tieba.post.ui.widgets.compose.LongPicChip
 import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
+import com.huanchengfly.tieba.post.ui.widgets.compose.PlaceholderRetry
+import com.huanchengfly.tieba.post.ui.widgets.compose.placeholder
+import com.huanchengfly.tieba.post.ui.widgets.compose.shimmer
+import com.google.accompanist.placeholder.PlaceholderHighlight
 import coil3.compose.AsyncImagePainter
 import coil3.compose.rememberAsyncImagePainter
 import coil3.request.ImageRequest
@@ -52,6 +62,22 @@ import kotlinx.coroutines.launch
 
 /** 当前渲染图片组所在的 LazyColumn, 供展开/收起时保持滚动位置. */
 internal val LocalLazyColumnState = compositionLocalOf<LazyListState?> { null }
+
+/**
+ * 长图展开后, 供上下楼导航把「每张展开图 / 收起按钮」当作中间站点.
+ *
+ * @param postId 所属楼层 id
+ * @param itemTopY 该楼层 item 顶部在窗口中的 Y, 用于换算成 item 内偏移
+ * @param report 上报升序的 item 内偏移列表(每张展开图 + 最后的收起按钮)
+ */
+@Immutable
+class LongImageNavContext(
+    val postId: Long,
+    val itemTopY: () -> Int,
+    val report: (List<Int>) -> Unit,
+)
+
+internal val LocalLongImageNavContext = compositionLocalOf<LongImageNavContext?> { null }
 
 private val GridSpacing = 4.dp
 
@@ -108,30 +134,59 @@ fun PostImageGroup(
         val listState = LocalLazyColumnState.current
         val hasLong = pics.any { it.isLongImage() }
         var expanded by rememberSaveable(pics) { mutableStateOf(false) }
+        val navContext = LocalLongImageNavContext.current
+        // step -> item 内偏移; 最后一个 step 是收起按钮
+        val waypointOffsets = remember(pics) { mutableStateMapOf<Int, Int>() }
+        fun recordWaypoint(step: Int, y: Float) {
+            val context = navContext ?: return
+            waypointOffsets[step] = (y - context.itemTopY()).toInt().coerceAtLeast(0)
+            scope.launch {
+                withFrameNanos { }
+                val ordered = (0 until pics.size).map { waypointOffsets[it] } +
+                        waypointOffsets[pics.size]
+                if (ordered.all { it != null }) {
+                    context.report(ordered.map { it!! })
+                }
+            }
+        }
         Column {
             if (hasLong && expanded) {
                 // 展开态: 长图全宽封顶显示, 非长图保持各自比例, 恢复为展开前的纵向排列
                 Column(verticalArrangement = Arrangement.spacedBy(GridSpacing)) {
                     pics.forEachIndexed { index, pic ->
-                        if (pic.isLongImage()) {
-                            ExpandedLongImage(pic = pic, photoViewDataProvider = photoViewDataProvider)
-                        } else {
-                            pic.Render()
+                        Box(
+                            modifier = Modifier
+                                .fillMaxWidth()
+                                .onGloballyPositioned { recordWaypoint(index, it.positionInWindow().y) },
+                        ) {
+                            if (pic.isLongImage()) {
+                                ExpandedLongImage(pic = pic, photoViewDataProvider = photoViewDataProvider)
+                            } else {
+                                pic.Render()
+                            }
                         }
                     }
                 }
-                PostImageToggleButton(
-                    expand = false,
-                    onClick = {
-                        expanded = false
-                        // 收起后跳回所在帖项, 避免被长图高度变化甩到列表末尾
-                        listState?.let {
-                            scope.launch {
-                                it.animateScrollToItem(it.firstVisibleItemIndex)
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .onGloballyPositioned { recordWaypoint(pics.size, it.positionInWindow().y) },
+                ) {
+                    PostImageToggleButton(
+                        expand = false,
+                        onClick = {
+                            expanded = false
+                            // 收起后清除站点, 上下楼导航不再按图逐站
+                            navContext?.report(emptyList())
+                            // 收起后跳回所在帖项, 避免被长图高度变化甩到列表末尾
+                            listState?.let {
+                                scope.launch {
+                                    it.animateScrollToItem(it.firstVisibleItemIndex)
+                                }
                             }
-                        }
-                    },
-                )
+                        },
+                    )
+                }
             } else {
                 PostImageGrid(pics = pics, photoViewDataProvider = photoViewDataProvider)
                 if (hasLong) {
@@ -180,30 +235,48 @@ private fun ExpandedLongImage(
     Box(
         modifier = Modifier
             .fillMaxWidth()
-            .pointerInput(pic) {
-                detectTapGestures {
-                    val photos = photoViewDataProvider?.invoke(listOf(pic), 0) ?: pic.photoViewData
-                        ?: return@detectTapGestures
-                    PhotoViewActivity.launch(context, photos)
-                }
-            },
+            .animateContentSize(),
         contentAlignment = Alignment.TopEnd,
     ) {
-        if (painterState is AsyncImagePainter.State.Success) {
-            Image(
-                painter = painter,
-                contentDescription = null,
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(ratio),
-                contentScale = ContentScale.Fit,
-            )
-        } else {
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .aspectRatio(ratio),
-            )
+        when (painterState) {
+            is AsyncImagePainter.State.Success -> {
+                Image(
+                    painter = painter,
+                    contentDescription = null,
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .aspectRatio(ratio)
+                        .pointerInput(pic) {
+                            detectTapGestures {
+                                val photos = photoViewDataProvider?.invoke(listOf(pic), 0) ?: pic.photoViewData
+                                    ?: return@detectTapGestures
+                                PhotoViewActivity.launch(context, photos)
+                            }
+                        },
+                    contentScale = ContentScale.Fit,
+                )
+            }
+            is AsyncImagePainter.State.Error -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(LongImageMaxHeight),
+                ) {
+                    PlaceholderRetry(onRetry = painter::restart)
+                }
+            }
+            else -> {
+                Box(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .height(LongImageMaxHeight)
+                        .placeholder(
+                            visible = true,
+                            shape = MaterialTheme.shapes.small,
+                            highlight = PlaceholderHighlight.shimmer(),
+                        ),
+                )
+            }
         }
     }
 }

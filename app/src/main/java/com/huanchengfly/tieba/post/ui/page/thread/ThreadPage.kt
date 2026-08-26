@@ -73,6 +73,7 @@ import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateMapOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
@@ -86,6 +87,7 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
+import androidx.compose.ui.layout.onGloballyPositioned
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
@@ -306,8 +308,20 @@ fun ThreadPage(
     var pendingCommentNav by remember { mutableStateOf<PendingCommentNav?>(null) }
     // 上次导航跳转到的楼层, 作为下一次导航的锚点, 保证连续按 ▲▼ 逐楼前进
     var lastNavAnchorPostId by remember { mutableStateOf<Long?>(null) }
+    // 当前锚点楼层在「长图展开」站点中的进度(0..n 为各图, 最后一站是收起按钮); -1 表示未进入
+    var lastNavWaypointIndex by remember { mutableStateOf(-1) }
+    // 各楼层经 onGloballyPositioned 上报的展开长图站点(升序 item 内偏移), 供导航逐站前进
+    val imageNavWaypoints = remember { mutableStateMapOf<Long, List<Int>>() }
     // 导航键自身触发的滚动进行中; 期间不隐藏导航键
     var navScrollActive by remember { mutableStateOf(false) }
+    // 置顶排序栏(StickyHeaderOverlay)高度: 上下楼导航时让出, 避免目标楼层用户名/头像被裁
+    // 先给一个基于密度的兜底值(首次导航时排序栏尚未显示/测量), 显示后被 onGloballyPositioned 校准
+    val density = LocalDensity.current
+    var stickyHeaderHeightPx by remember {
+        mutableStateOf(
+            with(density) { 36.dp.roundToPx() }
+        )
+    }
     // 评论导航坞与回复栏一致: 内容向下滚动时隐藏, 直到向上滚动才恢复
     val commentNavHidden by remember {
         derivedStateOf { toolbarScrollBehavior.state.collapsedFraction >= 0.9f }
@@ -319,14 +333,6 @@ fun ThreadPage(
         toolbarScrollBehavior.state.offset = 0f
     }
     val useStickyThreadHeader = useStickyHeader && !useStickyHeaderWorkaround
-    // 顶栏(含状态栏)高度: 跳转时让出, 避免目标楼层头像/昵称被顶栏裁掉
-    val density = LocalDensity.current
-    val topBarInsetPx = WindowInsets.statusBars.getTop(density) +
-            with(density) { TopAppBarDefaults.TopAppBarExpandedHeight.roundToPx() }
-    // 顶栏可见比例: 0=收起, 1=完全展开(enterAlways 模式下滚动后顶栏会收起)
-    val currentTopBarInsetPx: () -> Int = {
-        (topBarInsetPx * (1f - topAppBarScrollBehavior.state.collapsedFraction)).toInt()
-    }
 
     val fullscreenToggle = if (LocalUISettings.current.fullscreenButtonStyle == FullscreenButtonStyle.FAB) {
         onToggleDetailPane
@@ -364,7 +370,11 @@ fun ThreadPage(
             lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
         }.collect {
             if (!navScrollActive) {
-                lastNavAnchorPostId = lazyListState.navigationAnchorPost(state)?.id
+                val newAnchor = lazyListState.navigationAnchorPost(state)?.id
+                if (newAnchor != lastNavAnchorPostId) {
+                    lastNavAnchorPostId = newAnchor
+                    lastNavWaypointIndex = -1
+                }
             }
         }
     }
@@ -376,21 +386,63 @@ fun ThreadPage(
             return
         }
         if (useStickyThreadHeader) {
-            // 让出顶栏 + sticky 排序栏高度
+            // 顶栏已由 contentPadding 让出, 这里只需再让出 sticky 排序栏高度
             lazyListState.scrollToItemWithHeader(
                 index = targetIndex,
-                scrollOffset = -currentTopBarInsetPx(),
+                scrollOffset = 0,
                 animate = true,
             ) { it.contentType === Type.Header }
         } else {
-            lazyListState.animateScrollToItem(targetIndex, scrollOffset = -currentTopBarInsetPx())
+            // contentPadding 已让出顶栏, 这里只需再让出置顶排序栏高度, 避免用户名被裁
+            lazyListState.animateScrollToItem(targetIndex, scrollOffset = -stickyHeaderHeightPx)
         }
+    }
+
+    // 把「展开长图」的某个站点(某张图/收起按钮)顶部对齐到置顶排序栏下方
+    suspend fun scrollToWaypoint(itemIndex: Int, offsetWithinItem: Int) {
+        lazyListState.animateScrollToItem(itemIndex, scrollOffset = offsetWithinItem - stickyHeaderHeightPx)
     }
 
     fun requestNavigateComment(direction: CommentNavDirection) {
         val anchorId = lastNavAnchorPostId?.takeIf { it in layout.orderedPostIds }
             ?: lazyListState.navigationAnchorPost(state)?.id
             ?: return
+        // 长图展开: 当前楼有展开站点时, 先逐站前进/后退, 走完才跳楼
+        val waypoints = imageNavWaypoints[anchorId].orEmpty()
+        val itemIndex = layout.itemIndexOf(anchorId)
+        if (waypoints.isNotEmpty() && itemIndex != null) {
+            val curStep = if (lastNavAnchorPostId == anchorId) lastNavWaypointIndex else -1
+            when (direction) {
+                CommentNavDirection.NEXT -> {
+                    if (curStep < waypoints.size - 1) {
+                        val next = curStep + 1
+                        navScrollActive = true
+                        coroutineScope.launch {
+                            scrollToWaypoint(itemIndex, waypoints[next])
+                            navScrollActive = false
+                            resetCommentNavDock()
+                        }
+                        lastNavAnchorPostId = anchorId
+                        lastNavWaypointIndex = next
+                        return
+                    }
+                }
+                CommentNavDirection.PREV -> {
+                    if (curStep > 0) {
+                        val prev = curStep - 1
+                        navScrollActive = true
+                        coroutineScope.launch {
+                            scrollToWaypoint(itemIndex, waypoints[prev])
+                            navScrollActive = false
+                            resetCommentNavDock()
+                        }
+                        lastNavAnchorPostId = anchorId
+                        lastNavWaypointIndex = prev
+                        return
+                    }
+                }
+            }
+        }
         val target = layout.targetPostId(anchorId, direction)
         if (target != null) {
             // 预加载: 目标楼接近已加载末尾且还有下一页时提前拉取, 避免到临界点再加载导致来回跳动
@@ -403,6 +455,7 @@ fun ThreadPage(
             }
             layout.itemIndexOf(target)?.let { targetIndex ->
                 lastNavAnchorPostId = target
+                lastNavWaypointIndex = -1
                 navScrollActive = true
                 coroutineScope.launch {
                     scrollToPost(targetIndex)
@@ -433,6 +486,7 @@ fun ThreadPage(
                         // 无更早分页: 回跳楼主帖(此时 targetPostId 已应返回 firstPost, 兜底)
                         layout.itemIndexOf(layout.firstPostId ?: return)?.let { firstPostIndex ->
                             lastNavAnchorPostId = layout.firstPostId
+                            lastNavWaypointIndex = -1
                             navScrollActive = true
                             coroutineScope.launch {
                                 scrollToPost(firstPostIndex)
@@ -453,6 +507,7 @@ fun ThreadPage(
         val target = newLayout.targetPostId(pending.anchorPostId, pending.direction)
         if (target != null) {
             lastNavAnchorPostId = target
+            lastNavWaypointIndex = -1
             navScrollActive = true
             newLayout.itemIndexOf(target)?.let { scrollToPost(it) }
             navScrollActive = false
@@ -688,7 +743,13 @@ fun ThreadPage(
                     if (useStickyHeaderWorkaround && state.thread?.replyNum != null) {
                         Container {
                             StickyHeaderOverlay(state = lazyListState) {
-                                ThreadHeader(uiState = state, viewModel = viewModel)
+                                ThreadHeader(
+                                    uiState = state,
+                                    viewModel = viewModel,
+                                    modifier = Modifier.onGloballyPositioned {
+                                        stickyHeaderHeightPx = it.size.height
+                                    },
+                                )
                             }
                         }
                     }
@@ -776,7 +837,12 @@ fun ThreadPage(
                             contentPadding = contentPadding,
                             topAppBarScrollBehavior = topAppBarScrollBehavior,
                             layout = layout,
-                            useStickyHeader = useStickyHeader && !useStickyHeaderWorkaround
+                            useStickyHeader = useStickyHeader && !useStickyHeaderWorkaround,
+                            onImageNavWaypoints = { postId, waypoints ->
+                                if (imageNavWaypoints[postId] != waypoints) {
+                                    imageNavWaypoints[postId] = waypoints
+                                }
+                            },
                         )
                     }
                 }
