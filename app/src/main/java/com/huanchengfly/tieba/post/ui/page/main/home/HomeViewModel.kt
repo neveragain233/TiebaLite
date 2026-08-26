@@ -3,6 +3,7 @@ package com.huanchengfly.tieba.post.ui.page.main.home
 import androidx.compose.runtime.Immutable
 import androidx.compose.runtime.Stable
 import androidx.lifecycle.viewModelScope
+import com.huanchengfly.tieba.post.models.database.History
 import androidx.paging.PagingData
 import androidx.paging.cachedIn
 import com.huanchengfly.tieba.post.arch.BaseStateViewModel
@@ -52,7 +53,7 @@ data class HomeUiState(
 class HomeViewModel @Inject constructor(
     private val homeRepo: HomeRepository,
     private val okSignRepo: OKSignRepository,
-    historyRepo: HistoryRepository,
+    private val historyRepo: HistoryRepository,
     settingsRepo: SettingsRepository
 ) : BaseStateViewModel<HomeUiState>() {
 
@@ -122,6 +123,10 @@ class HomeViewModel @Inject constructor(
         } else {
             homeRepo.removeTopForum(forum)
         }
+    }
+
+    fun deleteHistory(history: History): Unit = launchInVM {
+        historyRepo.deleteHistory(history)
     }
 
     fun onListModeChanged() = uiSettings.save { it.copy(homeForumList = !it.homeForumList) }

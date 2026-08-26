@@ -6,6 +6,8 @@ import androidx.compose.animation.AnimatedVisibilityScope
 import androidx.compose.animation.core.animateFloatAsState
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -76,6 +78,7 @@ import com.airbnb.lottie.compose.LottieConstants
 import com.airbnb.lottie.compose.rememberLottieComposition
 import com.google.accompanist.placeholder.PlaceholderDefaults
 import com.huanchengfly.tieba.post.LocalUISettings
+import com.huanchengfly.tieba.post.utils.DeviceUtils
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaNotLoggedInException
 import com.huanchengfly.tieba.post.arch.isOverlapping
@@ -211,6 +214,7 @@ private fun ForumItemPlaceholder(showAvatar: Boolean) {
     }
 }
 
+@OptIn(ExperimentalFoundationApi::class)
 @Composable
 fun HistoryItem(
     modifier: Modifier = Modifier,
@@ -218,14 +222,21 @@ fun HistoryItem(
     avatar: @Composable RowScope.() -> Unit,
     color: Color,
     contentColor: Color,
-    onClick: () -> Unit = {}
+    onClick: () -> Unit = {},
+    onLongClick: (() -> Unit)? = null,
 ) {
     Row(
         modifier = modifier
             .height(IntrinsicSize.Min)
             .clip(shape = CircleShape)
             .background(color = color)
-            .clickable(onClick = onClick)
+            .let { m ->
+                if (onLongClick != null) {
+                    m.combinedClickable(onClick = onClick, onLongClick = onLongClick)
+                } else {
+                    m.clickable(onClick = onClick)
+                }
+            }
             .padding(start = 4.dp, top = 4.dp, end = 8.dp, bottom = 4.dp),
         verticalAlignment = Alignment.CenterVertically,
         horizontalArrangement = Arrangement.spacedBy(4.dp)
@@ -236,7 +247,12 @@ fun HistoryItem(
 }
 
 @Composable
-private fun HistoryRow(modifier: Modifier = Modifier, history: List<History>, onClick: (History) -> Unit) {
+private fun HistoryRow(
+    modifier: Modifier = Modifier,
+    history: List<History>,
+    onClick: (History) -> Unit,
+    onLongClick: (History) -> Unit,
+) {
     var expandHistoryForum by rememberSaveable { mutableStateOf(true) }
 
     val degrees by animateFloatAsState(
@@ -277,7 +293,8 @@ private fun HistoryRow(modifier: Modifier = Modifier, history: List<History>, on
                         avatar = { Avatar(data = it.avatar, size = Sizes.Tiny) },
                         color = colorScheme.surfaceContainer,
                         contentColor = colorScheme.onSurface,
-                        onClick = { onClick(it) }
+                        onClick = { onClick(it) },
+                        onLongClick = { onLongClick(it) },
                     )
                 }
             }
@@ -491,6 +508,14 @@ fun AnimatedVisibilityScope.HomePage(
         val onHistoryClickedListener: (History) -> Unit = {
             navigator.navigateDebounced(route = Destination.Forum(forumName = it.name))
         }
+        val context = LocalContext.current
+        val historyLongPressDelete = LocalUISettings.current.historyLongPressDelete
+        val onHistoryLongPressListener: (History) -> Unit = {
+            if (historyLongPressDelete) {
+                DeviceUtils.run { context.vibrateOneShot() }
+                viewModel.deleteHistory(it)
+            }
+        }
 
         val onUnfollow: (LikedForum) -> Unit = {
             unfollowForum = it
@@ -542,7 +567,11 @@ fun AnimatedVisibilityScope.HomePage(
                 ) {
                     historyForums?.takeUnless { it.isEmpty() }?.let {
                         item(key = ForumType.History.hashCode(), DefaultGridSpan, { ForumType.History }) {
-                            HistoryRow(history = it, onClick = onHistoryClickedListener)
+                            HistoryRow(
+                                history = it,
+                                onClick = onHistoryClickedListener,
+                                onLongClick = onHistoryLongPressListener,
+                            )
                         }
                     }
 

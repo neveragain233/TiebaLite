@@ -20,6 +20,7 @@ import androidx.compose.material.icons.outlined.BlurOn
 import androidx.compose.material.icons.outlined.ColorLens
 import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
+import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FontDownload
 import androidx.compose.material.icons.outlined.House
 import androidx.compose.material.icons.outlined.Houseboat
@@ -201,6 +202,13 @@ fun UISettingsPage(
                 property = UISettings::showHistoryInHome,
                 title = R.string.settings_home_page_show_history_forum,
                 leadingIcon = Icons.Outlined.WatchLater
+            )
+
+            toggleablePreference(
+                property = UISettings::historyLongPressDelete,
+                title = R.string.settings_home_page_long_press_history_forum_delete,
+                leadingIcon = Icons.Outlined.Delete,
+                enabled = currentPreference.showHistoryInHome,
             )
 
             toggleablePreference(
