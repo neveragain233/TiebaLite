@@ -100,6 +100,12 @@ android {
             initWith(getByName("benchmarkRelease"))
             applicationIdSuffix = ".ci"
         }
+
+        // Debug variant, suffixed so it can coexist with release on the same device
+        debug {
+            applicationIdSuffix = ".dev"
+            versionNameSuffix = "-dev"
+        }
     }
 
     compileOptions {
@@ -132,6 +138,14 @@ android {
     }
 
     namespace = "com.huanchengfly.tieba.post"
+}
+
+androidComponents {
+    onVariants(selector().withBuildType("debug")) { variant ->
+        variant.outputs.forEach { output ->
+            output.outputFileName.set("app-${variant.buildType}-dev.apk")
+        }
+    }
 }
 
 kotlin {
