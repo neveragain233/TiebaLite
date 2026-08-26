@@ -238,6 +238,12 @@ fun UISettingsPage(
             )
 
             toggleablePreference(
+                property = UISettings::subPostsInDualPane,
+                title = R.string.settings_thread_subposts_keep_in_dual_pane,
+                leadingIcon = Icons.Outlined.ViewColumn,
+            )
+
+            toggleablePreference(
                 property = UISettings::compactReplyBar,
                 title = R.string.settings_compact_reply_bar,
                 summary = R.string.summary_compact_reply_bar,

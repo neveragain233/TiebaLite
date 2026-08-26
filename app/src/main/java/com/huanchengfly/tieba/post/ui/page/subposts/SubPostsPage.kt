@@ -128,11 +128,12 @@ fun SubPostsSheetPage(
 fun SubPostsPage(
     params: SubPosts,
     navigator: NavController,
-    viewModel: SubPostsViewModel = hiltViewModel()
+    viewModel: SubPostsViewModel = hiltViewModel(),
+    onBack: () -> Unit = navigator::navigateUp,
 ) {
     ProvideNavigator(navigator) {
         with(params) {
-            SubPostsContent(viewModel, threadId, postId, isSheet = false, navigator::navigateUp)
+            SubPostsContent(viewModel, threadId, postId, isSheet = false, onBack)
         }
     }
 }

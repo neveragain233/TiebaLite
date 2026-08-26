@@ -281,6 +281,7 @@ fun ThreadPage(
     detailPaneExpanded: Boolean = false,
     onToggleDetailPane: (() -> Unit)? = null,
     onOpenForum: ((Destination.Forum) -> Unit)? = null,
+    onOpenSubPosts: ((Destination.SubPosts) -> Unit)? = null,
 ) = trace(MacrobenchmarkConstant.TRACE_THREAD) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -601,7 +602,9 @@ fun ThreadPage(
 
             is ThreadUiEvent.ToReplyDestination -> navigator.navigateDebounced(it.direction)
 
-            is ThreadUiEvent.ToSubPostsDestination -> navigator.navigateDebounced(it.direction)
+            is ThreadUiEvent.ToSubPostsDestination -> {
+                onOpenSubPosts?.invoke(it.direction) ?: navigator.navigateDebounced(it.direction)
+            }
 
             is ThreadLikeUiEvent -> it.toMessage(context)
 

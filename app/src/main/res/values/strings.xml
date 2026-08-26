@@ -575,6 +575,7 @@
     <string name="dialog_content_rule_restore_to">恢复至 %s 的状态</string>
     <string name="settings_home_page_show_history_forum">显示最近逛的吧</string>
     <string name="settings_home_page_long_press_history_forum_delete">长按删除经过的贴吧</string>
+    <string name="settings_thread_subposts_keep_in_dual_pane">双栏进楼中楼保持双栏</string>
     <string name="settings_group_account_edit">账号修改</string>
     <string name="settings_group_account_expire">登录状态失效</string>
     <string name="settings_group_cache">缓存</string>

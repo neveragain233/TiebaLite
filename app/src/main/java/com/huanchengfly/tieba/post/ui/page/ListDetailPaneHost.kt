@@ -18,6 +18,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.runtime.saveable.rememberSaveableStateHolder
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.compositionLocalOf
 import androidx.compose.ui.Alignment
@@ -39,6 +40,7 @@ import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isPhoneDevice
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadPage
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadViewModel
+import com.huanchengfly.tieba.post.ui.page.subposts.SubPostsPage
 import com.huanchengfly.tieba.post.ui.page.main.LocalMainNavState
 import androidx.window.core.layout.WindowSizeClass
 import kotlinx.serialization.Serializable
@@ -84,8 +86,13 @@ fun ListDetailPaneHost(
     val isCompact = isPhoneDevice()
     val detailNavController = rememberNavController()
     val detailEntry by detailNavController.currentBackStackEntryAsState()
-    val isDetailShowing = detailEntry?.destination?.hasRoute<Destination.Thread>() == true
+    // 详情面板里有内容(帖子或楼中楼)都视为「详情已显示」, 否则 SubPosts 在栈顶时返回会
+    // 触发宿主 BackHandler 被禁用而穿透到根导航, 导致直接退回首页
+    val isDetailShowing = detailEntry?.destination?.hasRoute<Destination.Thread>() == true ||
+            detailEntry?.destination?.hasRoute<Destination.SubPosts>() == true
     var detailExpanded by rememberSaveable { mutableStateOf(false) }
+    // 列表层状态(选中 tab + 各 tab 滚动位置): 全屏详情时列表移出组合, 用 holder 留存
+    val listPaneHolder = rememberSaveableStateHolder()
     val uiSettings = LocalUISettings.current
     val effectiveStartSplit =
         startSplit || (respectLargeScreenDefaultSplit && uiSettings.largeScreenDefaultSplit)
@@ -195,6 +202,13 @@ fun ListDetailPaneHost(
                         onToggleDetailPane = if (isCompact) null else {
                             { detailExpanded = !detailExpanded }
                         },
+                        onOpenSubPosts = { subPosts ->
+                            if (!isCompact && uiSettings.subPostsInDualPane) {
+                                detailNavController.navigate(subPosts.copy(isSheet = false))
+                            } else {
+                                navigator.navigateDebounced(subPosts)
+                            }
+                        },
                         onBack = {
                             if (!isCompact && detailExpanded) {
                                 // 全屏详情先收起到双栏
@@ -206,6 +220,15 @@ fun ListDetailPaneHost(
                     )
                 }
             }
+            composable<Destination.SubPosts> { backStackEntry ->
+                val params = backStackEntry.toRoute<Destination.SubPosts>()
+                SubPostsPage(
+                    params = params,
+                    // 内容导航(回复/用户)走根导航, 返回则停在面板栈内
+                    navigator = navigator,
+                    onBack = { detailNavController.popBackStack() },
+                )
+            }
         }
     }
 
@@ -214,11 +237,16 @@ fun ListDetailPaneHost(
         LocalDetailPaneOpen provides isDetailShowing,
     ) {
         Box(modifier = modifier.fillMaxSize()) {
-            // 列表层
+            // 列表层: 用 SaveableStateHolder 包住, 全屏详情时列表移出组合也能保留
+            // 选中 tab 与各 tab 滚动位置, 回到双栏时恢复, 避免 pager 在 0 宽下跑飞
             when {
                 isCompact && isDetailShowing -> Unit
-                isCompact -> listPane(openThread)
-                !showSplit -> listPane(openThread)
+                isCompact -> listPaneHolder.SaveableStateProvider(ForumListPaneKey) {
+                    listPane(openThread)
+                }
+                !showSplit -> listPaneHolder.SaveableStateProvider(ForumListPaneKey) {
+                    listPane(openThread)
+                }
                 isDetailShowing && detailExpanded -> Unit
                 else -> {
                     // 分屏: 列表占左半
@@ -228,7 +256,9 @@ fun ListDetailPaneHost(
                             .fillMaxHeight()
                             .align(Alignment.CenterStart)
                     ) {
-                        listPane(openThread)
+                        listPaneHolder.SaveableStateProvider(ForumListPaneKey) {
+                            listPane(openThread)
+                        }
                         VerticalDivider(
                             modifier = Modifier
                                 .align(Alignment.CenterEnd)
@@ -257,8 +287,8 @@ fun ListDetailPaneHost(
     }
 }
 
-/** 分屏时列表栏占窗口宽度比例. */
-private const val ListPaneFraction = 0.45f
+/** 列表层在 SaveableStateHolder 中使用的 key, 仅需与同宿主内其它条目区分. */
+private const val ForumListPaneKey = "ListDetailPaneForumList"
 
 @Composable
 private fun ListDetailPanePlaceholderContent() {
@@ -273,3 +303,5 @@ private fun ListDetailPanePlaceholderContent() {
         )
     }
 }
+/** 分屏时列表栏占窗口宽度比例. */
+private const val ListPaneFraction = 0.45f
