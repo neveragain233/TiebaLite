@@ -370,9 +370,11 @@ fun ThreadPage(
             lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
         }.collect {
             if (!navScrollActive) {
-                val newAnchor = lazyListState.navigationAnchorPost(state)?.id
-                if (newAnchor != lastNavAnchorPostId) {
-                    lastNavAnchorPostId = newAnchor
+                // 仍在同一楼(即使滚得很深, 如楼主帖长图尾部)时不要重置站点进度,
+                // 否则会把下一楼误当成锚点, 导致回退多按一次
+                val lastItemIndex = lastNavAnchorPostId?.let { layout.itemIndexOf(it) }
+                if (lazyListState.firstVisibleItemIndex != lastItemIndex) {
+                    lastNavAnchorPostId = lazyListState.navigationAnchorPost(state)?.id
                     lastNavWaypointIndex = -1
                 }
             }
@@ -400,27 +402,56 @@ fun ThreadPage(
 
     // 把「展开长图」的某个站点(某张图/收起按钮)顶部对齐到置顶排序栏下方
     suspend fun scrollToWaypoint(itemIndex: Int, offsetWithinItem: Int) {
-        lazyListState.animateScrollToItem(itemIndex, scrollOffset = offsetWithinItem - stickyHeaderHeightPx)
+        // 楼主帖(第 0 项)上方没有置顶排序栏, 不需要让出; 其余楼才让出
+        val headerOffset = if (itemIndex > 0) stickyHeaderHeightPx else 0
+        lazyListState.animateScrollToItem(itemIndex, scrollOffset = offsetWithinItem - headerOffset)
+    }
+
+    // 这楼「楼顶(0) + 每张展开图 + 收起按钮」的站点坐标序列(升序)
+    fun imageNavPositions(postId: Long): List<Int> = listOf(0) + imageNavWaypoints[postId].orEmpty()
+
+    // 跳到某楼: 下一楼从楼顶进入, 上一楼(回到已展开长图的楼)先落到收起按钮
+    fun scrollToFloorOrPos(target: Long, direction: CommentNavDirection) {
+        val targetIndex = layout.itemIndexOf(target) ?: return
+        val targetPositions = imageNavPositions(target)
+        lastNavAnchorPostId = target
+        lastNavWaypointIndex = when {
+            targetPositions.size > 1 ->
+                if (direction == CommentNavDirection.NEXT) 0 else targetPositions.size - 1
+            else -> -1
+        }
+        navScrollActive = true
+        coroutineScope.launch {
+            if (targetPositions.size > 1 && direction == CommentNavDirection.PREV) {
+                scrollToWaypoint(targetIndex, targetPositions.last())
+            } else {
+                scrollToPost(targetIndex)
+            }
+            navScrollActive = false
+            resetCommentNavDock()
+        }
     }
 
     fun requestNavigateComment(direction: CommentNavDirection) {
         val anchorId = lastNavAnchorPostId?.takeIf { it in layout.orderedPostIds }
             ?: lazyListState.navigationAnchorPost(state)?.id
             ?: return
-        // 长图展开: 当前楼有展开站点时, 先逐站前进/后退, 走完才跳楼
-        val waypoints = imageNavWaypoints[anchorId].orEmpty()
+        // 长图展开: 当前楼有站点时, 下键顺着楼顶→图→收起走, 上键镜像(收起→图→楼顶), 走完才跳楼
+        val positions = imageNavPositions(anchorId)
         val itemIndex = layout.itemIndexOf(anchorId)
-        if (waypoints.isNotEmpty() && itemIndex != null) {
+        if (positions.size > 1 && itemIndex != null) {
             val curStep = if (lastNavAnchorPostId == anchorId) lastNavWaypointIndex else -1
             when (direction) {
                 CommentNavDirection.NEXT -> {
-                    if (curStep < waypoints.size - 1) {
+                    if (curStep < positions.size - 1) {
                         val next = curStep + 1
-                        navScrollActive = true
-                        coroutineScope.launch {
-                            scrollToWaypoint(itemIndex, waypoints[next])
-                            navScrollActive = false
-                            resetCommentNavDock()
+                        if (next > 0) {
+                            navScrollActive = true
+                            coroutineScope.launch {
+                                scrollToWaypoint(itemIndex, positions[next])
+                                navScrollActive = false
+                                resetCommentNavDock()
+                            }
                         }
                         lastNavAnchorPostId = anchorId
                         lastNavWaypointIndex = next
@@ -432,7 +463,7 @@ fun ThreadPage(
                         val prev = curStep - 1
                         navScrollActive = true
                         coroutineScope.launch {
-                            scrollToWaypoint(itemIndex, waypoints[prev])
+                            scrollToWaypoint(itemIndex, positions[prev])
                             navScrollActive = false
                             resetCommentNavDock()
                         }
@@ -453,16 +484,7 @@ fun ThreadPage(
                     viewModel.requestLoadMore()
                 }
             }
-            layout.itemIndexOf(target)?.let { targetIndex ->
-                lastNavAnchorPostId = target
-                lastNavWaypointIndex = -1
-                navScrollActive = true
-                coroutineScope.launch {
-                    scrollToPost(targetIndex)
-                    navScrollActive = false
-                    resetCommentNavDock()
-                }
-            }
+            scrollToFloorOrPos(target, direction)
             return
         }
         // 处于边界: 决定是触发加载, 还是回跳楼主帖 / 提示已到首末楼
@@ -506,10 +528,21 @@ fun ThreadPage(
         val newLayout = buildThreadListLayout(state)
         val target = newLayout.targetPostId(pending.anchorPostId, pending.direction)
         if (target != null) {
+            val targetPositions = listOf(0) + imageNavWaypoints[target].orEmpty()
             lastNavAnchorPostId = target
-            lastNavWaypointIndex = -1
+            lastNavWaypointIndex = when {
+                targetPositions.size > 1 ->
+                    if (pending.direction == CommentNavDirection.NEXT) 0 else targetPositions.size - 1
+                else -> -1
+            }
             navScrollActive = true
-            newLayout.itemIndexOf(target)?.let { scrollToPost(it) }
+            newLayout.itemIndexOf(target)?.let { targetIndex ->
+                if (targetPositions.size > 1 && pending.direction == CommentNavDirection.PREV) {
+                    scrollToWaypoint(targetIndex, targetPositions.last())
+                } else {
+                    scrollToPost(targetIndex)
+                }
+            }
             navScrollActive = false
             resetCommentNavDock()
             pendingCommentNav = null
