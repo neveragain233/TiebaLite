@@ -75,6 +75,7 @@ class LongImageNavContext(
     val postId: Long,
     val itemTopY: () -> Int,
     val report: (List<Int>) -> Unit,
+    val topInsetPx: Int,
 )
 
 internal val LocalLongImageNavContext = compositionLocalOf<LongImageNavContext?> { null }
@@ -101,6 +102,18 @@ fun PostContentRenders(
     contentRenders: List<PbContentRender>,
     photoViewDataProvider: ((List<PicContentRender>, Int) -> PhotoViewData?)? = null,
 ) {
+    // 统计这楼里有几组连续图片, 用于收起时决定回楼顶还是回本组位置
+    var groupCount = 0
+    var scan = 0
+    while (scan < contentRenders.size) {
+        if (contentRenders[scan] is PicContentRender) {
+            groupCount++
+            while (scan < contentRenders.size && contentRenders[scan] is PicContentRender) scan++
+        } else {
+            scan++
+        }
+    }
+    val isSoleGroup = groupCount == 1
     var index = 0
     while (index < contentRenders.size) {
         val render = contentRenders[index]
@@ -110,6 +123,7 @@ fun PostContentRenders(
             PostImageGroup(
                 pics = contentRenders.subList(index, end).filterIsInstance<PicContentRender>(),
                 photoViewDataProvider = photoViewDataProvider,
+                isSoleGroup = isSoleGroup,
             )
             index = end
         } else {
@@ -126,6 +140,7 @@ fun PostContentRenders(
 fun PostImageGroup(
     pics: List<PicContentRender>,
     photoViewDataProvider: ((List<PicContentRender>, Int) -> PhotoViewData?)? = null,
+    isSoleGroup: Boolean = true,
 ) {
     if (pics.size == 1) {
         SinglePostImage(pic = pics[0], photoViewDataProvider = photoViewDataProvider)
@@ -178,10 +193,17 @@ fun PostImageGroup(
                             expanded = false
                             // 收起后清除站点, 上下楼导航不再按图逐站
                             navContext?.report(emptyList())
-                            // 收起后跳回所在帖项, 避免被长图高度变化甩到列表末尾
+                            // 收起后跳回所在帖项并让出置顶排序栏, 避免用户名被裁
+                            // 多组图时回本组位置, 单组图/评论楼回楼顶
                             listState?.let {
+                                val topInset = navContext?.topInsetPx ?: 0
+                                val targetOffset =
+                                        (if (isSoleGroup) 0 else (waypointOffsets[0] ?: 0)) - topInset
                                 scope.launch {
-                                    it.animateScrollToItem(it.firstVisibleItemIndex)
+                                    it.animateScrollToItem(
+                                        it.firstVisibleItemIndex,
+                                        scrollOffset = targetOffset,
+                                    )
                                 }
                             }
                         },

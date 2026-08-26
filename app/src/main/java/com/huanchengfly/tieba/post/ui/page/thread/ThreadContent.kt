@@ -304,6 +304,7 @@ fun StateScreenScope.ThreadContent(
     topAppBarScrollBehavior: TopAppBarScrollBehavior,
     layout: ThreadListLayout,
     useStickyHeader: Boolean, // Bug: StickyHeader doesn't respect content padding
+    topBarInsetPx: Int,
     onImageNavWaypoints: ((Long, List<Int>) -> Unit)? = null,
 ) {
     val navigator = LocalNavController.current
@@ -341,7 +342,7 @@ fun StateScreenScope.ThreadContent(
                     ThreadListSegment.FirstPost -> item(key = Type.FirstPost.key, contentType = Type.FirstPost) {
                         val firstPost = state.firstPost ?: return@item
                         Column {
-                            PostCardItem(viewModel, firstPost, localUid, collectPid, onImageNavWaypoints)
+                            PostCardItem(viewModel, firstPost, localUid, collectPid, topBarInsetPx, onImageNavWaypoints)
 
                             state.thread?.originThreadInfo?.let { info ->
                                 OriginThreadCard(
@@ -408,11 +409,11 @@ fun StateScreenScope.ThreadContent(
                         val posts = segment.posts
                         if (segment.source == PostSource.DATA) {
                             items(items = posts, key = { it.id }, contentType = { Type.Post }) { post ->
-                                PostCardItem(viewModel, post, localUid, collectPid, onImageNavWaypoints)
+                                PostCardItem(viewModel, post, localUid, collectPid, topBarInsetPx, onImageNavWaypoints)
                             }
                         } else {
                             items(items = posts, key = { post -> "LatestPost_${post.id}" }) { post ->
-                                PostCardItem(viewModel, post, localUid, collectPid, onImageNavWaypoints)
+                                PostCardItem(viewModel, post, localUid, collectPid, topBarInsetPx, onImageNavWaypoints)
                             }
                         }
                     }
@@ -478,6 +479,7 @@ private fun PostCardItem(
     post: PostData,
     localUid: Long?,
     collectPid: Long,
+    topBarInsetPx: Int,
     onImageNavWaypoints: ((Long, List<Int>) -> Unit)? = null,
 ) {
     val navigator = LocalNavController.current
@@ -491,7 +493,12 @@ private fun PostCardItem(
 
     CompositionLocalProvider(
         LocalLongImageNavContext provides onImageNavWaypoints?.let {
-            LongImageNavContext(post.id, { itemTopY.value }, { waypoints -> it(post.id, waypoints) })
+            LongImageNavContext(
+                postId = post.id,
+                itemTopY = { itemTopY.value },
+                report = { waypoints -> it(post.id, waypoints) },
+                topInsetPx = topBarInsetPx,
+            )
         },
     ) {
         Box(Modifier.onGloballyPositioned { itemTopY.value = it.positionInWindow().y.toInt() }) {

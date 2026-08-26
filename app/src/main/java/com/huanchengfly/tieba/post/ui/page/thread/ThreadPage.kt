@@ -838,6 +838,7 @@ fun ThreadPage(
                             topAppBarScrollBehavior = topAppBarScrollBehavior,
                             layout = layout,
                             useStickyHeader = useStickyHeader && !useStickyHeaderWorkaround,
+                            topBarInsetPx = stickyHeaderHeightPx,
                             onImageNavWaypoints = { postId, waypoints ->
                                 if (imageNavWaypoints[postId] != waypoints) {
                                     imageNavWaypoints[postId] = waypoints
