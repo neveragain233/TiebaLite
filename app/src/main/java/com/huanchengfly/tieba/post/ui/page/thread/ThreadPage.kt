@@ -188,6 +188,9 @@ private val ThreadToolbarScreenOffset = FloatingToolbarDefaults.ScreenOffset / 2
 /** 评论导航接近末尾多少楼时提前预加载下一页, 避免临界点再加载导致来回跳动. */
 private const val NavPreloadNearEnd = 3
 
+/** 判定「已到达某个长图站点」的容差: 站点落在视口顶边这条线以内即视为走过, 不再重复对齐. */
+private val NavWaypointToleranceDp = 8.dp
+
 const val ThreadResultKey = "THREAD_PAGE"
 
 private fun createResult(threadId: Long, like: Like?, markedPostId: Long?): ThreadResult? {
@@ -244,6 +247,19 @@ private fun LazyListState.middleVisiblePost(uiState: ThreadUiState): PostData? =
     // item key is Post ID
     val postId = postItem.key as Long
     return uiState.data.fastFirstOrNull { p -> p.id == postId } ?: uiState.firstPost
+}
+
+/**
+ * 该楼层顶部相对视口起始线的位移: >0 表示楼头已滚出视口, <0 表示楼头仍在视口内.
+ * 该楼层不在可见范围内时返回 null.
+ */
+private fun LazyListState.scrolledPastOffsetInItem(itemIndex: Int): Int? = layoutInfo.run {
+    val item = visibleItemsInfo.firstOrNull { it.index == itemIndex } ?: return null
+    if (itemIndex == firstVisibleItemIndex) {
+        firstVisibleItemScrollOffset
+    } else {
+        viewportStartOffset - item.offset
+    }
 }
 
 /**
@@ -309,7 +325,8 @@ fun ThreadPage(
     var pendingCommentNav by remember { mutableStateOf<PendingCommentNav?>(null) }
     // 上次导航跳转到的楼层, 作为下一次导航的锚点, 保证连续按 ▲▼ 逐楼前进
     var lastNavAnchorPostId by remember { mutableStateOf<Long?>(null) }
-    // 当前锚点楼层在「长图展开」站点中的进度(0..n 为各图, 最后一站是收起按钮); -1 表示未进入
+    // 最近一次导航落到的「长图展开」站点下标(-1 表示未进入站点序列).
+    // 只作为导航滚动进行中的目标记忆, 静止时以实测视口反查为准, 见 [waypointStep]
     var lastNavWaypointIndex by remember { mutableStateOf(-1) }
     // 各楼层经 onGloballyPositioned 上报的展开长图站点(升序 item 内偏移), 供导航逐站前进
     val imageNavWaypoints = remember { mutableStateMapOf<Long, List<Int>>() }
@@ -323,6 +340,7 @@ fun ThreadPage(
             with(density) { 36.dp.roundToPx() }
         )
     }
+    val navWaypointTolerancePx = with(density) { NavWaypointToleranceDp.roundToPx() }
     // 评论导航坞与回复栏一致: 内容向下滚动时隐藏, 直到向上滚动才恢复
     val commentNavHidden by remember {
         derivedStateOf { toolbarScrollBehavior.state.collapsedFraction >= 0.9f }
@@ -401,15 +419,38 @@ fun ThreadPage(
         }
     }
 
+    // 长图站点/楼层对齐时, 目标位置相对视口起始线要让出的高度:
+    // 楼主帖(第 0 项)上方没有置顶排序栏, 不让位; 其余楼让出排序栏高度.
+    // 滚动定位与站点进度反查共用此规则, 避免两处基准线漂移
+    fun navAlignOffsetPx(itemIndex: Int): Int =
+        if (itemIndex > 0) stickyHeaderHeightPx else 0
+
     // 把「展开长图」的某个站点(某张图/收起按钮)顶部对齐到置顶排序栏下方
     suspend fun scrollToWaypoint(itemIndex: Int, offsetWithinItem: Int) {
-        // 楼主帖(第 0 项)上方没有置顶排序栏, 不需要让出; 其余楼才让出
-        val headerOffset = if (itemIndex > 0) stickyHeaderHeightPx else 0
-        lazyListState.animateScrollToItem(itemIndex, scrollOffset = offsetWithinItem - headerOffset)
+        lazyListState.animateScrollToItem(
+            itemIndex,
+            scrollOffset = offsetWithinItem - navAlignOffsetPx(itemIndex),
+        )
     }
 
     // 这楼「楼顶(0) + 每张展开图 + 收起按钮」的站点坐标序列(升序)
     fun imageNavPositions(postId: Long): List<Int> = listOf(0) + imageNavWaypoints[postId].orEmpty()
+
+    // 当前站点进度: 导航滚动动画期间沿用上次的目标站(避免动画未完时重复对齐同一站),
+    // 其余情况按实测视口反查, 使展开长图/手动滚动后的第一按就落在下一个真实站点
+    fun waypointStep(anchorId: Long, itemIndex: Int, positions: List<Int>): Int {
+        if (navScrollActive && lastNavAnchorPostId == anchorId) return lastNavWaypointIndex
+        val scrolledPast = lazyListState.scrolledPastOffsetInItem(itemIndex)
+            ?: return if (lastNavAnchorPostId == anchorId) lastNavWaypointIndex else -1
+        // 站点滚动时对齐到「置顶排序栏下沿」, 反查进度必须用同一条基准线:
+        // 否则刚对齐到某站会被「让出排序栏」的位移误判成还没走到, 又退化成要按两次
+        val alignLinePx = scrolledPast + navAlignOffsetPx(itemIndex)
+        return resolvedWaypointIndex(
+            positions,
+            alignLinePx.coerceAtLeast(0),
+            navWaypointTolerancePx,
+        )
+    }
 
     // 跳到某楼: 下一楼从楼顶进入, 上一楼(回到已展开长图的楼)先落到收起按钮
     fun scrollToFloorOrPos(target: Long, direction: CommentNavDirection) {
@@ -441,18 +482,22 @@ fun ThreadPage(
         val positions = imageNavPositions(anchorId)
         val itemIndex = layout.itemIndexOf(anchorId)
         if (positions.size > 1 && itemIndex != null) {
-            val curStep = if (lastNavAnchorPostId == anchorId) lastNavWaypointIndex else -1
+            val curStep = waypointStep(anchorId, itemIndex, positions)
             when (direction) {
                 CommentNavDirection.NEXT -> {
                     if (curStep < positions.size - 1) {
                         val next = curStep + 1
-                        if (next > 0) {
-                            navScrollActive = true
-                            coroutineScope.launch {
+                        navScrollActive = true
+                        coroutineScope.launch {
+                            // next == 0 仅在取不到该楼几何时出现(旧逻辑此处什么都不做, 会白按一下):
+                            // 按楼头对齐兜底, 保证每次按键都有可见结果
+                            if (next == 0) {
+                                scrollToPost(itemIndex)
+                            } else {
                                 scrollToWaypoint(itemIndex, positions[next])
-                                navScrollActive = false
-                                resetCommentNavDock()
                             }
+                            navScrollActive = false
+                            resetCommentNavDock()
                         }
                         lastNavAnchorPostId = anchorId
                         lastNavWaypointIndex = next

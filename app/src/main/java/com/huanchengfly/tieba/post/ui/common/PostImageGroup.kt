@@ -150,7 +150,10 @@ fun PostImageGroup(
         val hasLong = pics.any { it.isLongImage() }
         var expanded by rememberSaveable(pics) { mutableStateOf(false) }
         val navContext = LocalLongImageNavContext.current
-        // step -> item 内偏移; 最后一个 step 是收起按钮
+        // step -> item 内偏移; 最后一个 step 是收起按钮.
+        // 只能在 onGloballyPositioned 回调「当下」把坐标换算成标量存起来:
+        // 回调给的 LayoutCoordinates 是修饰符节点的 coordinator 实例, 会被对象池回收复用,
+        // 把它存下来到后面的帧再读, 拿到的是别的节点的坐标(实测偏移退化成 0/错值)
         val waypointOffsets = remember(pics) { mutableStateMapOf<Int, Int>() }
         fun recordWaypoint(step: Int, y: Float) {
             val context = navContext ?: return

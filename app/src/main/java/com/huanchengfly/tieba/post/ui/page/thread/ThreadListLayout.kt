@@ -166,6 +166,33 @@ data class ThreadListLayout(
     }
 }
 
+/**
+ * 依「视口已滚过该楼层顶部的像素数」反查当前已走完的最后一个长图展开站点下标.
+ *
+ * 站点进度不再靠按键次数累加: 展开长图或手动滚进某楼时进度是 -1, 累加会先空走一步
+ * 「楼顶」而画面纹丝不动(按一下 ▼ 没反应), 且滚得比记忆进度深时会往回滚. 改成按实测
+ * 视口反查, 每次按键都落在视口之下的下一个真实站点.
+ *
+ * @param positions 升序的 item 内站点偏移, 首项恒为楼顶 0
+ * @param scrolledPastPx 视口顶边相对该楼顶部已滚过的像素数(楼头仍在视口内时为 0)
+ * @param tolerancePx 判定「已到达」的容差, 吸收亚像素以及站点与楼顶重合(首张图紧贴楼头)
+ * @return 已走完的最后一个站点下标; [positions] 为空时返回 -1
+ */
+fun resolvedWaypointIndex(
+    positions: List<Int>,
+    scrolledPastPx: Int,
+    tolerancePx: Int = 0,
+): Int {
+    if (positions.isEmpty()) return -1
+    val limit = scrolledPastPx + tolerancePx
+    var lastReached = -1
+    for (index in positions.indices) {
+        if (positions[index] > limit) break
+        lastReached = index
+    }
+    return lastReached
+}
+
 /** 由 [ThreadUiState] 构建 [ThreadListLayout]. */
 fun buildThreadListLayout(state: ThreadUiState): ThreadListLayout =
     ThreadListLayout(

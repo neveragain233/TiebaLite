@@ -7,7 +7,19 @@ import com.huanchengfly.tieba.post.ui.models.ThreadInfoData
 import com.huanchengfly.tieba.post.ui.models.UserData
 import org.junit.Assert.assertEquals
 import org.junit.Assert.assertNull
+import org.junit.Assert.assertTrue
 import org.junit.Test
+
+/**
+ * 模拟「下键」在站点序列里的落点: 按实测视口反查已走完的最后一站, 返回下一站偏移;
+ * 站点走完(含恰好停在最后一站)时返回 null, 表示该跳楼了.
+ */
+private fun nextWaypointOffset(positions: List<Int>, scrolledPastPx: Int): Int? {
+    val step = resolvedWaypointIndex(positions, scrolledPastPx, NavWaypointToleranceTestPx)
+    return positions.getOrNull(step + 1)
+}
+
+private const val NavWaypointToleranceTestPx = 24
 
 private fun post(id: Long): PostData = PostData(
     id = id,
@@ -160,5 +172,74 @@ class ThreadListLayoutTest {
         assertNull(layout.targetPostId(1L, CommentNavDirection.NEXT))
         assertNull(layout.targetPostId(1L, CommentNavDirection.PREV))
         assertEquals(0, layout.itemIndexOf(1L))
+    }
+    @Test
+    fun waypointIndex_walksSitesAlreadyBehindViewport() {
+        val positions = listOf(0, 100, 200, 300)
+
+        // 展开长图后视口停在楼内 250px: 楼顶/图1/图2 都已走过, 进度应为下标 2,
+        // 下键下一站是收起按钮(下标 3) —— 而不是旧逻辑那样先空走一步没有动作
+        assertEquals(2, resolvedWaypointIndex(positions, scrolledPastPx = 250, tolerancePx = 24))
+        assertEquals(300, nextWaypointOffset(positions, scrolledPastPx = 250))
+    }
+
+    @Test
+    fun waypointIndex_skipsSiteGluedToPostTop() {
+        // 首张图紧贴楼顶, 两个站点落在容差内: 不能被当成「还没走过」而原地不动
+        val positions = listOf(0, 5, 300)
+
+        assertEquals(1, resolvedWaypointIndex(positions, scrolledPastPx = 0, tolerancePx = 24))
+        assertEquals(300, nextWaypointOffset(positions, scrolledPastPx = 0))
+    }
+
+    @Test
+    fun waypointIndex_countsSiteAlignedUnderSortBar() {
+        // 站点滚到置顶排序栏下沿时, 楼头实际比基准线多滚出一段排序栏高度(此处 94px).
+        // 反查用同一条基准线, 该站才算「已到达」, 再按 ▼ 直接去下一站而不是重对齐
+        val positions = listOf(0, 100, 200, 300)
+
+        assertEquals(
+            2,
+            resolvedWaypointIndex(positions, scrolledPastPx = 106 + 94, tolerancePx = 24),
+        )
+        assertEquals(300, nextWaypointOffset(positions, scrolledPastPx = 106 + 94))
+    }
+
+    @Test
+    fun waypointIndex_noSitesOrExhausted() {
+        assertEquals(-1, resolvedWaypointIndex(emptyList(), scrolledPastPx = 500, tolerancePx = 24))
+        // 走完最后一站后进度落在末位, 调用方据此回退到「跳楼」分支
+        assertEquals(
+            3,
+            resolvedWaypointIndex(listOf(0, 100, 200, 300), scrolledPastPx = 900, tolerancePx = 24),
+        )
+        assertNull(nextWaypointOffset(listOf(0, 100, 200, 300), scrolledPastPx = 900))
+    }
+
+    @Test
+    fun waypointWalk_eachPressMovesForward() {
+        // 从楼顶逐站走完一整楼: 每次按键的目标都必须严格大于当前视口位置, 即不存在白按一下
+        val positions = listOf(0, 100, 200, 300)
+        var scrollPosition = 0
+        val visited = mutableListOf<Int>()
+        repeat(positions.size) {
+            val next = nextWaypointOffset(positions, scrollPosition) ?: return@repeat
+            assertTrue("每次按 ▼ 都应向下移动到下一个站点", next > scrollPosition)
+            scrollPosition = next
+            visited += next
+        }
+
+        assertEquals(listOf(100, 200, 300), visited)
+    }
+
+    @Test
+    fun waypointWalk_recoversAfterManualScroll() {
+        // 导航落到某楼(进度记忆为 0)后用户手动滚到楼层深处,
+        // 再按下 ▼ 应当顺着实测视口继续往下, 而不是回到第一个站点
+        val positions = listOf(0, 100, 200, 300)
+
+        assertEquals(300, nextWaypointOffset(positions, scrolledPastPx = 250))
+        // 对齐到最后一站之后再按下, 站点走完 -> 无下一站, 交给跳楼分支
+        assertNull(nextWaypointOffset(positions, scrolledPastPx = 300))
     }
 }
