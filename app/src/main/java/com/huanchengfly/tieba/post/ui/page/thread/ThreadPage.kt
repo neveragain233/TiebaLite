@@ -338,7 +338,7 @@ fun ThreadPage(
     LaunchedEffect(state.sortType) {
         commentNavDirection = CommentNavDirection.NEXT
     }
-    // 导航键自身触发的滚动进行中; 期间不隐藏导航键
+    // 导航键自身触发的滚动进行中; 期间不更新导航锚点记忆
     var navScrollActive by remember { mutableStateOf(false) }
     // 置顶排序栏(StickyHeaderOverlay)高度: 上下楼导航时让出, 避免目标楼层用户名/头像被裁
     // 先给一个基于密度的兜底值(首次导航时排序栏尚未显示/测量), 显示后被 onGloballyPositioned 校准
@@ -352,17 +352,12 @@ fun ThreadPage(
         )
     }
     val navWaypointTolerancePx = with(density) { NavWaypointToleranceDp.roundToPx() }
-    // 评论导航坞与回复栏一致: 内容向下滚动时隐藏, 直到向上滚动才恢复
-    val commentNavHidden by remember {
-        derivedStateOf { toolbarScrollBehavior.state.collapsedFraction >= 0.9f }
-    }
-    val hideCommentNav = commentNavHidden && !navScrollActive
     // 单键导航到底态: 列表已滚动到最底且无后续分页(正序=最后一楼, 倒序=最早已加载楼).
     // 响应式判定而非按键累积, 到达底部立即变为「回顶」, 不需要把边界状态按出来
     val commentNavAtEnd = LocalUISettings.current.commentNavSingleKey &&
             !state.pageData.hasMore &&
             !lazyListState.canScrollForward
-    // 导航键触发程序化滚动后, 复位回复栏收起状态, 保证连续导航不被隐藏
+    // 程序化导航滚动开始时复位回复栏/导航坞收起位移, 保证按键后两者立即恢复可见
     fun resetCommentNavDock() {
         toolbarScrollBehavior.state.contentOffset = 0f
         toolbarScrollBehavior.state.offset = 0f
@@ -378,10 +373,10 @@ fun ThreadPage(
     val scrollToTop: () -> Unit = {
         lastNavAnchorPostId = null
         navScrollActive = true
+        resetCommentNavDock()
         coroutineScope.launch {
             lazyListState.scrollToItem(0)
             navScrollActive = false
-            resetCommentNavDock()
         }
     }
 
@@ -479,6 +474,7 @@ fun ThreadPage(
             else -> -1
         }
         navScrollActive = true
+        resetCommentNavDock()
         coroutineScope.launch {
             if (targetPositions.size > 1 && direction == CommentNavDirection.PREV) {
                 scrollToWaypoint(targetIndex, targetPositions.last())
@@ -486,7 +482,6 @@ fun ThreadPage(
                 scrollToPost(targetIndex)
             }
             navScrollActive = false
-            resetCommentNavDock()
         }
     }
 
@@ -504,6 +499,7 @@ fun ThreadPage(
                     if (curStep < positions.size - 1) {
                         val next = curStep + 1
                         navScrollActive = true
+                        resetCommentNavDock()
                         coroutineScope.launch {
                             // next == 0 仅在取不到该楼几何时出现(旧逻辑此处什么都不做, 会白按一下):
                             // 按楼头对齐兜底, 保证每次按键都有可见结果
@@ -513,7 +509,6 @@ fun ThreadPage(
                                 scrollToWaypoint(itemIndex, positions[next])
                             }
                             navScrollActive = false
-                            resetCommentNavDock()
                         }
                         lastNavAnchorPostId = anchorId
                         lastNavWaypointIndex = next
@@ -524,10 +519,10 @@ fun ThreadPage(
                     if (curStep > 0) {
                         val prev = curStep - 1
                         navScrollActive = true
+                        resetCommentNavDock()
                         coroutineScope.launch {
                             scrollToWaypoint(itemIndex, positions[prev])
                             navScrollActive = false
-                            resetCommentNavDock()
                         }
                         lastNavAnchorPostId = anchorId
                         lastNavWaypointIndex = prev
@@ -568,12 +563,12 @@ fun ThreadPage(
                             ?.let { it.offset + it.size - info.viewportEndOffset + contentBottomPaddingPx }
                             ?: 0f
                         navScrollActive = true
+                        resetCommentNavDock()
                         coroutineScope.launch {
                             if (bottomDelta > 0f) {
                                 lazyListState.animateScrollBy(bottomDelta)
                             }
                             navScrollActive = false
-                            resetCommentNavDock()
                         }
                     }
                     else -> context.toastShort(R.string.tip_no_more_comment)
@@ -596,10 +591,10 @@ fun ThreadPage(
                             lastNavAnchorPostId = layout.firstPostId
                             lastNavWaypointIndex = -1
                             navScrollActive = true
+                            resetCommentNavDock()
                             coroutineScope.launch {
                                 scrollToPost(firstPostIndex)
                                 navScrollActive = false
-                                resetCommentNavDock()
                             }
                         }
                     }
@@ -622,6 +617,7 @@ fun ThreadPage(
                 else -> -1
             }
             navScrollActive = true
+            resetCommentNavDock()
             newLayout.itemIndexOf(target)?.let { targetIndex ->
                 if (targetPositions.size > 1 && pending.direction == CommentNavDirection.PREV) {
                     scrollToWaypoint(targetIndex, targetPositions.last())
@@ -630,7 +626,6 @@ fun ThreadPage(
                 }
             }
             navScrollActive = false
-            resetCommentNavDock()
             pendingCommentNav = null
         }
     }
@@ -1021,8 +1016,15 @@ fun ThreadPage(
                         onPrev = { requestNavigateComment(CommentNavDirection.PREV) },
                         onNext = { requestNavigateComment(CommentNavDirection.NEXT) },
                         showCommentNav = commentNavEnabled,
-                        hideCommentNav = hideCommentNav,
                         onPrevLongPress = scrollToTop,
+                        // 与紧凑回复栏同源: 随 scrollBehavior 位移隐藏(逐帧跟随, 无阈值竞态);
+                        // 纵向坞(完整回复栏)无法被平移完全遮没, 额外按收起比例淡出
+                        hideOffset = { -toolbarScrollBehavior.state.offset },
+                        hideAlpha = if (compactReplyBar) {
+                            null
+                        } else {
+                            { 1f - toolbarScrollBehavior.state.collapsedFraction }
+                        },
                         onToggleDetailPane = fullscreenToggle,
                         detailPaneExpanded = detailPaneExpanded,
                     )

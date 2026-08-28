@@ -1,8 +1,5 @@
 package com.huanchengfly.tieba.post.ui.page.thread
 
-import androidx.compose.animation.AnimatedVisibility
-import androidx.compose.animation.fadeIn
-import androidx.compose.animation.fadeOut
 import androidx.compose.foundation.background
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Box
@@ -50,6 +47,10 @@ private val NavDockShadowElevation = 6.dp
  *
  * 聚合「上一楼 / 下一楼」评论导航与「全屏/收起」详情切换.
  *
+ * 隐藏动效与紧凑回复栏同源: 由调用方传入基于 [androidx.compose.material3.FloatingToolbarScrollBehavior]
+ * 位移的 lambda, 在 graphicsLayer 中逐帧读取, 与回复栏完全同步, 无阈值状态竞态.
+ * 不直接复用 Modifier.floatingScrollBehavior(), 因其会按自身父布局重算并覆盖共享的 offsetLimit.
+ *
  * @param horizontal 紧凑回复栏模式: 上下楼键横排, 与紧凑栏同高同配色, 全屏键排末尾
  * @param singleKey 单键模式: 单击沿方向推进, 到底变为回顶键
  * @param navDirection 单键模式当前方向(决定图标与语义)
@@ -61,10 +62,11 @@ private val NavDockShadowElevation = 6.dp
  * @param onPrev 上一楼
  * @param onNext 下一楼
  * @param showCommentNav 是否显示评论导航按钮(与全屏切换解耦)
- * @param hideCommentNav 滚动时是否隐藏评论导航按钮(全屏切换不隐藏)
  * @param onPrevLongPress 按住上一楼时的回调(回顶)
  * @param onToggleDetailPane 全屏/收起详情切换; 为 null 时不显示(如紧凑窗口或样式为 TOP_BAR/NONE)
  * @param detailPaneExpanded 详情当前是否全屏
+ * @param hideOffset 隐藏位移(px, 向下平移量), 在 graphicsLayer 中逐帧读取; null 表示不平移
+ * @param hideAlpha 隐藏透明度(0..1), 在 graphicsLayer 中逐帧读取; null 表示不淡出
  */
 @OptIn(ExperimentalFoundationApi::class)
 @Composable
@@ -81,142 +83,107 @@ fun ThreadNavigationDock(
     onReverse: (() -> Unit)? = null,
     onJumpToTop: (() -> Unit)? = null,
     showCommentNav: Boolean = true,
-    hideCommentNav: Boolean = false,
     onPrevLongPress: (() -> Unit)? = null,
     onToggleDetailPane: (() -> Unit)? = null,
     detailPaneExpanded: Boolean = false,
+    hideOffset: (() -> Float)? = null,
+    hideAlpha: (() -> Float)? = null,
 ) {
     val showFullscreen = onToggleDetailPane != null
-    val navVisible = showCommentNav && !hideCommentNav
-    // 没有评论导航按钮且没有全屏按键时(手机滚动隐藏), 连同外壳一起淡出, 避免角落残留空容器
-    AnimatedVisibility(
-        visible = navVisible || showFullscreen,
-        modifier = modifier,
-        enter = fadeIn(),
-        exit = fadeOut(),
-    ) {
-        // 与紧凑回复栏同源配色: primaryContainer, 非半透明主题且未减弱效果时降低不透明度
-        val containerColor = MaterialTheme.colorScheme.primaryContainer.let {
-            if (!MaterialTheme.colorScheme.isTranslucent &&
-                !LocalUISettings.current.reduceEffect
-            ) {
-                it.copy(alpha = 0.7f)
-            } else {
-                it
-            }
-        }
-        Box(
-            modifier = Modifier
-                .graphicsLayer {
-                    this.shadowElevation = NavDockShadowElevation.toPx()
-                    this.shape = NavDockContainerShape
-                    this.clip = true
-                }
-                .withNonNull(LocalHazeState.current) { Modifier.defaultHazeEffect() }
-                .background(color = containerColor, shape = NavDockContainerShape),
+    // 与紧凑回复栏同源配色: primaryContainer, 非半透明主题且未减弱效果时降低不透明度
+    val containerColor = MaterialTheme.colorScheme.primaryContainer.let {
+        if (!MaterialTheme.colorScheme.isTranslucent &&
+            !LocalUISettings.current.reduceEffect
         ) {
-            ProvideContentColor(MaterialTheme.colorScheme.onPrimaryContainer) {
-                val navContent: @Composable () -> Unit = {
-                    if (singleKey) {
-                        if (atEnd) {
-                            // 已到底: 键变为「回顶」, 单击回到列表顶部重新开始
-                            NavDockButton(
-                                icon = Icons.Rounded.VerticalAlignTop,
-                                contentDescription = stringResource(R.string.btn_back_to_top),
-                                onClick = onAdvance ?: {},
-                            )
-                        } else {
-                            val advanceNext = navDirection == CommentNavDirection.NEXT
-                            NavDockButton(
-                                icon = if (advanceNext) {
-                                    Icons.Rounded.KeyboardArrowDown
-                                } else {
-                                    Icons.Rounded.KeyboardArrowUp
-                                },
-                                contentDescription = stringResource(
-                                    id = if (advanceNext) {
-                                        R.string.title_next_comment
-                                    } else {
-                                        R.string.title_prev_comment
-                                    }
-                                ),
-                                onClick = onAdvance ?: {},
-                                onLongClick = if (holdToTop) onJumpToTop else onReverse,
-                            )
-                        }
+            it.copy(alpha = 0.7f)
+        } else {
+            it
+        }
+    }
+    Box(
+        modifier = modifier
+            .graphicsLayer {
+                translationY = hideOffset?.invoke() ?: 0f
+                alpha = hideAlpha?.invoke() ?: 1f
+                this.shadowElevation = NavDockShadowElevation.toPx()
+                this.shape = NavDockContainerShape
+                this.clip = true
+            }
+            .withNonNull(LocalHazeState.current) { Modifier.defaultHazeEffect() }
+            .background(color = containerColor, shape = NavDockContainerShape),
+    ) {
+        ProvideContentColor(MaterialTheme.colorScheme.onPrimaryContainer) {
+            val navContent: @Composable () -> Unit = {
+                if (singleKey) {
+                    if (atEnd) {
+                        // 已到底: 键变为「回顶」, 单击回到列表顶部重新开始
+                        NavDockButton(
+                            icon = Icons.Rounded.VerticalAlignTop,
+                            contentDescription = stringResource(R.string.btn_back_to_top),
+                            onClick = onAdvance ?: {},
+                        )
                     } else {
+                        val advanceNext = navDirection == CommentNavDirection.NEXT
                         NavDockButton(
-                            icon = Icons.Rounded.KeyboardArrowUp,
-                            contentDescription = stringResource(R.string.title_prev_comment),
-                            onClick = onPrev,
-                            onLongClick = onPrevLongPress,
-                        )
-                        NavDockButton(
-                            icon = Icons.Rounded.KeyboardArrowDown,
-                            contentDescription = stringResource(R.string.title_next_comment),
-                            onClick = onNext,
-                        )
-                    }
-                }
-                if (horizontal) {
-                    Row(modifier = Modifier.padding(horizontal = 4.dp)) {
-                        AnimatedVisibility(
-                            visible = navVisible,
-                            enter = fadeIn(),
-                            exit = fadeOut(),
-                        ) {
-                            Row { navContent() }
-                        }
-                        if (showFullscreen) {
-                            NavDockButton(
-                                icon = if (detailPaneExpanded) {
-                                    Icons.Rounded.FullscreenExit
+                            icon = if (advanceNext) {
+                                Icons.Rounded.KeyboardArrowDown
+                            } else {
+                                Icons.Rounded.KeyboardArrowUp
+                            },
+                            contentDescription = stringResource(
+                                id = if (advanceNext) {
+                                    R.string.title_next_comment
                                 } else {
-                                    Icons.Rounded.Fullscreen
-                                },
-                                contentDescription = stringResource(
-                                    id = if (detailPaneExpanded) {
-                                        R.string.desc_collapse_detail
-                                    } else {
-                                        R.string.desc_expand_detail
-                                    }
-                                ),
-                                onClick = onToggleDetailPane,
-                            )
-                        }
+                                    R.string.title_prev_comment
+                                }
+                            ),
+                            onClick = onAdvance ?: {},
+                            onLongClick = if (holdToTop) onJumpToTop else onReverse,
+                        )
                     }
                 } else {
-                    Column(
-                        modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
-                        horizontalAlignment = Alignment.CenterHorizontally,
-                    ) {
-                        AnimatedVisibility(
-                            visible = navVisible,
-                            enter = fadeIn(),
-                            exit = fadeOut(),
-                        ) {
-                            Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                                navContent()
-                            }
+                    NavDockButton(
+                        icon = Icons.Rounded.KeyboardArrowUp,
+                        contentDescription = stringResource(R.string.title_prev_comment),
+                        onClick = onPrev,
+                        onLongClick = onPrevLongPress,
+                    )
+                    NavDockButton(
+                        icon = Icons.Rounded.KeyboardArrowDown,
+                        contentDescription = stringResource(R.string.title_next_comment),
+                        onClick = onNext,
+                    )
+                }
+            }
+            val fullscreenContent: @Composable () -> Unit = {
+                NavDockButton(
+                    icon = if (detailPaneExpanded) {
+                        Icons.Rounded.FullscreenExit
+                    } else {
+                        Icons.Rounded.Fullscreen
+                    },
+                    contentDescription = stringResource(
+                        id = if (detailPaneExpanded) {
+                            R.string.desc_collapse_detail
+                        } else {
+                            R.string.desc_expand_detail
                         }
-                        if (showFullscreen) {
-                            NavDockButton(
-                                icon = if (detailPaneExpanded) {
-                                    Icons.Rounded.FullscreenExit
-                                } else {
-                                    Icons.Rounded.Fullscreen
-                                },
-                                contentDescription = stringResource(
-                                    id = if (detailPaneExpanded) {
-                                        R.string.desc_collapse_detail
-                                    } else {
-                                        R.string.desc_expand_detail
-                                    }
-                                ),
-                                onClick = onToggleDetailPane,
-                            )
-                        }
-                    }
+                    ),
+                    onClick = onToggleDetailPane ?: {},
+                )
+            }
+            if (horizontal) {
+                Row(modifier = Modifier.padding(horizontal = 4.dp)) {
+                    if (showCommentNav) navContent()
+                    if (showFullscreen) fullscreenContent()
+                }
+            } else {
+                Column(
+                    modifier = Modifier.padding(horizontal = 4.dp, vertical = 4.dp),
+                    horizontalAlignment = Alignment.CenterHorizontally,
+                ) {
+                    if (showCommentNav) navContent()
+                    if (showFullscreen) fullscreenContent()
                 }
             }
         }
