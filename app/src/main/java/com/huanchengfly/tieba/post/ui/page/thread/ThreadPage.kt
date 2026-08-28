@@ -72,6 +72,7 @@ import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.SideEffect
 import androidx.compose.runtime.derivedStateOf
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateMapOf
@@ -342,6 +343,9 @@ fun ThreadPage(
     // 置顶排序栏(StickyHeaderOverlay)高度: 上下楼导航时让出, 避免目标楼层用户名/头像被裁
     // 先给一个基于密度的兜底值(首次导航时排序栏尚未显示/测量), 显示后被 onGloballyPositioned 校准
     val density = LocalDensity.current
+    // Scaffold 内容底部 padding(回复栏高度+导航栏 inset, px): 计算滚动到列表底的距离时必须计入,
+    // 它位于最后一楼之下且在 LazyColumn contentPadding 滚动范围内
+    var contentBottomPaddingPx by remember { mutableStateOf(0f) }
     var stickyHeaderHeightPx by remember {
         mutableStateOf(
             with(density) { 36.dp.roundToPx() }
@@ -558,13 +562,15 @@ fun ThreadPage(
                     lazyListState.canScrollForward -> {
                         val info = lazyListState.layoutInfo
                         val lastItem = info.visibleItemsInfo.lastOrNull()
+                        // 最后一楼底边到视口底边的距离 + 底部 contentPadding(其仍在滚动范围内),
+                        // 漏加 padding 会停在最大滚动位置之前, canScrollForward 永不为 false
                         val bottomDelta = lastItem
-                            ?.let { it.offset + it.size - info.viewportEndOffset }
-                            ?: 0
+                            ?.let { it.offset + it.size - info.viewportEndOffset + contentBottomPaddingPx }
+                            ?: 0f
                         navScrollActive = true
                         coroutineScope.launch {
-                            if (bottomDelta > 0) {
-                                lazyListState.animateScrollBy(bottomDelta.toFloat())
+                            if (bottomDelta > 0f) {
+                                lazyListState.animateScrollBy(bottomDelta)
                             }
                             navScrollActive = false
                             resetCommentNavDock()
@@ -938,6 +944,9 @@ fun ThreadPage(
             val hazeState = LocalHazeState.current
             // Ignore Scaffold padding top changes if workaround enabled
             val contentPadding = padding.fixedTopBarPadding()
+            SideEffect {
+                contentBottomPaddingPx = with(density) { padding.calculateBottomPadding().toPx() }
+            }
 
             Box(modifier = Modifier.fillMaxSize()) {
                 Container(modifier = Modifier.clipToBounds()) {
