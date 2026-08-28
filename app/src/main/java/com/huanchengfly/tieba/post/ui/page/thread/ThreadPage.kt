@@ -969,6 +969,10 @@ fun ThreadPage(
 
                 val commentNavEnabled = LocalUISettings.current.commentNavEnabled
                 if (commentNavEnabled || fullscreenToggle != null) {
+                    // 紧凑坞的额外离屏行程: 工具栏只平移自身高度(到 bottomBar 内容区底边为止),
+                    // 其下还有导航栏 inset 与屏幕偏移; 坞要完全离屏必须多走这一段
+                    val dockExtraTravelPx = with(density) { ThreadToolbarScreenOffset.toPx() } +
+                            WindowInsets.navigationBars.getBottom(density)
                     val compactReplyBar = LocalUISettings.current.compactReplyBar
                     val compactReplyBarLeft =
                         LocalUISettings.current.compactReplyBarPosition == CompactReplyBarPosition.LEFT
@@ -1018,8 +1022,17 @@ fun ThreadPage(
                         showCommentNav = commentNavEnabled,
                         onPrevLongPress = scrollToTop,
                         // 与紧凑回复栏同源: 随 scrollBehavior 位移隐藏(逐帧跟随, 无阈值竞态);
-                        // 纵向坞(完整回复栏)无法被平移完全遮没, 额外按收起比例淡出
-                        hideOffset = { -toolbarScrollBehavior.state.offset },
+                        // 紧凑坞按比例放大行程以完全离屏; 纵向坞(完整回复栏)无法被平移完全遮没,
+                        // 额外按收起比例淡出
+                        hideOffset = {
+                            val barTravel = -toolbarScrollBehavior.state.offsetLimit
+                            if (compactReplyBar && barTravel > 0f) {
+                                (-toolbarScrollBehavior.state.offset) *
+                                        (barTravel + dockExtraTravelPx) / barTravel
+                            } else {
+                                -toolbarScrollBehavior.state.offset
+                            }
+                        },
                         hideAlpha = if (compactReplyBar) {
                             null
                         } else {
