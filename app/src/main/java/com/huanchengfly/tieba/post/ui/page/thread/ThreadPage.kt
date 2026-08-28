@@ -330,6 +330,8 @@ fun ThreadPage(
     var lastNavWaypointIndex by remember { mutableStateOf(-1) }
     // 各楼层经 onGloballyPositioned 上报的展开长图站点(升序 item 内偏移), 供导航逐站前进
     val imageNavWaypoints = remember { mutableStateMapOf<Long, List<Int>>() }
+    // 单键导航模式: 当前推进方向; 到底/到顶时在边界分支自动反向, 长按手动反向
+    var commentNavDirection by rememberSaveable { mutableStateOf(CommentNavDirection.NEXT) }
     // 导航键自身触发的滚动进行中; 期间不隐藏导航键
     var navScrollActive by remember { mutableStateOf(false) }
     // 置顶排序栏(StickyHeaderOverlay)高度: 上下楼导航时让出, 避免目标楼层用户名/头像被裁
@@ -541,11 +543,17 @@ fun ThreadPage(
                     viewModel.requestLoadMore()
                 } else {
                     context.toastShort(R.string.tip_no_more_comment)
+                    // 单键导航: 已到底, 翻转为向上
+                    commentNavDirection = CommentNavDirection.PREV
                 }
             }
             CommentNavDirection.PREV -> {
                 when {
-                    anchorId == layout.firstPostId -> context.toastShort(R.string.tip_no_prev_comment)
+                    anchorId == layout.firstPostId -> {
+                        context.toastShort(R.string.tip_no_prev_comment)
+                        // 单键导航: 已到顶, 翻转为向下
+                        commentNavDirection = CommentNavDirection.NEXT
+                    }
                     state.pageData.hasPrevious -> {
                         pendingCommentNav = PendingCommentNav(direction, anchorId)
                         viewModel.requestLoadPrevious(offset = 0)
@@ -954,6 +962,16 @@ fun ThreadPage(
                     ThreadNavigationDock(
                         modifier = dockModifier,
                         horizontal = compactReplyBar,
+                        singleKey = LocalUISettings.current.commentNavSingleKey,
+                        navDirection = commentNavDirection,
+                        onAdvance = { requestNavigateComment(commentNavDirection) },
+                        onReverse = {
+                            commentNavDirection = if (commentNavDirection == CommentNavDirection.NEXT) {
+                                CommentNavDirection.PREV
+                            } else {
+                                CommentNavDirection.NEXT
+                            }
+                        },
                         onPrev = { requestNavigateComment(CommentNavDirection.PREV) },
                         onNext = { requestNavigateComment(CommentNavDirection.NEXT) },
                         showCommentNav = commentNavEnabled,

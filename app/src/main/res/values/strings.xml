@@ -681,6 +681,8 @@
     <string name="fullscreen_button_style_none">不显示</string>
     <string name="settings_comment_nav_enabled">评论上/下导航</string>
     <string name="summary_comment_nav_enabled">在帖子详情页显示上一楼/下一楼按钮</string>
+    <string name="settings_comment_nav_single_key">评论单键导航</string>
+    <string name="summary_comment_nav_single_key">合并为单键: 单击沿当前方向逐楼, 到底/到顶自动反向, 长按切换方向</string>
     <string name="settings_compact_reply_bar_position">紧凑回复栏位置</string>
     <string name="compact_reply_bar_position_right">右下</string>
     <string name="compact_reply_bar_position_left">左下</string>

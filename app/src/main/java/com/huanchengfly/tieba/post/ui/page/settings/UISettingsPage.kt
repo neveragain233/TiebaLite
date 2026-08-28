@@ -10,6 +10,7 @@ import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Compress
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Star
+import androidx.compose.material.icons.rounded.SwapVert
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.LabelImportant
 import androidx.compose.material.icons.automirrored.outlined.LabelOff
@@ -235,6 +236,14 @@ fun UISettingsPage(
                 title = R.string.settings_comment_nav_enabled,
                 summary = R.string.summary_comment_nav_enabled,
                 leadingIcon = Icons.Rounded.KeyboardArrowDown,
+            )
+
+            toggleablePreference(
+                property = UISettings::commentNavSingleKey,
+                title = R.string.settings_comment_nav_single_key,
+                summary = R.string.summary_comment_nav_single_key,
+                leadingIcon = Icons.Rounded.SwapVert,
+                enabled = currentPreference.commentNavEnabled,
             )
 
             toggleablePreference(

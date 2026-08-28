@@ -50,6 +50,10 @@ private val NavDockShadowElevation = 6.dp
  * 聚合「上一楼 / 下一楼」评论导航与「全屏/收起」详情切换.
  *
  * @param horizontal 紧凑回复栏模式: 上下楼键横排, 与紧凑栏同高同配色, 全屏键排末尾
+ * @param singleKey 单键模式: 单击沿方向推进, 长按切换方向
+ * @param navDirection 单键模式当前方向(决定图标与语义)
+ * @param onAdvance 单键模式: 单击推进
+ * @param onReverse 单键模式: 长按切换方向
  * @param onPrev 上一楼
  * @param onNext 下一楼
  * @param showCommentNav 是否显示评论导航按钮(与全屏切换解耦)
@@ -65,6 +69,10 @@ fun ThreadNavigationDock(
     onNext: () -> Unit,
     modifier: Modifier = Modifier,
     horizontal: Boolean = false,
+    singleKey: Boolean = false,
+    navDirection: CommentNavDirection = CommentNavDirection.NEXT,
+    onAdvance: (() -> Unit)? = null,
+    onReverse: (() -> Unit)? = null,
     showCommentNav: Boolean = true,
     hideCommentNav: Boolean = false,
     onPrevLongPress: (() -> Unit)? = null,
@@ -102,17 +110,37 @@ fun ThreadNavigationDock(
         ) {
             ProvideContentColor(MaterialTheme.colorScheme.onPrimaryContainer) {
                 val navContent: @Composable () -> Unit = {
-                    NavDockButton(
-                        icon = Icons.Rounded.KeyboardArrowUp,
-                        contentDescription = stringResource(R.string.title_prev_comment),
-                        onClick = onPrev,
-                        onLongClick = onPrevLongPress,
-                    )
-                    NavDockButton(
-                        icon = Icons.Rounded.KeyboardArrowDown,
-                        contentDescription = stringResource(R.string.title_next_comment),
-                        onClick = onNext,
-                    )
+                    if (singleKey) {
+                        val advanceNext = navDirection == CommentNavDirection.NEXT
+                        NavDockButton(
+                            icon = if (advanceNext) {
+                                Icons.Rounded.KeyboardArrowDown
+                            } else {
+                                Icons.Rounded.KeyboardArrowUp
+                            },
+                            contentDescription = stringResource(
+                                id = if (advanceNext) {
+                                    R.string.title_next_comment
+                                } else {
+                                    R.string.title_prev_comment
+                                }
+                            ),
+                            onClick = onAdvance ?: {},
+                            onLongClick = onReverse,
+                        )
+                    } else {
+                        NavDockButton(
+                            icon = Icons.Rounded.KeyboardArrowUp,
+                            contentDescription = stringResource(R.string.title_prev_comment),
+                            onClick = onPrev,
+                            onLongClick = onPrevLongPress,
+                        )
+                        NavDockButton(
+                            icon = Icons.Rounded.KeyboardArrowDown,
+                            contentDescription = stringResource(R.string.title_next_comment),
+                            onClick = onNext,
+                        )
+                    }
                 }
                 if (horizontal) {
                     Row(modifier = Modifier.padding(horizontal = 4.dp)) {

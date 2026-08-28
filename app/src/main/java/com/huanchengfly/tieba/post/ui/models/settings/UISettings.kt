@@ -101,6 +101,7 @@ enum class NavRailPosition {
  * @param appNavRailPosition 应用级侧栏按钮组停靠位置
  * @param fullscreenButtonStyle 详情全屏按钮样式
  * @param commentNavEnabled 帖子详情页启用评论上/下导航
+ * @param commentNavSingleKey 评论导航合并为单键(到底/到顶自动反向, 长按切换方向)
  * @param compactReplyBarPosition 回复栏紧凑模式胶囊停靠位置
  * @param compactReplyBar 回复栏使用紧凑布局
  * @param compactShowCollect 紧凑模式是否显示收藏按钮
@@ -131,6 +132,7 @@ data class UISettings(
     val appNavRailPosition: NavRailPosition = NavRailPosition.CENTER,
     val fullscreenButtonStyle: FullscreenButtonStyle = FullscreenButtonStyle.FAB,
     val commentNavEnabled: Boolean = true,
+    val commentNavSingleKey: Boolean = false,
     val compactReplyBarPosition: CompactReplyBarPosition = CompactReplyBarPosition.RIGHT,
     val compactReplyBar: Boolean = false,
     val compactShowCollect: Boolean = true,

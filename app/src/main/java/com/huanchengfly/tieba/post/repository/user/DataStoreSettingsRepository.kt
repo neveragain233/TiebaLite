@@ -318,6 +318,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
                 FullscreenButtonStyle.FAB
             },
             commentNavEnabled = it[booleanPreferencesKey(KEY_COMMENT_NAV_ENABLED)] ?: true,
+            commentNavSingleKey = it[booleanPreferencesKey(KEY_COMMENT_NAV_SINGLE_KEY)] ?: false,
             compactReplyBarPosition = CompactReplyBarPosition.entries.getOrElse(compactReplyBarPositionOrdinal) {
                 CompactReplyBarPosition.RIGHT
             },
@@ -350,6 +351,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[intPreferencesKey(KEY_APP_NAV_RAIL_POSITION)] = ui.appNavRailPosition.ordinal
         it[intPreferencesKey(KEY_FULLSCREEN_BUTTON_STYLE)] = ui.fullscreenButtonStyle.ordinal
         it[booleanPreferencesKey(KEY_COMMENT_NAV_ENABLED)] = ui.commentNavEnabled
+        it[booleanPreferencesKey(KEY_COMMENT_NAV_SINGLE_KEY)] = ui.commentNavSingleKey
         it[intPreferencesKey(KEY_COMPACT_REPLY_BAR_POSITION)] = ui.compactReplyBarPosition.ordinal
         it[booleanPreferencesKey(KEY_COMPACT_REPLY_BAR)] = ui.compactReplyBar
         it[booleanPreferencesKey(KEY_COMPACT_SHOW_COLLECT)] = ui.compactShowCollect
@@ -385,6 +387,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_APP_NAV_RAIL_POSITION = "ui_app_nav_rail_position"
     private const val KEY_FULLSCREEN_BUTTON_STYLE = "ui_fullscreen_button_style"
     private const val KEY_COMMENT_NAV_ENABLED = "ui_comment_nav_enabled"
+    private const val KEY_COMMENT_NAV_SINGLE_KEY = "ui_comment_nav_single_key"
     private const val KEY_COMPACT_REPLY_BAR_POSITION = "ui_compact_reply_bar_position"
     private const val KEY_COMPACT_REPLY_BAR = "ui_compact_reply_bar"
     private const val KEY_COMPACT_SHOW_COLLECT = "ui_compact_show_collect"
