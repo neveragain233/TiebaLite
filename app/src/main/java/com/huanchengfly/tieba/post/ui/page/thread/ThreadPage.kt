@@ -25,6 +25,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.statusBars
 import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.lazy.LazyListState
+import androidx.compose.foundation.gestures.animateScrollBy
 import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.TextAutoSize
@@ -547,11 +548,29 @@ fun ThreadPage(
         // 处于边界: 决定是触发加载, 还是回跳楼主帖 / 提示已到首末楼
         when (direction) {
             CommentNavDirection.NEXT -> {
-                if (state.pageData.hasMore) {
-                    pendingCommentNav = PendingCommentNav(direction, anchorId)
-                    viewModel.requestLoadMore()
-                } else {
-                    context.toastShort(R.string.tip_no_more_comment)
+                when {
+                    state.pageData.hasMore -> {
+                        pendingCommentNav = PendingCommentNav(direction, anchorId)
+                        viewModel.requestLoadMore()
+                    }
+                    // 锚点已是最后一楼且楼内容超出视口: 先滚到列表底(楼底),
+                    // 单键模式随后由响应式到底态接管为「回顶」
+                    lazyListState.canScrollForward -> {
+                        val info = lazyListState.layoutInfo
+                        val lastItem = info.visibleItemsInfo.lastOrNull()
+                        val bottomDelta = lastItem
+                            ?.let { it.offset + it.size - info.viewportEndOffset }
+                            ?: 0
+                        navScrollActive = true
+                        coroutineScope.launch {
+                            if (bottomDelta > 0) {
+                                lazyListState.animateScrollBy(bottomDelta.toFloat())
+                            }
+                            navScrollActive = false
+                            resetCommentNavDock()
+                        }
+                    }
+                    else -> context.toastShort(R.string.tip_no_more_comment)
                 }
             }
             CommentNavDirection.PREV -> {
