@@ -53,10 +53,10 @@ enum class FullscreenButtonStyle {
  * 回复栏紧凑模式(隐藏回贴入口)下, 点赞/更多胶囊的停靠位置
  */
 enum class CompactReplyBarPosition {
-    /** 右下角 (默认, 与右侧评论导航坞同侧, 位于其下方) */
+    /** 右下角 (默认, 评论导航坞同层停靠在左下角) */
     RIGHT,
 
-    /** 左下角 (与评论导航坞对侧) */
+    /** 左下角 (评论导航坞同层停靠在右下角) */
     LEFT,
 }
 

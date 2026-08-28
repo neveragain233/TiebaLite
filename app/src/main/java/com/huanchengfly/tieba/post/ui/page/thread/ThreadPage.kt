@@ -931,15 +931,29 @@ fun ThreadPage(
 
                 val commentNavEnabled = LocalUISettings.current.commentNavEnabled
                 if (commentNavEnabled || fullscreenToggle != null) {
-                    ThreadNavigationDock(
-                        modifier = Modifier
+                    val compactReplyBar = LocalUISettings.current.compactReplyBar
+                    val compactReplyBarLeft =
+                        LocalUISettings.current.compactReplyBarPosition == CompactReplyBarPosition.LEFT
+                    // 紧凑回复栏模式下与回复栏同层同高, 停靠在其对侧; 否则保持右下角原位
+                    val dockModifier = if (compactReplyBar) {
+                        Modifier
+                            .align(if (compactReplyBarLeft) Alignment.BottomEnd else Alignment.BottomStart)
+                            .windowInsetsPadding(WindowInsets.navigationBars)
+                            .offset(y = -ThreadToolbarScreenOffset)
+                            .padding(horizontal = CardHorizontalSpacing)
+                    } else {
+                        Modifier
                             .align(Alignment.BottomEnd)
                             .padding(
                                 end = CardHorizontalSpacing,
                                 bottom = padding.calculateBottomPadding() +
                                         ThreadToolbarScreenOffset +
                                         CardHorizontalSpacing,
-                            ),
+                            )
+                    }
+                    ThreadNavigationDock(
+                        modifier = dockModifier,
+                        horizontal = compactReplyBar,
                         onPrev = { requestNavigateComment(CommentNavDirection.PREV) },
                         onNext = { requestNavigateComment(CommentNavDirection.NEXT) },
                         showCommentNav = commentNavEnabled,
