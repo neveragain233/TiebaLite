@@ -332,12 +332,9 @@ fun ThreadPage(
     val imageNavWaypoints = remember { mutableStateMapOf<Long, List<Int>>() }
     // 单键导航模式: 当前推进方向; 到顶时在边界分支复位为 NEXT, 长按手动反向
     var commentNavDirection by rememberSaveable { mutableStateOf(CommentNavDirection.NEXT) }
-    // 单键导航模式: 已推进到底(正序=最后一楼, 倒序=最早已加载楼), 键切换为「回顶」
-    var commentNavAtEnd by rememberSaveable { mutableStateOf(false) }
-    // 切换正/倒序会整体重载列表, 导航进度与到底态全部失效
+    // 切换正/倒序会整体重载列表, 导航方向记忆失效
     LaunchedEffect(state.sortType) {
         commentNavDirection = CommentNavDirection.NEXT
-        commentNavAtEnd = false
     }
     // 导航键自身触发的滚动进行中; 期间不隐藏导航键
     var navScrollActive by remember { mutableStateOf(false) }
@@ -355,6 +352,11 @@ fun ThreadPage(
         derivedStateOf { toolbarScrollBehavior.state.collapsedFraction >= 0.9f }
     }
     val hideCommentNav = commentNavHidden && !navScrollActive
+    // 单键导航到底态: 列表已滚动到最底且无后续分页(正序=最后一楼, 倒序=最早已加载楼).
+    // 响应式判定而非按键累积, 到达底部立即变为「回顶」, 不需要把边界状态按出来
+    val commentNavAtEnd = LocalUISettings.current.commentNavSingleKey &&
+            !state.pageData.hasMore &&
+            !lazyListState.canScrollForward
     // 导航键触发程序化滚动后, 复位回复栏收起状态, 保证连续导航不被隐藏
     fun resetCommentNavDock() {
         toolbarScrollBehavior.state.contentOffset = 0f
@@ -550,8 +552,6 @@ fun ThreadPage(
                     viewModel.requestLoadMore()
                 } else {
                     context.toastShort(R.string.tip_no_more_comment)
-                    // 单键导航: 已到底(正序=最后一楼, 倒序=最早楼), 键切换为「回顶」
-                    commentNavAtEnd = true
                 }
             }
             CommentNavDirection.PREV -> {
@@ -560,7 +560,6 @@ fun ThreadPage(
                         context.toastShort(R.string.tip_no_prev_comment)
                         // 单键导航: 已到顶, 复位为向下
                         commentNavDirection = CommentNavDirection.NEXT
-                        commentNavAtEnd = false
                     }
                     state.pageData.hasPrevious -> {
                         pendingCommentNav = PendingCommentNav(direction, anchorId)
@@ -977,15 +976,13 @@ fun ThreadPage(
                         holdToTop = LocalUISettings.current.commentNavSingleKeyHoldToTop,
                         onAdvance = {
                             if (singleKeyNav && commentNavAtEnd) {
-                                // 到底态: 单击回顶, 回顶后重置为向下推进
-                                commentNavAtEnd = false
+                                // 到底态: 单击回顶, 滚离底部后自动恢复向下推进
                                 scrollToTop()
                             } else {
                                 requestNavigateComment(commentNavDirection)
                             }
                         },
                         onReverse = {
-                            commentNavAtEnd = false
                             commentNavDirection = if (commentNavDirection == CommentNavDirection.NEXT) {
                                 CommentNavDirection.PREV
                             } else {
