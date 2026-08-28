@@ -130,8 +130,11 @@ fun ListDetailPaneHost(
     // 面板详情模式下接管系统返回键: 全屏详情先收起回双栏, 分屏详情先关闭详情回列表全屏。
     // ThreadPage 只在帖子带收藏楼层标记等特殊状态时注册 BackHandler, 普通帖子会漏掉,
     // 导致返回键直接落到 MainPage 而退回首页; 这里在宿主层兜底保证按详情状态机分步返回。
-    BackHandler(enabled = isDetailShowing && !isCompact) {
-        if (detailExpanded) {
+    BackHandler(enabled = isDetailShowing) {
+        // 折叠到外屏后 isCompact 为 true, 但楼中楼/普通帖子仍在嵌套 detail 栈顶,
+        // 此时没有任何页面级 BackHandler 接管返回; 去掉 !isCompact 让宿主在紧凑宽度下
+        // 也兜底, 按 楼中楼 -> 帖子 -> 列表 -> 首页 分步返回, 避免穿透到根导航.
+        if (!isCompact && detailExpanded) {
             detailExpanded = false
         } else {
             detailNavController.popBackStack()
