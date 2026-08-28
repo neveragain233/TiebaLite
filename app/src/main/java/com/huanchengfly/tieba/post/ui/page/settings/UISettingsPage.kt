@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.Compress
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.LabelImportant
 import androidx.compose.material.icons.automirrored.outlined.LabelOff
@@ -34,7 +35,6 @@ import androidx.compose.material.icons.outlined.WatchLater
 import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.ScreenRotation
-import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
@@ -244,6 +244,14 @@ fun UISettingsPage(
                 summary = R.string.summary_comment_nav_single_key,
                 leadingIcon = Icons.Rounded.SwapVert,
                 enabled = currentPreference.commentNavEnabled,
+            )
+
+            toggleablePreference(
+                property = UISettings::commentNavSingleKeyHoldToTop,
+                title = R.string.settings_comment_nav_single_key_hold_top,
+                summary = R.string.summary_comment_nav_single_key_hold_top,
+                leadingIcon = Icons.Rounded.VerticalAlignTop,
+                enabled = currentPreference.commentNavEnabled && currentPreference.commentNavSingleKey,
             )
 
             toggleablePreference(

@@ -18,6 +18,7 @@ import androidx.compose.material.icons.rounded.Fullscreen
 import androidx.compose.material.icons.rounded.FullscreenExit
 import androidx.compose.material.icons.rounded.KeyboardArrowDown
 import androidx.compose.material.icons.rounded.KeyboardArrowUp
+import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
@@ -50,10 +51,13 @@ private val NavDockShadowElevation = 6.dp
  * 聚合「上一楼 / 下一楼」评论导航与「全屏/收起」详情切换.
  *
  * @param horizontal 紧凑回复栏模式: 上下楼键横排, 与紧凑栏同高同配色, 全屏键排末尾
- * @param singleKey 单键模式: 单击沿方向推进, 长按切换方向
+ * @param singleKey 单键模式: 单击沿方向推进, 到底变为回顶键
  * @param navDirection 单键模式当前方向(决定图标与语义)
- * @param onAdvance 单键模式: 单击推进
+ * @param atEnd 单键模式: 已推进到底, 键切换为「回顶」
+ * @param holdToTop 单键模式长按直接回顶(否则长按切换方向)
+ * @param onAdvance 单键模式: 单击推进(到底时为回顶)
  * @param onReverse 单键模式: 长按切换方向
+ * @param onJumpToTop 单键模式长按回顶(holdToTop 时使用)
  * @param onPrev 上一楼
  * @param onNext 下一楼
  * @param showCommentNav 是否显示评论导航按钮(与全屏切换解耦)
@@ -71,8 +75,11 @@ fun ThreadNavigationDock(
     horizontal: Boolean = false,
     singleKey: Boolean = false,
     navDirection: CommentNavDirection = CommentNavDirection.NEXT,
+    atEnd: Boolean = false,
+    holdToTop: Boolean = false,
     onAdvance: (() -> Unit)? = null,
     onReverse: (() -> Unit)? = null,
+    onJumpToTop: (() -> Unit)? = null,
     showCommentNav: Boolean = true,
     hideCommentNav: Boolean = false,
     onPrevLongPress: (() -> Unit)? = null,
@@ -111,23 +118,32 @@ fun ThreadNavigationDock(
             ProvideContentColor(MaterialTheme.colorScheme.onPrimaryContainer) {
                 val navContent: @Composable () -> Unit = {
                     if (singleKey) {
-                        val advanceNext = navDirection == CommentNavDirection.NEXT
-                        NavDockButton(
-                            icon = if (advanceNext) {
-                                Icons.Rounded.KeyboardArrowDown
-                            } else {
-                                Icons.Rounded.KeyboardArrowUp
-                            },
-                            contentDescription = stringResource(
-                                id = if (advanceNext) {
-                                    R.string.title_next_comment
+                        if (atEnd) {
+                            // 已到底: 键变为「回顶」, 单击回到列表顶部重新开始
+                            NavDockButton(
+                                icon = Icons.Rounded.VerticalAlignTop,
+                                contentDescription = stringResource(R.string.btn_back_to_top),
+                                onClick = onAdvance ?: {},
+                            )
+                        } else {
+                            val advanceNext = navDirection == CommentNavDirection.NEXT
+                            NavDockButton(
+                                icon = if (advanceNext) {
+                                    Icons.Rounded.KeyboardArrowDown
                                 } else {
-                                    R.string.title_prev_comment
-                                }
-                            ),
-                            onClick = onAdvance ?: {},
-                            onLongClick = onReverse,
-                        )
+                                    Icons.Rounded.KeyboardArrowUp
+                                },
+                                contentDescription = stringResource(
+                                    id = if (advanceNext) {
+                                        R.string.title_next_comment
+                                    } else {
+                                        R.string.title_prev_comment
+                                    }
+                                ),
+                                onClick = onAdvance ?: {},
+                                onLongClick = if (holdToTop) onJumpToTop else onReverse,
+                            )
+                        }
                     } else {
                         NavDockButton(
                             icon = Icons.Rounded.KeyboardArrowUp,

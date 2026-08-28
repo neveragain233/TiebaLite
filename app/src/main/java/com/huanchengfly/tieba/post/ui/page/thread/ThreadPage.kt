@@ -330,8 +330,15 @@ fun ThreadPage(
     var lastNavWaypointIndex by remember { mutableStateOf(-1) }
     // 各楼层经 onGloballyPositioned 上报的展开长图站点(升序 item 内偏移), 供导航逐站前进
     val imageNavWaypoints = remember { mutableStateMapOf<Long, List<Int>>() }
-    // 单键导航模式: 当前推进方向; 到底/到顶时在边界分支自动反向, 长按手动反向
+    // 单键导航模式: 当前推进方向; 到顶时在边界分支复位为 NEXT, 长按手动反向
     var commentNavDirection by rememberSaveable { mutableStateOf(CommentNavDirection.NEXT) }
+    // 单键导航模式: 已推进到底(正序=最后一楼, 倒序=最早已加载楼), 键切换为「回顶」
+    var commentNavAtEnd by rememberSaveable { mutableStateOf(false) }
+    // 切换正/倒序会整体重载列表, 导航进度与到底态全部失效
+    LaunchedEffect(state.sortType) {
+        commentNavDirection = CommentNavDirection.NEXT
+        commentNavAtEnd = false
+    }
     // 导航键自身触发的滚动进行中; 期间不隐藏导航键
     var navScrollActive by remember { mutableStateOf(false) }
     // 置顶排序栏(StickyHeaderOverlay)高度: 上下楼导航时让出, 避免目标楼层用户名/头像被裁
@@ -543,16 +550,17 @@ fun ThreadPage(
                     viewModel.requestLoadMore()
                 } else {
                     context.toastShort(R.string.tip_no_more_comment)
-                    // 单键导航: 已到底, 翻转为向上
-                    commentNavDirection = CommentNavDirection.PREV
+                    // 单键导航: 已到底(正序=最后一楼, 倒序=最早楼), 键切换为「回顶」
+                    commentNavAtEnd = true
                 }
             }
             CommentNavDirection.PREV -> {
                 when {
                     anchorId == layout.firstPostId -> {
                         context.toastShort(R.string.tip_no_prev_comment)
-                        // 单键导航: 已到顶, 翻转为向下
+                        // 单键导航: 已到顶, 复位为向下
                         commentNavDirection = CommentNavDirection.NEXT
+                        commentNavAtEnd = false
                     }
                     state.pageData.hasPrevious -> {
                         pendingCommentNav = PendingCommentNav(direction, anchorId)
@@ -959,19 +967,32 @@ fun ThreadPage(
                                         CardHorizontalSpacing,
                             )
                     }
+                    val singleKeyNav = LocalUISettings.current.commentNavSingleKey
                     ThreadNavigationDock(
                         modifier = dockModifier,
                         horizontal = compactReplyBar,
-                        singleKey = LocalUISettings.current.commentNavSingleKey,
+                        singleKey = singleKeyNav,
                         navDirection = commentNavDirection,
-                        onAdvance = { requestNavigateComment(commentNavDirection) },
+                        atEnd = commentNavAtEnd,
+                        holdToTop = LocalUISettings.current.commentNavSingleKeyHoldToTop,
+                        onAdvance = {
+                            if (singleKeyNav && commentNavAtEnd) {
+                                // 到底态: 单击回顶, 回顶后重置为向下推进
+                                commentNavAtEnd = false
+                                scrollToTop()
+                            } else {
+                                requestNavigateComment(commentNavDirection)
+                            }
+                        },
                         onReverse = {
+                            commentNavAtEnd = false
                             commentNavDirection = if (commentNavDirection == CommentNavDirection.NEXT) {
                                 CommentNavDirection.PREV
                             } else {
                                 CommentNavDirection.NEXT
                             }
                         },
+                        onJumpToTop = scrollToTop,
                         onPrev = { requestNavigateComment(CommentNavDirection.PREV) },
                         onNext = { requestNavigateComment(CommentNavDirection.NEXT) },
                         showCommentNav = commentNavEnabled,
