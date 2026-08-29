@@ -318,9 +318,14 @@ fun ThreadPage(
     } else {
         TopAppBarDefaults.enterAlwaysScrollBehavior()
     }
+    // 回复栏收起行程追加「屏幕偏移+导航栏 inset」, 使其与导航坞一样完全滑出屏幕
+    // (M3 默认行程只到 bottomBar 内容区底边, 会残留一截在导航栏区域内)
+    val toolbarExtraExitPx = with(LocalDensity.current) {
+        ThreadToolbarScreenOffset.toPx() + WindowInsets.navigationBars.getBottom(this)
+    }
     val toolbarScrollBehavior = FloatingToolbarDefaults.exitAlwaysScrollBehavior(
         exitDirection = Bottom,
-        state = rememberSafeFloatingToolbarState(),
+        state = rememberSafeFloatingToolbarState(extraExitDistancePx = { toolbarExtraExitPx }),
     )
 
     val layout = remember(state) { buildThreadListLayout(state) }
@@ -969,10 +974,6 @@ fun ThreadPage(
 
                 val commentNavEnabled = LocalUISettings.current.commentNavEnabled
                 if (commentNavEnabled || fullscreenToggle != null) {
-                    // 紧凑坞的额外离屏行程: 工具栏只平移自身高度(到 bottomBar 内容区底边为止),
-                    // 其下还有导航栏 inset 与屏幕偏移; 坞要完全离屏必须多走这一段
-                    val dockExtraTravelPx = with(density) { ThreadToolbarScreenOffset.toPx() } +
-                            WindowInsets.navigationBars.getBottom(density)
                     val compactReplyBar = LocalUISettings.current.compactReplyBar
                     val compactReplyBarLeft =
                         LocalUISettings.current.compactReplyBarPosition == CompactReplyBarPosition.LEFT
@@ -1021,18 +1022,10 @@ fun ThreadPage(
                         onNext = { requestNavigateComment(CommentNavDirection.NEXT) },
                         showCommentNav = commentNavEnabled,
                         onPrevLongPress = scrollToTop,
-                        // 与紧凑回复栏同源: 随 scrollBehavior 位移隐藏(逐帧跟随, 无阈值竞态);
-                        // 紧凑坞按比例放大行程以完全离屏; 纵向坞(完整回复栏)无法被平移完全遮没,
-                        // 额外按收起比例淡出
-                        hideOffset = {
-                            val barTravel = -toolbarScrollBehavior.state.offsetLimit
-                            if (compactReplyBar && barTravel > 0f) {
-                                (-toolbarScrollBehavior.state.offset) *
-                                        (barTravel + dockExtraTravelPx) / barTravel
-                            } else {
-                                -toolbarScrollBehavior.state.offset
-                            }
-                        },
+                        // 与紧凑回复栏同源: 位移严格相同(工具栏行程已在 state 层追加
+                        // 屏幕偏移+导航栏 inset), 逐帧跟随, 无阈值竞态;
+                        // 纵向坞(完整回复栏)无法被平移完全遮没, 额外按收起比例淡出
+                        hideOffset = { -toolbarScrollBehavior.state.offset },
                         hideAlpha = if (compactReplyBar) {
                             null
                         } else {
