@@ -911,6 +911,51 @@ fun ThreadPage(
                                 scrollBehavior = toolbarScrollBehavior,
                             )
                         }
+                        // 导航坞与紧凑栏同一容器同层, 停靠在对侧, 隐藏动效完全一致
+                        val commentNavEnabled = LocalUISettings.current.commentNavEnabled
+                        val singleKeyNav = LocalUISettings.current.commentNavSingleKey
+                        if (commentNavEnabled || fullscreenToggle != null) {
+                            ThreadNavigationDock(
+                                modifier = Modifier
+                                    .align(
+                                        if (isLeft) Alignment.BottomEnd else Alignment.BottomStart
+                                    )
+                                    .padding(horizontal = CardHorizontalSpacing),
+                                horizontal = true,
+                                singleKey = singleKeyNav,
+                                navDirection = commentNavDirection,
+                                atEnd = commentNavAtEnd,
+                                holdToTop = LocalUISettings.current.commentNavSingleKeyHoldToTop,
+                                onAdvance = {
+                                    if (singleKeyNav && commentNavAtEnd) {
+                                        // 到底态: 单击回顶, 滚离底部后自动恢复向下推进
+                                        scrollToTop()
+                                    } else {
+                                        requestNavigateComment(commentNavDirection)
+                                    }
+                                },
+                                onReverse = {
+                                    commentNavDirection = if (
+                                        commentNavDirection == CommentNavDirection.NEXT
+                                    ) {
+                                        CommentNavDirection.PREV
+                                    } else {
+                                        CommentNavDirection.NEXT
+                                    }
+                                },
+                                onJumpToTop = scrollToTop,
+                                onPrev = { requestNavigateComment(CommentNavDirection.PREV) },
+                                onNext = { requestNavigateComment(CommentNavDirection.NEXT) },
+                                showCommentNav = commentNavEnabled,
+                                onPrevLongPress = scrollToTop,
+                                // 与紧凑栏同源: 位移严格相同(工具栏行程已在 state 层追加
+                                // 屏幕偏移+导航栏 inset), 逐帧跟随, 无阈值竞态
+                                hideOffset = { -toolbarScrollBehavior.state.offset },
+                                hideAlpha = null,
+                                onToggleDetailPane = fullscreenToggle,
+                                detailPaneExpanded = detailPaneExpanded,
+                            )
+                        }
                     }
                 } else {
                     Container {
@@ -933,6 +978,57 @@ fun ThreadPage(
                             onLiked = viewModel::onThreadLikeClicked,
                             scrollBehavior = toolbarScrollBehavior
                         )
+                        // 导航坞与回复栏同层, 悬浮在其上方
+                        val commentNavEnabled = LocalUISettings.current.commentNavEnabled
+                        val singleKeyNav = LocalUISettings.current.commentNavSingleKey
+                        if (commentNavEnabled || fullscreenToggle != null) {
+                            ThreadNavigationDock(
+                                modifier = Modifier
+                                    .align(Alignment.BottomEnd)
+                                    .windowInsetsPadding(WindowInsets.navigationBars)
+                                    .offset(
+                                        y = -(
+                                                ThreadToolbarScreenOffset +
+                                                        ThreadToolbarContainerHeight +
+                                                        CardHorizontalSpacing
+                                                )
+                                    )
+                                    .padding(end = CardHorizontalSpacing),
+                                horizontal = false,
+                                singleKey = LocalUISettings.current.commentNavSingleKey,
+                                navDirection = commentNavDirection,
+                                atEnd = commentNavAtEnd,
+                                holdToTop = LocalUISettings.current.commentNavSingleKeyHoldToTop,
+                                onAdvance = {
+                                    if (singleKeyNav && commentNavAtEnd) {
+                                        // 到底态: 单击回顶, 滚离底部后自动恢复向下推进
+                                        scrollToTop()
+                                    } else {
+                                        requestNavigateComment(commentNavDirection)
+                                    }
+                                },
+                                onReverse = {
+                                    commentNavDirection = if (
+                                        commentNavDirection == CommentNavDirection.NEXT
+                                    ) {
+                                        CommentNavDirection.PREV
+                                    } else {
+                                        CommentNavDirection.NEXT
+                                    }
+                                },
+                                onJumpToTop = scrollToTop,
+                                onPrev = { requestNavigateComment(CommentNavDirection.PREV) },
+                                onNext = { requestNavigateComment(CommentNavDirection.NEXT) },
+                                showCommentNav = commentNavEnabled,
+                                onPrevLongPress = scrollToTop,
+                                // 与回复栏同源: 位移严格相同; 纵向坞无法被平移完全遮没,
+                                // 额外按收起比例淡出
+                                hideOffset = { -toolbarScrollBehavior.state.offset },
+                                hideAlpha = { 1f - toolbarScrollBehavior.state.collapsedFraction },
+                                onToggleDetailPane = fullscreenToggle,
+                                detailPaneExpanded = detailPaneExpanded,
+                            )
+                        }
                     }
                 }
             },
@@ -972,69 +1068,6 @@ fun ThreadPage(
                     }
                 }
 
-                val commentNavEnabled = LocalUISettings.current.commentNavEnabled
-                if (commentNavEnabled || fullscreenToggle != null) {
-                    val compactReplyBar = LocalUISettings.current.compactReplyBar
-                    val compactReplyBarLeft =
-                        LocalUISettings.current.compactReplyBarPosition == CompactReplyBarPosition.LEFT
-                    // 紧凑回复栏模式下与回复栏同层同高, 停靠在其对侧; 否则保持右下角原位
-                    val dockModifier = if (compactReplyBar) {
-                        Modifier
-                            .align(if (compactReplyBarLeft) Alignment.BottomEnd else Alignment.BottomStart)
-                            .windowInsetsPadding(WindowInsets.navigationBars)
-                            .offset(y = -ThreadToolbarScreenOffset)
-                            .padding(horizontal = CardHorizontalSpacing)
-                    } else {
-                        Modifier
-                            .align(Alignment.BottomEnd)
-                            .padding(
-                                end = CardHorizontalSpacing,
-                                bottom = padding.calculateBottomPadding() +
-                                        ThreadToolbarScreenOffset +
-                                        CardHorizontalSpacing,
-                            )
-                    }
-                    val singleKeyNav = LocalUISettings.current.commentNavSingleKey
-                    ThreadNavigationDock(
-                        modifier = dockModifier,
-                        horizontal = compactReplyBar,
-                        singleKey = singleKeyNav,
-                        navDirection = commentNavDirection,
-                        atEnd = commentNavAtEnd,
-                        holdToTop = LocalUISettings.current.commentNavSingleKeyHoldToTop,
-                        onAdvance = {
-                            if (singleKeyNav && commentNavAtEnd) {
-                                // 到底态: 单击回顶, 滚离底部后自动恢复向下推进
-                                scrollToTop()
-                            } else {
-                                requestNavigateComment(commentNavDirection)
-                            }
-                        },
-                        onReverse = {
-                            commentNavDirection = if (commentNavDirection == CommentNavDirection.NEXT) {
-                                CommentNavDirection.PREV
-                            } else {
-                                CommentNavDirection.NEXT
-                            }
-                        },
-                        onJumpToTop = scrollToTop,
-                        onPrev = { requestNavigateComment(CommentNavDirection.PREV) },
-                        onNext = { requestNavigateComment(CommentNavDirection.NEXT) },
-                        showCommentNav = commentNavEnabled,
-                        onPrevLongPress = scrollToTop,
-                        // 与紧凑回复栏同源: 位移严格相同(工具栏行程已在 state 层追加
-                        // 屏幕偏移+导航栏 inset), 逐帧跟随, 无阈值竞态;
-                        // 纵向坞(完整回复栏)无法被平移完全遮没, 额外按收起比例淡出
-                        hideOffset = { -toolbarScrollBehavior.state.offset },
-                        hideAlpha = if (compactReplyBar) {
-                            null
-                        } else {
-                            { 1f - toolbarScrollBehavior.state.collapsedFraction }
-                        },
-                        onToggleDetailPane = fullscreenToggle,
-                        detailPaneExpanded = detailPaneExpanded,
-                    )
-                }
             }
 
             if (showBottomSheet) {
