@@ -55,6 +55,7 @@ import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.distinctUntilChanged
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import javax.inject.Singleton
 
@@ -93,6 +94,12 @@ class DataStoreSettingsRepository @Inject constructor(
             dataStore.edit { transformer.set(it, new) }
         }
 
+        override suspend fun setNow(new: T) {
+            withContext(Dispatchers.IO) {
+                dataStore.edit { transformer.set(it, new) }
+            }
+        }
+
         override fun save(transform: (old: T) -> T) = queue.submit(Dispatchers.IO) {
             dataStore.edit {
                 val new = transform(transformer.get(it))
@@ -106,6 +113,12 @@ class DataStoreSettingsRepository @Inject constructor(
     ) {
 
         override fun set(new: T) = queue.submit(Dispatchers.IO) { dataStore.edit { it[key] = new } }
+
+        override suspend fun setNow(new: T) {
+            withContext(Dispatchers.IO) {
+                dataStore.edit { it[key] = new }
+            }
+        }
 
         override fun save(transform: (T) -> T) = queue.submit(Dispatchers.IO) {
             dataStore.edit { it[key] = transform(it[key] ?: default) }

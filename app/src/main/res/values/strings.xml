@@ -692,4 +692,19 @@
     <string name="summary_compact_reply_bar">开启后底部回复栏使用紧凑胶囊布局</string>
     <string name="settings_compact_show_collect">紧凑模式显示收藏</string>
     <string name="summary_compact_show_collect">在紧凑回复栏中显示收藏按钮</string>
+    <string name="title_settings_backup">设置备份</string>
+    <string name="summary_settings_backup">导出或恢复应用设置, 不包含账号和登录信息</string>
+    <string name="settings_backup_export">导出设置</string>
+    <string name="settings_backup_export_rules">导出设置和屏蔽规则</string>
+    <string name="settings_backup_import">导入备份</string>
+    <string name="settings_backup_restore_settings">恢复设置</string>
+    <string name="settings_backup_restore_rules">恢复屏蔽规则</string>
+    <string name="dialog_restore_select_backup">选择要恢复的内容</string>
+    <string name="settings_backup_created_at">备份时间: %1$s</string>
+    <string name="settings_backup_version">备份版本: v%1$d</string>
+    <string name="settings_backup_empty_rules">该备份未包含屏蔽规则</string>
+    <string name="toast_settings_backup_done">设置备份完成</string>
+    <string name="toast_settings_restore_done">设置恢复完成</string>
+    <string name="toast_unsupported_backup">不支持的备份版本</string>
+
 </resources>

@@ -58,6 +58,9 @@ sealed interface SettingsDestination {
     object More: SettingsDestination
 
     @Serializable
+    object Backup: SettingsDestination
+
+    @Serializable
     object OKSign: SettingsDestination
 
     @Serializable
@@ -140,6 +143,10 @@ fun NavGraphBuilder.settingsGraph(navController: NavController, settingsRepo: Se
 
     composable<SettingsDestination.OKSign> {
         OKSignSettingsPage(settings = settingsRepo.signConfig, onBack = navController::navigateUp)
+    }
+
+    composable<SettingsDestination.Backup> {
+        SettingsBackupPage(settings = settingsRepo.updateSettings, navController)
     }
 
     composable<SettingsDestination.WorkInfo> {

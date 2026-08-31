@@ -6,6 +6,7 @@ import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
 import com.huanchengfly.tieba.post.ui.models.settings.PrivacySettings
 import com.huanchengfly.tieba.post.ui.models.settings.SignConfig
 import com.huanchengfly.tieba.post.ui.models.settings.ThemeSettings
+import com.huanchengfly.tieba.post.ui.models.settings.UpdateSettings
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.utils.HmTime
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -15,6 +16,8 @@ import javax.inject.Inject
 private class FakeSettings<T>(default: T): Settings<T>(MutableStateFlow(default)) {
 
     override fun set(new: T) = (flow as MutableStateFlow).update { new }
+
+    override suspend fun setNow(new: T) = (flow as MutableStateFlow).update { new }
 
     override fun save(transform: (T) -> T) = (flow as MutableStateFlow).update { transform(it) }
 }
@@ -44,6 +47,9 @@ class FakeSettingsRepository @Inject constructor(): SettingsRepository {
 
     override val signConfig: Settings<SignConfig> =
         FakeSettings(SignConfig(autoSignTime = HmTime(12, 0)))
+
+    override val updateSettings: Settings<UpdateSettings> =
+        FakeSettings(UpdateSettings())
 
     override val UUIDSettings: Settings<String>
         get() = throw RuntimeException("Not yet implemented")

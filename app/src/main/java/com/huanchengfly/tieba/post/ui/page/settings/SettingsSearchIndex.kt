@@ -29,6 +29,7 @@ object SettingsSearchIndex {
         entry(SettingsDestination.Habit, R.string.title_settings_read_habit, R.string.summary_settings_habit),
         entry(SettingsDestination.Privacy, R.string.title_settings_privacy, R.string.summary_settings_privacy),
         entry(SettingsDestination.More, R.string.title_settings_more, R.string.summary_settings_more),
+        entry(SettingsDestination.Backup, R.string.title_settings_backup, R.string.summary_settings_backup),
         entry(SettingsDestination.About, R.string.title_about, R.string.summary_settings_about),
 
         // 界面自定义
@@ -84,6 +85,9 @@ object SettingsSearchIndex {
         entry(SettingsDestination.Privacy, R.string.title_settings_clipboard_link),
 
         // 更多
+        entry(SettingsDestination.Backup, R.string.settings_backup_export),
+        entry(SettingsDestination.Backup, R.string.settings_backup_export_rules),
+        entry(SettingsDestination.Backup, R.string.settings_backup_import),
         entry(SettingsDestination.More, R.string.title_use_webview),
         entry(SettingsDestination.More, R.string.title_settings_worker),
         entry(SettingsDestination.More, R.string.settings_update_background_download, R.string.summary_update_background_download),

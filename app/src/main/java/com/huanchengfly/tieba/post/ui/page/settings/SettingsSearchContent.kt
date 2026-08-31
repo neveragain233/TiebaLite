@@ -157,6 +157,7 @@ private fun destinationLabelRes(destination: SettingsDestination): Int = when (d
     SettingsDestination.Habit -> R.string.title_settings_read_habit
     SettingsDestination.Privacy -> R.string.title_settings_privacy
     SettingsDestination.More -> R.string.title_settings_more
+    SettingsDestination.Backup -> R.string.title_settings_backup
     SettingsDestination.About -> R.string.title_about
     SettingsDestination.Settings -> R.string.title_settings
     SettingsDestination.WorkInfo -> R.string.title_settings_worker

@@ -21,6 +21,8 @@ abstract class Settings<T>(protected val flow: Flow<T>): Flow<T> by flow {
 
     abstract fun set(new: T)
 
+    abstract suspend fun setNow(new: T)
+
     abstract fun save(transform: (old: T) -> T)
 }
 

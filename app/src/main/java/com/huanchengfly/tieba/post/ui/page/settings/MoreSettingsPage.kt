@@ -7,6 +7,7 @@ import android.webkit.WebView
 import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Analytics
+import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material3.Icon
@@ -75,6 +76,15 @@ fun MoreSettingsPage(
                     },
                 )
             }
+
+            preference(
+                title = R.string.title_settings_backup,
+                summary = R.string.summary_settings_backup,
+                onClick = {
+                    navigator.navigate(route = SettingsDestination.Backup)
+                },
+                leadingIcon = Icons.Outlined.Backup,
+            )
 
             preference(
                 title = R.string.title_settings_worker,
