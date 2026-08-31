@@ -1,10 +1,12 @@
 package com.huanchengfly.tieba.post.ui.page.settings
 
+import android.content.Context
+import android.icu.text.Transliterator
 import androidx.annotation.StringRes
 import com.huanchengfly.tieba.post.R
 
 /**
- * 设置搜索里的一条可检索项.
+ * 搜索里的一条可检索项.
  *
  * @param destination 跳转到的设置子页
  * @param titleRes 标题
@@ -18,8 +20,22 @@ data class SettingsSearchEntry(
     val itemKey: Any? = titleRes,
 )
 
+/**
+ * 预处理后的搜索索引. ICU 中文转音有一定开销, 因此在搜索页内复用.
+ */
+data class SettingsSearchIndexedEntry(
+    val entry: SettingsSearchEntry,
+    internal val title: String,
+    internal val summary: String?,
+    internal val titlePinyin: String,
+    internal val summaryPinyin: String?,
+    internal val titlePinyinInitials: String,
+    internal val summaryPinyinInitials: String?,
+)
+
 /** 全量设置索引, 供设置搜索页过滤. */
 object SettingsSearchIndex {
+
     val all: List<SettingsSearchEntry> = listOf(
         // 主设置页分类(点击直达对应子页)
         entry(SettingsDestination.AccountManage, R.string.title_account_manage, R.string.summary_now_account),
@@ -111,6 +127,161 @@ object SettingsSearchIndex {
         entry(SettingsDestination.AccountManage, R.string.title_modify_username),
         entry(SettingsDestination.AccountManage, R.string.title_copy_bduss),
     )
+
+    fun index(context: Context): List<SettingsSearchIndexedEntry> {
+        return all.map { entry ->
+            val title = context.getString(entry.titleRes)
+            val summary = entry.summaryRes?.let(context::getString)
+            val titlePinyin = toPinyin(title)
+            val summaryPinyin = summary?.let(::toPinyin)
+
+            SettingsSearchIndexedEntry(
+                entry = entry,
+                title = normalizeText(title),
+                summary = summary?.let(::normalizeText),
+                titlePinyin = titlePinyin.full,
+                summaryPinyin = summaryPinyin?.full,
+                titlePinyinInitials = titlePinyin.initials,
+                summaryPinyinInitials = summaryPinyin?.initials,
+            )
+        }
+    }
+
+    fun search(keyword: String, index: List<SettingsSearchIndexedEntry>): List<SettingsSearchEntry> {
+        val terms = keyword.lowercase()
+            .split(Regex("\\s+"))
+            .map { term -> term.replace(NON_WORD_REGEX, "") }
+            .filter { it.isNotEmpty() }
+        if (terms.isEmpty()) return emptyList()
+
+        return index.mapNotNull { indexed ->
+            terms.fold(0) { total, term ->
+                val score = matchTerm(term, indexed)
+                if (score == Int.MAX_VALUE) return@mapNotNull null
+                total + score
+            } to indexed.entry
+        }
+            .sortedWith(compareBy({ it.first }, { it.second.titleRes }))
+            .map { it.second }
+    }
+
+    private fun matchTerm(term: String, indexed: SettingsSearchIndexedEntry): Int {
+        val titleScore = matchText(term, indexed.title, indexed.titlePinyin, indexed.titlePinyinInitials)
+        val summaryScore = indexed.summary?.let {
+            matchText(term, it, indexed.summaryPinyin.orEmpty(), indexed.summaryPinyinInitials.orEmpty())
+        }?.takeIf { it != Int.MAX_VALUE }?.plus(1)
+
+        val best = minOf(titleScore, summaryScore ?: Int.MAX_VALUE)
+        return if (best == Int.MAX_VALUE) Int.MAX_VALUE else best
+    }
+
+    private fun matchText(term: String, text: String, pinyin: String, initials: String): Int {
+        text.indexOf(term).let {
+            if (it >= 0) return when {
+                it == 0 && text.length == term.length -> 0
+                it == 0 -> 1
+                else -> 2
+            }
+        }
+
+        if (term.all { it.isLetterOrDigit() && it.code < 128 }) {
+            pinyin.indexOf(term).let {
+                if (it >= 0) return when {
+                    it == 0 && pinyin.length == term.length -> 1
+                    it == 0 -> 2
+                    else -> 3
+                }
+            }
+
+            // 首字母匹配要求至少两个字符, 减少单字母带来的误报.
+            if (term.length >= 2 && initials.contains(term)) {
+                return when {
+                    initials == term -> 1
+                    initials.startsWith(term) -> 2
+                    else -> 4
+                }
+            }
+
+            // 只对较长的拉丁输入做编辑距离容错, 避免两三个字母时结果过泛.
+            val maxDistance = minOf(2, term.length / 4)
+            if (maxDistance > 0 && fuzzyContains(text, term, maxDistance)) return 5
+            if (maxDistance > 0 && fuzzyContains(pinyin, term, maxDistance)) return 6
+        }
+
+        return if (isSubsequence(text, term)) 7 else Int.MAX_VALUE
+    }
+
+    /**
+     * 计算 pattern 与 text 任意子串的最小编辑距离. 只处理拉丁查询的拼写容错.
+     */
+    private fun fuzzyContains(text: String, pattern: String, maxDistance: Int): Boolean {
+        if (pattern.isEmpty()) return true
+        if (text.isEmpty()) return false
+
+        var previous = IntArray(pattern.length + 1) { it }
+        var current = IntArray(pattern.length + 1)
+
+        for (textChar in text) {
+            current[0] = 0
+            for (patternIndex in pattern.indices) {
+                val substitution = previous[patternIndex] +
+                    if (textChar == pattern[patternIndex]) 0 else 1
+                current[patternIndex + 1] = minOf(
+                    current[patternIndex] + 1, // insert into pattern
+                    previous[patternIndex + 1] + 1, // delete from text
+                    substitution,
+                )
+            }
+            if (current[pattern.length] <= maxDistance) return true
+
+            val swap = previous
+            previous = current
+            current = swap
+        }
+        return false
+    }
+
+    private fun isSubsequence(text: String, pattern: String): Boolean {
+        var patternIndex = 0
+        for (textChar in text) {
+            if (textChar == pattern[patternIndex]) {
+                patternIndex++
+                if (patternIndex == pattern.length) return true
+            }
+        }
+        return false
+    }
+
+    private fun toPinyin(value: String): PinyinText {
+        return try {
+            val transliterated = Transliterator
+                .getInstance("Han-Latin; Latin-ASCII; Lower")
+                .transliterate(value)
+                .lowercase()
+            val spaced = transliterated
+                .replace(NON_WORD_REGEX, " ")
+                .trim()
+            PinyinText(
+                full = spaced.replace(" ", ""),
+                initials = spaced.split(' ')
+                    .mapNotNull { token -> token.firstOrNull { it.isLetterOrDigit() } }
+                    .joinToString(""),
+            )
+        } catch (_: Throwable) {
+            PinyinText()
+        }
+    }
+
+    private fun normalizeText(value: String): String {
+        return value.lowercase().replace(NON_WORD_REGEX, "").trim()
+    }
+
+    private data class PinyinText(
+        val full: String = "",
+        val initials: String = "",
+    )
+
+    private val NON_WORD_REGEX = Regex("[^\\p{L}\\p{N}]+")
 
     private fun entry(
         destination: SettingsDestination,

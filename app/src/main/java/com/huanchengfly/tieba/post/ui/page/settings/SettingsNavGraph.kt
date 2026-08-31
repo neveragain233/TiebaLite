@@ -19,6 +19,9 @@ sealed interface SettingsDestination {
     object Settings: SettingsDestination
 
     @Serializable
+    object SettingsSearch: SettingsDestination
+
+    @Serializable
     object About: SettingsDestination
 
     @Serializable
@@ -70,6 +73,10 @@ sealed interface SettingsDestination {
 fun NavGraphBuilder.settingsGraph(navController: NavController, settingsRepo: SettingsRepository) {
     composable<SettingsDestination.Settings> {
         SettingsPage(navController)
+    }
+
+    composable<SettingsDestination.SettingsSearch> {
+        SettingsSearchPage(navController)
     }
 
     composable<SettingsDestination.About> {
