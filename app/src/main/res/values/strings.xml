@@ -685,6 +685,8 @@
     <string name="summary_comment_nav_single_key">合并为单键: 单击沿当前方向逐楼, 到底后变为回顶键, 长按切换方向</string>
     <string name="settings_comment_nav_single_key_hold_top">单键长按回顶</string>
     <string name="summary_comment_nav_single_key_hold_top">开启后单键长按直接回到顶部(默认长按为切换方向)</string>
+    <string name="settings_comment_nav_end_haptic">最后一楼震动</string>
+    <string name="summary_comment_nav_end_haptic">导航进入最后一楼时提供轻震动反馈</string>
     <string name="settings_compact_reply_bar_position">紧凑回复栏位置</string>
     <string name="compact_reply_bar_position_right">右下</string>
     <string name="compact_reply_bar_position_left">左下</string>

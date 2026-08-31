@@ -103,6 +103,7 @@ enum class NavRailPosition {
  * @param commentNavEnabled 帖子详情页启用评论上/下导航
  * @param commentNavSingleKey 评论导航合并为单键(到底变为回顶键, 长按切换方向)
  * @param commentNavSingleKeyHoldToTop 单键模式长按直接回顶(默认长按为切换方向)
+ * @param commentNavEndHaptic 评论导航进入最后一楼时震动
  * @param compactReplyBarPosition 回复栏紧凑模式胶囊停靠位置
  * @param compactReplyBar 回复栏使用紧凑布局
  * @param compactShowCollect 紧凑模式是否显示收藏按钮
@@ -135,6 +136,7 @@ data class UISettings(
     val commentNavEnabled: Boolean = true,
     val commentNavSingleKey: Boolean = false,
     val commentNavSingleKeyHoldToTop: Boolean = false,
+    val commentNavEndHaptic: Boolean = true,
     val compactReplyBarPosition: CompactReplyBarPosition = CompactReplyBarPosition.RIGHT,
     val compactReplyBar: Boolean = false,
     val compactShowCollect: Boolean = true,

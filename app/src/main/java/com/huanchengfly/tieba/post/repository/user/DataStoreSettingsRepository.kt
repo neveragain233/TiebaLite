@@ -378,6 +378,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             commentNavSingleKey = it[booleanPreferencesKey(KEY_COMMENT_NAV_SINGLE_KEY)] ?: false,
             commentNavSingleKeyHoldToTop =
                 it[booleanPreferencesKey(KEY_COMMENT_NAV_SINGLE_KEY_HOLD_TOP)] ?: false,
+            commentNavEndHaptic = it[booleanPreferencesKey(KEY_COMMENT_NAV_END_HAPTIC)] ?: true,
             compactReplyBarPosition = CompactReplyBarPosition.entries.getOrElse(compactReplyBarPositionOrdinal) {
                 CompactReplyBarPosition.RIGHT
             },
@@ -412,6 +413,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_COMMENT_NAV_ENABLED)] = ui.commentNavEnabled
         it[booleanPreferencesKey(KEY_COMMENT_NAV_SINGLE_KEY)] = ui.commentNavSingleKey
         it[booleanPreferencesKey(KEY_COMMENT_NAV_SINGLE_KEY_HOLD_TOP)] = ui.commentNavSingleKeyHoldToTop
+        it[booleanPreferencesKey(KEY_COMMENT_NAV_END_HAPTIC)] = ui.commentNavEndHaptic
         it[intPreferencesKey(KEY_COMPACT_REPLY_BAR_POSITION)] = ui.compactReplyBarPosition.ordinal
         it[booleanPreferencesKey(KEY_COMPACT_REPLY_BAR)] = ui.compactReplyBar
         it[booleanPreferencesKey(KEY_COMPACT_SHOW_COLLECT)] = ui.compactShowCollect
@@ -448,6 +450,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_FULLSCREEN_BUTTON_STYLE = "ui_fullscreen_button_style"
     private const val KEY_COMMENT_NAV_ENABLED = "ui_comment_nav_enabled"
     private const val KEY_COMMENT_NAV_SINGLE_KEY = "ui_comment_nav_single_key"
+    private const val KEY_COMMENT_NAV_END_HAPTIC = "ui_comment_nav_end_haptic"
     private const val KEY_COMMENT_NAV_SINGLE_KEY_HOLD_TOP = "ui_comment_nav_single_key_hold_top"
     private const val KEY_COMPACT_REPLY_BAR_POSITION = "ui_compact_reply_bar_position"
     private const val KEY_COMPACT_REPLY_BAR = "ui_compact_reply_bar"

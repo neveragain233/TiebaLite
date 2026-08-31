@@ -96,6 +96,7 @@ data class UISettingsDto(
     val commentNavEnabled: Boolean,
     val commentNavSingleKey: Boolean,
     val commentNavSingleKeyHoldToTop: Boolean,
+    val commentNavEndHaptic: Boolean = true,
     val compactReplyBarPosition: String,
     val compactReplyBar: Boolean,
     val compactShowCollect: Boolean,

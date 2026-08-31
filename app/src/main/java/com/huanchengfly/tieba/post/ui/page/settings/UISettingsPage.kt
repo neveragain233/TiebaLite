@@ -11,6 +11,7 @@ import androidx.compose.material.icons.rounded.Compress
 import androidx.compose.material.icons.rounded.PictureInPictureAlt
 import androidx.compose.material.icons.rounded.Star
 import androidx.compose.material.icons.rounded.SwapVert
+import androidx.compose.material.icons.rounded.Vibration
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.material.icons.automirrored.outlined.Label
 import androidx.compose.material.icons.automirrored.outlined.LabelImportant
@@ -253,6 +254,14 @@ fun UISettingsPage(
                 summary = R.string.summary_comment_nav_single_key_hold_top,
                 leadingIcon = Icons.Rounded.VerticalAlignTop,
                 enabled = currentPreference.commentNavEnabled && currentPreference.commentNavSingleKey,
+            )
+
+            toggleablePreference(
+                property = UISettings::commentNavEndHaptic,
+                title = R.string.settings_comment_nav_end_haptic,
+                summary = R.string.summary_comment_nav_end_haptic,
+                leadingIcon = Icons.Rounded.Vibration,
+                enabled = currentPreference.commentNavEnabled,
             )
 
             toggleablePreference(

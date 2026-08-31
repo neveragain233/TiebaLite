@@ -135,30 +135,6 @@ object DeviceUtils {
             }
         }
     }
-
-    /**
-     * 线性马达轻反馈. 优先使用系统 primitive, 硬件不支持时退化为短振动.
-     */
-    fun Context.vibrateLight() {
-        if (!vibrator.hasVibrator()) return
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
-            vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK)
-        ) {
-            val effect = VibrationEffect.startComposition()
-                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 0.4f)
-                .compose()
-            vibrator.vibrate(effect)
-            return
-        }
-
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
-            return
-        }
-
-        vibrateOneShot(milliseconds = 10)
-    }
 }
 
 private class VibratorSingletonDelegate : ReadOnlyProperty<Context, Vibrator> {

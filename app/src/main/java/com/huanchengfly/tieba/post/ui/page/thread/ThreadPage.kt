@@ -90,7 +90,9 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -174,7 +176,6 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.rememberSnackbarHostState
 import com.huanchengfly.tieba.post.ui.widgets.compose.scrollToItemWithHeader
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.useStickyHeaderWorkaround
-import com.huanchengfly.tieba.post.utils.DeviceUtils.vibrateLight
 import com.huanchengfly.tieba.post.utils.StringUtil.getShortNumString
 import com.huanchengfly.tieba.post.utils.TiebaUtil
 import com.huanchengfly.tieba.post.utils.trace
@@ -304,6 +305,14 @@ fun ThreadPage(
 ) = trace(MacrobenchmarkConstant.TRACE_THREAD) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
+    val hapticFeedback = LocalHapticFeedback.current
+    val uiSettings = LocalUISettings.current
+    val performEndHaptic: () -> Unit = {
+        if (uiSettings.commentNavEndHaptic) {
+            // 与动态页长按回顶一致, 走系统 HapticFeedback 路径而不是裸 Vibrator primitive
+            hapticFeedback.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+        }
+    }
     val snackbarHostState = rememberSnackbarHostState()
     val useStickyHeader = LocalHabitSettings.current.stickyHeader
     val useStickyHeaderWorkaround = useStickyHeaderWorkaround()
@@ -556,7 +565,7 @@ fun ThreadPage(
                     !state.pageData.hasMore &&
                     target == layout.orderedPostIds.lastOrNull()
             scrollToFloorOrPos(target, direction) {
-                if (arriveAtEnd) context.vibrateLight()
+                if (arriveAtEnd) performEndHaptic()
             }
             return
         }
@@ -646,7 +655,7 @@ fun ThreadPage(
                 !newLayout.hasMore &&
                 target == newLayout.orderedPostIds.lastOrNull()
             ) {
-                context.vibrateLight()
+                performEndHaptic()
             }
             pendingCommentNav = null
         }
