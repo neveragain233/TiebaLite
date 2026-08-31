@@ -138,7 +138,10 @@ fun SettingsBackupPage(
         onBack = navigator::navigateUp,
         settings = settings,
         initialValue = BackupSettings(),
-        destination = SettingsDestination.Backup,
+        // 备份页不参与搜索定位: 不论从哪个入口进入都强制回页首,
+        // 避免 Navigation 恢复 LazyListState 或搜索目标导致页内滚动。
+        destination = null,
+        resetScrollWithoutTarget = true,
         snackbarHostState = snackbarHostState,
         snackbarHost = { SwipeToDismissSnackbarHost(snackbarHostState) },
     ) {

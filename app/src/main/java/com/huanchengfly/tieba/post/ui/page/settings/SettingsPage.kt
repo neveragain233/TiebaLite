@@ -383,6 +383,7 @@ fun <T> SettingsScaffold(
     settings: Settings<T>,
     initialValue: T,
     destination: SettingsDestination? = null,
+    resetScrollWithoutTarget: Boolean = false,
     snackbarHostState: SnackbarHostState = rememberSnackbarHostState(),
     snackbarHost: @Composable () -> Unit = { SwipeToDismissSnackbarHost(LocalSnackbarHostState.current) },
     content: SettingsSegmentedPrefsScope<T>.() -> Unit
@@ -419,6 +420,7 @@ fun <T> SettingsScaffold(
             initialValue = initialValue,
             contentPadding = contentPadding + SettingsContentPadding,
             scrollToItemKey = scrollToItemKey,
+            resetScrollWithoutTarget = resetScrollWithoutTarget,
             content = content
         )
     }

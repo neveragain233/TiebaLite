@@ -237,7 +237,8 @@ private open class SegmentedPrefsScopeImpl(
         crossinline content: @Composable LazyItemScope.(shapes: ListItemShapes) -> Unit
     ) {
         val index = itemsCount
-        if (key == scrollToItemKey) {
+        // scrollToItemKey 为 null 表示没有搜索定位请求; 不能让默认 key=null 的 item 匹配 null。
+        if (scrollToItemKey != null && key == scrollToItemKey) {
             onScrollItemIndex(index)
         }
         item(key, contentType) {
@@ -544,6 +545,7 @@ fun <T> SegmentedPrefsScreen(
     contentPadding: PaddingValues = PaddingValues.Zero,
     verticalArrangement: Arrangement.Vertical = Arrangement.spacedBy(2.dp),
     scrollToItemKey: Any? = null,
+    resetScrollWithoutTarget: Boolean = false,
     content: SettingsSegmentedPrefsScope<T>.() -> Unit
 ) {
     val latestContent by rememberUpdatedState(content)
@@ -576,7 +578,11 @@ fun <T> SegmentedPrefsScreen(
     }
 
     LaunchedEffect(scrollToItemKey) {
-        scrollToIndex?.let { listState.animateScrollToItem(it) }
+        val targetIndex = scrollToIndex
+        when {
+            targetIndex != null -> listState.animateScrollToItem(targetIndex)
+            resetScrollWithoutTarget -> listState.scrollToItem(0)
+        }
     }
 }
 
