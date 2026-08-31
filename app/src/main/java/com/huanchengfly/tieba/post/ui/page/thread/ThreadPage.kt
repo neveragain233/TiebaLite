@@ -967,6 +967,7 @@ fun ThreadPage(
                     Container {
                         ThreadFloatingToolbar(
                             modifier = Modifier
+                                .align(Alignment.BottomEnd)
                                 .windowInsetsPadding(WindowInsets.navigationBars)
                                 .offset(y = -ThreadToolbarScreenOffset)
                                 .padding(horizontal = CardHorizontalSpacing)
