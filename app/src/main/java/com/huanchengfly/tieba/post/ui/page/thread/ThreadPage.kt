@@ -470,7 +470,11 @@ fun ThreadPage(
     }
 
     // 跳到某楼: 下一楼从楼顶进入, 上一楼(回到已展开长图的楼)先落到收起按钮
-    fun scrollToFloorOrPos(target: Long, direction: CommentNavDirection) {
+    fun scrollToFloorOrPos(
+        target: Long,
+        direction: CommentNavDirection,
+        onArrive: (() -> Unit)? = null,
+    ) {
         val targetIndex = layout.itemIndexOf(target) ?: return
         val targetPositions = imageNavPositions(target)
         lastNavAnchorPostId = target
@@ -488,6 +492,7 @@ fun ThreadPage(
                 scrollToPost(targetIndex)
             }
             navScrollActive = false
+            onArrive?.invoke()
         }
     }
 
@@ -547,7 +552,12 @@ fun ThreadPage(
                     viewModel.requestLoadMore()
                 }
             }
-            scrollToFloorOrPos(target, direction)
+            val arriveAtEnd = direction == CommentNavDirection.NEXT &&
+                    !state.pageData.hasMore &&
+                    target == layout.orderedPostIds.lastOrNull()
+            scrollToFloorOrPos(target, direction) {
+                if (arriveAtEnd) context.vibrateLight()
+            }
             return
         }
         // 处于边界: 决定是触发加载, 还是回跳楼主帖 / 提示已到首末楼
@@ -575,14 +585,9 @@ fun ThreadPage(
                                 lazyListState.animateScrollBy(bottomDelta)
                             }
                             navScrollActive = false
-                            // 滚动结束后才反馈, 提示导航已经到达末楼底部
-                            context.vibrateLight()
                         }
                     }
-                    else -> {
-                        context.vibrateLight()
-                        context.toastShort(R.string.tip_no_more_comment)
-                    }
+                    else -> context.toastShort(R.string.tip_no_more_comment)
                 }
             }
             CommentNavDirection.PREV -> {
@@ -637,6 +642,12 @@ fun ThreadPage(
                 }
             }
             navScrollActive = false
+            if (pending.direction == CommentNavDirection.NEXT &&
+                !newLayout.hasMore &&
+                target == newLayout.orderedPostIds.lastOrNull()
+            ) {
+                context.vibrateLight()
+            }
             pendingCommentNav = null
         }
     }
