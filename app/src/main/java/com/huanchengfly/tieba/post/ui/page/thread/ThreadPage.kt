@@ -1511,14 +1511,9 @@ private fun ThreadFloatingToolbar(
     }
 
     ProvideContentColor(colorScheme.onPrimaryContainer) {
-        if (compact) {
-            // 用 clip 保证紧凑胶囊向下划动时完全隐藏, 不残留
-            Box(modifier = Modifier.clipToBounds()) {
-                toolbarRow()
-            }
-        } else {
-            toolbarRow()
-        }
+        // 不能在这里 clipToBounds: 会让胶囊按自身 bounds 裁切, 而不是整体滑出屏幕。
+        // 收起行程已在 FloatingToolbarState 中追加屏幕偏移 + navigationBars inset。
+        toolbarRow()
     }
 }
 
