@@ -707,4 +707,28 @@
     <string name="toast_settings_restore_done">设置恢复完成</string>
     <string name="toast_unsupported_backup">不支持的备份版本</string>
 
+    <string name="settings_group_auto_backup">自动备份</string>
+    <string name="settings_auto_backup_enabled">自动备份</string>
+    <string name="settings_auto_backup_include_rules">自动备份包含屏蔽规则</string>
+    <string name="settings_auto_backup_interval">备份间隔</string>
+    <string name="auto_backup_interval_daily">每天</string>
+    <string name="auto_backup_interval_weekly">每 7 天</string>
+    <string name="auto_backup_interval_monthly">每 30 天</string>
+    <string name="settings_auto_backup_keep_count">保留备份数量</string>
+    <string name="auto_backup_keep_count_3">3 份</string>
+    <string name="auto_backup_keep_count_7">7 份</string>
+    <string name="auto_backup_keep_count_14">14 份</string>
+    <string name="auto_backup_keep_count_30">30 份</string>
+    <string name="settings_auto_backup_directory">备份目录</string>
+    <string name="settings_auto_backup_private_directory">应用私有目录</string>
+    <string name="settings_auto_backup_use_private_directory">使用应用私有目录</string>
+    <string name="settings_auto_backup_run_now">立即备份</string>
+    <string name="settings_auto_backup_history">备份历史</string>
+    <string name="settings_auto_backup_no_history">暂无自动备份</string>
+    <string name="settings_auto_backup_never">尚未备份</string>
+    <string name="settings_auto_backup_last_run">上次自动备份</string>
+    <string name="settings_auto_backup_last_success">成功</string>
+    <string name="settings_auto_backup_last_failed">失败</string>
+    <string name="settings_auto_backup_last_unknown">未知</string>
+
 </resources>

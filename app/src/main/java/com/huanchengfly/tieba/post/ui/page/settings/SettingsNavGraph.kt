@@ -146,7 +146,7 @@ fun NavGraphBuilder.settingsGraph(navController: NavController, settingsRepo: Se
     }
 
     composable<SettingsDestination.Backup> {
-        SettingsBackupPage(settings = settingsRepo.updateSettings, navController)
+        SettingsBackupPage(settings = settingsRepo.backupSettings, navController)
     }
 
     composable<SettingsDestination.WorkInfo> {

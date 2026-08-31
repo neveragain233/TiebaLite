@@ -1,6 +1,7 @@
 package com.huanchengfly.tieba.post.repository.user
 
 import androidx.compose.runtime.Immutable
+import com.huanchengfly.tieba.post.ui.models.settings.BackupSettings
 import com.huanchengfly.tieba.post.ui.models.settings.BlockSettings
 import com.huanchengfly.tieba.post.ui.models.settings.ClientConfig
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
@@ -52,6 +53,8 @@ interface SettingsRepository {
     val uiSettings: Settings<UISettings>
 
     val updateSettings: Settings<UpdateSettings>
+
+    val backupSettings: Settings<BackupSettings>
 
     val signConfig: Settings<SignConfig>
 

@@ -1,5 +1,7 @@
 package com.huanchengfly.tieba.post.repository.user
 
+import com.huanchengfly.tieba.post.ui.models.settings.AutoBackupInterval
+import com.huanchengfly.tieba.post.ui.models.settings.BackupSettings
 import com.huanchengfly.tieba.post.ui.models.settings.BlockSettings
 import com.huanchengfly.tieba.post.ui.models.settings.ClientConfig
 import com.huanchengfly.tieba.post.ui.models.settings.HabitSettings
@@ -50,6 +52,10 @@ class FakeSettingsRepository @Inject constructor(): SettingsRepository {
 
     override val updateSettings: Settings<UpdateSettings> =
         FakeSettings(UpdateSettings())
+
+    override val backupSettings: Settings<BackupSettings> = FakeSettings(
+        BackupSettings(autoBackupInterval = AutoBackupInterval.DAILY)
+    )
 
     override val UUIDSettings: Settings<String>
         get() = throw RuntimeException("Not yet implemented")

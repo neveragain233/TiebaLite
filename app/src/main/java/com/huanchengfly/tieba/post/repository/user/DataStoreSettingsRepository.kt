@@ -26,6 +26,8 @@ import com.huanchengfly.tieba.post.putInt
 import com.huanchengfly.tieba.post.putLong
 import com.huanchengfly.tieba.post.putString
 import com.huanchengfly.tieba.post.theme.TiebaBlue
+import com.huanchengfly.tieba.post.ui.models.settings.AutoBackupInterval
+import com.huanchengfly.tieba.post.ui.models.settings.BackupSettings
 import com.huanchengfly.tieba.post.ui.models.settings.BlockSettings
 import com.huanchengfly.tieba.post.ui.models.settings.ClientConfig
 import com.huanchengfly.tieba.post.ui.models.settings.CompactReplyBarPosition
@@ -143,6 +145,8 @@ class DataStoreSettingsRepository @Inject constructor(
 
     override val updateSettings: Settings<UpdateSettings> = ComplexSettings(UpdateSettingsTransformer)
 
+    override val backupSettings: Settings<BackupSettings> = ComplexSettings(BackupSettingsTransformer)
+
     override val signConfig: Settings<SignConfig> = ComplexSettings(SignConfigTransformer)
 
     override val UUIDSettings: Settings<String> = SimpleSettings(stringPreferencesKey("uuid"), "")
@@ -163,6 +167,46 @@ private object UpdateSettingsTransformer : PreferenceTransformer<UpdateSettings>
     }
 
     private const val KEY_BACKGROUND_DOWNLOAD = "update_background_download"
+}
+
+private object BackupSettingsTransformer : PreferenceTransformer<BackupSettings> {
+    override val get: (Preferences) -> BackupSettings = {
+        val intervalOrdinal = it[intPreferencesKey(KEY_AUTO_BACKUP_INTERVAL)] ?: AutoBackupInterval.DAILY.ordinal
+        BackupSettings(
+            autoBackupEnabled = it[booleanPreferencesKey(KEY_AUTO_BACKUP_ENABLED)] == true,
+            autoBackupIncludeRules = it[booleanPreferencesKey(KEY_AUTO_BACKUP_INCLUDE_RULES)] ?: true,
+            autoBackupInterval = AutoBackupInterval.entries.getOrElse(intervalOrdinal) { AutoBackupInterval.DAILY },
+            autoBackupKeepCount = (it[intPreferencesKey(KEY_AUTO_BACKUP_KEEP_COUNT)] ?: 7).coerceIn(1, 30),
+            autoBackupDirectoryUri = it[stringPreferencesKey(KEY_AUTO_BACKUP_DIRECTORY)],
+            lastAutoBackupAt = it[longPreferencesKey(KEY_AUTO_BACKUP_LAST_AT)] ?: 0,
+            lastAutoBackupSucceeded = it[booleanPreferencesKey(KEY_AUTO_BACKUP_LAST_SUCCESS)],
+            lastAutoBackupMessage = it[stringPreferencesKey(KEY_AUTO_BACKUP_LAST_MESSAGE)],
+        )
+    }
+
+    override val set: (MutablePreferences, BackupSettings) -> Unit = { it, backup ->
+        it[booleanPreferencesKey(KEY_AUTO_BACKUP_ENABLED)] = backup.autoBackupEnabled
+        it[booleanPreferencesKey(KEY_AUTO_BACKUP_INCLUDE_RULES)] = backup.autoBackupIncludeRules
+        it[intPreferencesKey(KEY_AUTO_BACKUP_INTERVAL)] = backup.autoBackupInterval.ordinal
+        it[intPreferencesKey(KEY_AUTO_BACKUP_KEEP_COUNT)] = backup.autoBackupKeepCount.coerceIn(1, 30)
+        it.putString(KEY_AUTO_BACKUP_DIRECTORY, backup.autoBackupDirectoryUri)
+        it[longPreferencesKey(KEY_AUTO_BACKUP_LAST_AT)] = backup.lastAutoBackupAt
+        backup.lastAutoBackupSucceeded?.let { success ->
+            it[booleanPreferencesKey(KEY_AUTO_BACKUP_LAST_SUCCESS)] = success
+        } ?: run {
+            it -= booleanPreferencesKey(KEY_AUTO_BACKUP_LAST_SUCCESS)
+        }
+        it.putString(KEY_AUTO_BACKUP_LAST_MESSAGE, backup.lastAutoBackupMessage)
+    }
+
+    private const val KEY_AUTO_BACKUP_ENABLED = "backup_auto_enabled"
+    private const val KEY_AUTO_BACKUP_INCLUDE_RULES = "backup_auto_include_rules"
+    private const val KEY_AUTO_BACKUP_INTERVAL = "backup_auto_interval"
+    private const val KEY_AUTO_BACKUP_KEEP_COUNT = "backup_auto_keep_count"
+    private const val KEY_AUTO_BACKUP_DIRECTORY = "backup_auto_directory_uri"
+    private const val KEY_AUTO_BACKUP_LAST_AT = "backup_auto_last_at"
+    private const val KEY_AUTO_BACKUP_LAST_SUCCESS = "backup_auto_last_success"
+    private const val KEY_AUTO_BACKUP_LAST_MESSAGE = "backup_auto_last_message"
 }
 
 private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {

@@ -81,6 +81,8 @@ fun MoreSettingsPage(
                 title = R.string.title_settings_backup,
                 summary = R.string.summary_settings_backup,
                 onClick = {
+                    // 普通入口固定回页首; 只有设置搜索结果才应定位到具体条目。
+                    SettingsSearchTarget.clear()
                     navigator.navigate(route = SettingsDestination.Backup)
                 },
                 leadingIcon = Icons.Outlined.Backup,

@@ -17,6 +17,7 @@ import androidx.compose.runtime.tooling.ComposeStackTraceMode
 import androidx.compose.ui.ComposeUiFlags
 import androidx.hilt.work.HiltWorkerFactory
 import androidx.work.Configuration
+import androidx.work.WorkManager
 import coil3.SingletonImageLoader
 import com.huanchengfly.tieba.post.activities.CrashActivity
 import com.huanchengfly.tieba.post.components.ConfigInitializer
@@ -24,6 +25,7 @@ import com.huanchengfly.tieba.post.components.coil.TbImageLoaderFactory
 import com.huanchengfly.tieba.post.di.RepositoryEntryPoint
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
 import com.huanchengfly.tieba.post.utils.EmoticonManager
+import com.huanchengfly.tieba.post.workers.SettingsBackupWorker
 import com.huanchengfly.tieba.post.utils.ImageCacheUtil
 import dagger.hilt.android.EntryPointAccessors
 import dagger.hilt.android.HiltAndroidApp
@@ -31,6 +33,7 @@ import kotlinx.coroutines.CoroutineName
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.flow.distinctUntilChangedBy
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.launch
 import javax.inject.Inject
@@ -104,6 +107,21 @@ class App : Application(), Configuration.Provider {
         AppBackgroundScope.launch {
             delay(3000)
             ImageCacheUtil.clearGlideDiskCache(this@App)
+        }
+
+        AppBackgroundScope.launch {
+            settingRepository.backupSettings
+                .distinctUntilChangedBy { it.autoBackupEnabled to it.autoBackupInterval }
+                .collect { backupSettings ->
+                    if (backupSettings.autoBackupEnabled) {
+                        SettingsBackupWorker.schedule(
+                            workManager = WorkManager.getInstance(this@App),
+                            interval = backupSettings.autoBackupInterval,
+                        )
+                    } else {
+                        SettingsBackupWorker.cancel(WorkManager.getInstance(this@App))
+                    }
+                }
         }
     }
 

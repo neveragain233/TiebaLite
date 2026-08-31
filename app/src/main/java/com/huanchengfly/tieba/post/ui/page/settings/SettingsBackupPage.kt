@@ -3,11 +3,13 @@ package com.huanchengfly.tieba.post.ui.page.settings
 import android.net.Uri
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.documentfile.provider.DocumentFile
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
+import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
@@ -18,8 +20,12 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.CloudDownload
+import androidx.compose.material.icons.outlined.Folder
+import androidx.compose.material.icons.outlined.History
+import androidx.compose.material.icons.outlined.PlayCircle
 import androidx.compose.material.icons.outlined.Restore
 import androidx.compose.material.icons.outlined.Shield
+import androidx.compose.material.icons.outlined.Schedule
 import androidx.compose.material.icons.outlined.Tune
 import androidx.compose.material3.Button
 import androidx.compose.material3.Checkbox
@@ -47,7 +53,9 @@ import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.arch.collectUiEventWithLifecycle
 import com.huanchengfly.tieba.post.repository.user.Settings
-import com.huanchengfly.tieba.post.ui.models.settings.UpdateSettings
+import com.huanchengfly.tieba.post.ui.models.settings.AutoBackupInterval
+import com.huanchengfly.tieba.post.ui.models.settings.BackupHistoryItem
+import com.huanchengfly.tieba.post.ui.models.settings.BackupSettings
 import com.huanchengfly.tieba.post.ui.widgets.compose.AlertDialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogNegativeButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogState
@@ -58,7 +66,10 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.dialogs.DirectionState
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.preference
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberSnackbarHostState
+import com.huanchengfly.tieba.post.utils.workManager
 import com.huanchengfly.tieba.post.utils.SettingsBackupUtil
+import com.huanchengfly.tieba.post.workers.SettingsBackupWorker
+import kotlinx.collections.immutable.persistentMapOf
 import kotlinx.coroutines.launch
 import java.text.SimpleDateFormat
 import java.util.Date
@@ -66,7 +77,7 @@ import java.util.Locale
 
 @Composable
 fun SettingsBackupPage(
-    settings: Settings<UpdateSettings>,
+    settings: Settings<BackupSettings>,
     navigator: NavController,
     viewModel: SettingsBackupViewModel = hiltViewModel(),
 ) {
@@ -106,11 +117,27 @@ fun SettingsBackupPage(
         }
     }
 
+    val historyDialogState = rememberDialogState()
+    val directoryLauncher = rememberLauncherForActivityResult(
+        contract = ActivityResultContracts.OpenDocumentTree()
+    ) { uri: Uri? ->
+        if (uri != null) {
+            runCatching {
+                context.contentResolver.takePersistableUriPermission(
+                    uri,
+                    android.content.Intent.FLAG_GRANT_READ_URI_PERMISSION or
+                            android.content.Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+                )
+            }
+            viewModel.onAutoBackupDirectorySelected(uri)
+        }
+    }
+
     SettingsScaffold(
         titleRes = R.string.title_settings_backup,
         onBack = navigator::navigateUp,
         settings = settings,
-        initialValue = UpdateSettings(),
+        initialValue = BackupSettings(),
         destination = SettingsDestination.Backup,
         snackbarHostState = snackbarHostState,
         snackbarHost = { SwipeToDismissSnackbarHost(snackbarHostState) },
@@ -142,6 +169,104 @@ fun SettingsBackupPage(
                 }
             )
         }
+
+        group(title = R.string.settings_group_auto_backup) {
+            toggleablePreference(
+                property = BackupSettings::autoBackupEnabled,
+                title = R.string.settings_auto_backup_enabled,
+                leadingIcon = Icons.Outlined.Schedule,
+            )
+
+            toggleablePreference(
+                property = BackupSettings::autoBackupIncludeRules,
+                title = R.string.settings_auto_backup_include_rules,
+                leadingIcon = Icons.Outlined.Shield,
+                enabled = currentPreference.autoBackupEnabled,
+            )
+
+            listPref(
+                property = BackupSettings::autoBackupInterval,
+                title = R.string.settings_auto_backup_interval,
+                leadingIcon = Icons.Outlined.Tune,
+                enabled = currentPreference.autoBackupEnabled,
+                options = persistentMapOf(
+                    AutoBackupInterval.DAILY to R.string.auto_backup_interval_daily,
+                    AutoBackupInterval.WEEKLY to R.string.auto_backup_interval_weekly,
+                    AutoBackupInterval.MONTHLY to R.string.auto_backup_interval_monthly,
+                ),
+            )
+
+            listPref(
+                property = BackupSettings::autoBackupKeepCount,
+                title = R.string.settings_auto_backup_keep_count,
+                leadingIcon = Icons.Outlined.History,
+                enabled = currentPreference.autoBackupEnabled,
+                options = persistentMapOf(
+                    3 to R.string.auto_backup_keep_count_3,
+                    7 to R.string.auto_backup_keep_count_7,
+                    14 to R.string.auto_backup_keep_count_14,
+                    30 to R.string.auto_backup_keep_count_30,
+                ),
+            )
+
+            val directorySummary = currentPreference.autoBackupDirectoryUri?.let {
+                DocumentFile.fromTreeUri(context, Uri.parse(it))?.name ?: it
+            } ?: context.getString(R.string.settings_auto_backup_private_directory)
+
+            preference(
+                onClick = { directoryLauncher.launch(null) },
+                title = { Text(text = stringResource(R.string.settings_auto_backup_directory)) },
+                summary = { Text(text = directorySummary) },
+                icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
+                enabled = currentPreference.autoBackupEnabled,
+            )
+
+            preference(
+                onClick = { viewModel.onAutoBackupDirectorySelected(null) },
+                title = { Text(text = stringResource(R.string.settings_auto_backup_use_private_directory)) },
+                icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
+                enabled = currentPreference.autoBackupEnabled,
+            )
+
+            preference(
+                onClick = viewModel::onRunBackupNow,
+                title = { Text(text = stringResource(R.string.settings_auto_backup_run_now)) },
+                icon = { Icon(Icons.Outlined.PlayCircle, contentDescription = null) },
+            )
+
+            preference(
+                onClick = {
+                    viewModel.onLoadAutoBackups()
+                    historyDialogState.show()
+                },
+                title = { Text(text = stringResource(R.string.settings_auto_backup_history)) },
+                icon = { Icon(Icons.Outlined.History, contentDescription = null) },
+                enabled = currentPreference.autoBackupEnabled,
+            )
+
+            val lastBackupAt = currentPreference.lastAutoBackupAt
+            val lastBackupText = if (lastBackupAt > 0L) {
+                SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault()).format(Date(lastBackupAt))
+            } else {
+                context.getString(R.string.settings_auto_backup_never)
+            }
+            val lastStatusRes = when (currentPreference.lastAutoBackupSucceeded) {
+                true -> R.string.settings_auto_backup_last_success
+                false -> R.string.settings_auto_backup_last_failed
+                null -> R.string.settings_auto_backup_last_unknown
+            }
+            preference(
+                title = { Text(text = stringResource(R.string.settings_auto_backup_last_run)) },
+                summary = {
+                    Text(
+                        text = lastBackupText + " / " + stringResource(lastStatusRes) +
+                                (currentPreference.lastAutoBackupMessage?.let { " / $it" } ?: "")
+                    )
+                },
+                icon = { Icon(Icons.Outlined.Schedule, contentDescription = null) },
+                onClick = {},
+            )
+        }
     }
 
     StrongBox {
@@ -158,6 +283,25 @@ fun SettingsBackupPage(
                 state = restoreDialogState,
                 uiState = uiState,
                 onRestoreClicked = viewModel::onRestore,
+                onCancelClicked = viewModel::onCancelRestore,
+            )
+        }
+
+        LaunchedEffect(historyDialogState.show) {
+            if (historyDialogState.show) {
+                viewModel.onLoadAutoBackups()
+            }
+        }
+
+        if (historyDialogState.show) {
+            AutoBackupHistoryDialog(
+                state = historyDialogState,
+                uiState = uiState,
+                onRestore = { item ->
+                    historyDialogState.show = false
+                    viewModel.onRestoreFilePicked(item.uri)
+                    restoreDialogState.show()
+                },
                 onCancelClicked = viewModel::onCancelRestore,
             )
         }
@@ -294,6 +438,58 @@ private fun SettingsBackupRestoreDialog(
                         text = stringResource(R.string.settings_backup_empty_rules),
                         color = MaterialTheme.colorScheme.onSurfaceVariant,
                         modifier = Modifier.padding(start = 8.dp),
+                    )
+                }
+            }
+        }
+    }
+}
+
+@Composable
+private fun AutoBackupHistoryDialog(
+    state: DialogState,
+    uiState: SettingsBackupUiState,
+    onRestore: (BackupHistoryItem) -> Unit,
+    onCancelClicked: () -> Unit,
+) {
+    AlertDialog(
+        dialogState = state,
+        title = { Text(text = stringResource(R.string.settings_auto_backup_history)) },
+        buttons = {
+            DialogNegativeButton(
+                text = stringResource(R.string.button_cancel),
+                onClick = onCancelClicked,
+            )
+        },
+    ) {
+        if (uiState.loadingAutoBackups) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.Center,
+            ) {
+                LoadingIndicator()
+            }
+        } else if (uiState.autoBackups.isEmpty()) {
+            Text(
+                text = stringResource(R.string.settings_auto_backup_no_history),
+                modifier = Modifier.padding(horizontal = 16.dp),
+            )
+        } else {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .height(320.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp),
+            ) {
+                uiState.autoBackups.forEach { item ->
+                    val time = SimpleDateFormat("yyyy-MM-dd HH:mm:ss", Locale.getDefault())
+                        .format(Date(item.lastModified))
+                    Text(
+                        text = "${item.name}\n$time",
+                        color = MaterialTheme.colorScheme.primary,
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { onRestore(item) },
                     )
                 }
             }

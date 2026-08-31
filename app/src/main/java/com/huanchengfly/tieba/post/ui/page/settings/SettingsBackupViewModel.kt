@@ -1,5 +1,6 @@
 package com.huanchengfly.tieba.post.ui.page.settings
 
+import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
 import android.util.Log
@@ -12,9 +13,14 @@ import com.huanchengfly.tieba.post.models.database.dao.HiddenThreadDao
 import com.huanchengfly.tieba.post.models.database.dao.TransactionRunner
 import com.huanchengfly.tieba.post.repository.user.OKSignRepository
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
+import com.huanchengfly.tieba.post.workers.SettingsBackupWorker
+import com.huanchengfly.tieba.post.ui.models.settings.BackupHistoryItem
+import com.huanchengfly.tieba.post.ui.models.settings.BackupSettings
 import com.huanchengfly.tieba.post.ui.models.settings.SettingsBackupMetadata
 import com.huanchengfly.tieba.post.utils.RestoreOption
+import com.huanchengfly.tieba.post.utils.SettingsBackupStore
 import com.huanchengfly.tieba.post.utils.SettingsBackupUtil
+import androidx.work.WorkManager
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.Dispatchers
@@ -26,6 +32,8 @@ data class SettingsBackupUiState(
     val loading: Boolean = false,
     val pendingRestore: Pair<SettingsBackupMetadata, Uri>? = null,
     val error: Throwable? = null,
+    val autoBackups: List<BackupHistoryItem> = emptyList(),
+    val loadingAutoBackups: Boolean = false,
 )
 
 sealed interface SettingsBackupUiEvent : UiEvent {
@@ -87,8 +95,10 @@ class SettingsBackupViewModel @Inject constructor(
         if (currentState.loading) return else _uiState.update { it.copy(loading = true) }
         launchInVM(Dispatchers.IO) {
             val result = runCatching {
-                val document = DocumentFile.fromSingleUri(context, uri)!!
-                require(document.exists() && document.isFile)
+                if (uri.scheme == ContentResolver.SCHEME_CONTENT) {
+                    val document = DocumentFile.fromSingleUri(context, uri)!!
+                    require(document.exists() && document.isFile)
+                }
                 val metadata = context.contentResolver.openInputStream(uri)!!.use { input ->
                     SettingsBackupUtil.readMetadata(input)
                 }
@@ -159,6 +169,34 @@ class SettingsBackupViewModel @Inject constructor(
                 _uiState.update { it.copy(loading = false, error = e) }
             }
         }
+    }
+
+    fun onAutoBackupDirectorySelected(uri: Uri?) {
+        launchInVM(Dispatchers.IO) {
+            val current = settingsRepository.backupSettings.snapshot()
+            settingsRepository.backupSettings.setNow(
+                current.copy(autoBackupDirectoryUri = uri?.toString())
+            )
+        }
+    }
+
+    fun onLoadAutoBackups() {
+        if (currentState.loadingAutoBackups) return
+        _uiState.update { it.copy(loadingAutoBackups = true) }
+        launchInVM(Dispatchers.IO) {
+            val settings = settingsRepository.backupSettings.snapshot()
+            val backups = runCatching {
+                SettingsBackupStore.listAutoBackups(
+                    context = context,
+                    directoryUri = settings.autoBackupDirectoryUri,
+                )
+            }.getOrDefault(emptyList())
+            _uiState.update { it.copy(autoBackups = backups, loadingAutoBackups = false) }
+        }
+    }
+
+    fun onRunBackupNow() {
+        SettingsBackupWorker.startNow(WorkManager.getInstance(context))
     }
 
     fun onCancelRestore() = _uiState.update { createInitialState() }

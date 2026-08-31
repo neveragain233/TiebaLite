@@ -1,5 +1,7 @@
 package com.huanchengfly.tieba.post.ui.models.settings
 
+import android.net.Uri
+import androidx.compose.runtime.Immutable
 import kotlinx.serialization.Serializable
 
 @Serializable
@@ -111,4 +113,28 @@ data class SignSettingsDto(
     val autoSignHour: Int,
     val autoSignMinute: Int,
     val okSignOfficial: Boolean,
+)
+
+enum class AutoBackupInterval(val days: Int) {
+    DAILY(1),
+    WEEKLY(7),
+    MONTHLY(30),
+}
+
+@Immutable
+data class BackupSettings(
+    val autoBackupEnabled: Boolean = false,
+    val autoBackupIncludeRules: Boolean = true,
+    val autoBackupInterval: AutoBackupInterval = AutoBackupInterval.DAILY,
+    val autoBackupKeepCount: Int = 7,
+    val autoBackupDirectoryUri: String? = null,
+    val lastAutoBackupAt: Long = 0,
+    val lastAutoBackupSucceeded: Boolean? = null,
+    val lastAutoBackupMessage: String? = null,
+)
+
+data class BackupHistoryItem(
+    val uri: Uri,
+    val name: String,
+    val lastModified: Long,
 )
