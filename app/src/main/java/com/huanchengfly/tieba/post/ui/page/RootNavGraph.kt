@@ -93,7 +93,7 @@ fun RootNavGraph(
         NavHost(
             navController = navController,
             graph = remember {
-                buildRootNavGraph(navController, settingsRepo, startDestination)
+                buildRootNavGraph(navController, settingsRepo, startDestination, navTransitions)
             },
             enterTransition = { navTransitions.enterTransition },
             exitTransition = { navTransitions.exitTransition },
@@ -107,6 +107,7 @@ private fun SharedTransitionScope.buildRootNavGraph(
     navController: NavHostController,
     settingsRepo: SettingsRepository,
     startDestination: Destination,
+    navTransitions: NavTransitions,
 ): NavGraph {
     return navController.createGraph(startDestination) {
         animatedComposable<Destination.Main>(
@@ -232,7 +233,7 @@ private fun SharedTransitionScope.buildRootNavGraph(
         }
 
         navigation<Destination.Settings>(startDestination = SettingsDestination.Settings) {
-            settingsGraph(navController, settingsRepo)
+            settingsGraph(navController, settingsRepo, navTransitions)
         }
 
         composable<Destination.CopyText> { backStackEntry ->

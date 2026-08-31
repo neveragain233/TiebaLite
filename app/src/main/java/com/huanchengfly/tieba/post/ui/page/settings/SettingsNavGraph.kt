@@ -5,6 +5,7 @@ import androidx.navigation.NavGraphBuilder
 import androidx.navigation.compose.composable
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
+import com.huanchengfly.tieba.post.ui.common.NavTransitions
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.settings.blocklist.ForumBlockListPage
 import com.huanchengfly.tieba.post.ui.page.settings.blocklist.HiddenPostListPage
@@ -70,12 +71,21 @@ sealed interface SettingsDestination {
     object WorkInfo: SettingsDestination
 }
 
-fun NavGraphBuilder.settingsGraph(navController: NavController, settingsRepo: SettingsRepository) {
+fun NavGraphBuilder.settingsGraph(
+    navController: NavController,
+    settingsRepo: SettingsRepository,
+    navTransitions: NavTransitions,
+) {
     composable<SettingsDestination.Settings> {
         SettingsPage(navController)
     }
 
-    composable<SettingsDestination.SettingsSearch> {
+    composable<SettingsDestination.SettingsSearch>(
+        enterTransition = { navTransitions.enterTransition },
+        exitTransition = { navTransitions.exitTransition },
+        popEnterTransition = { navTransitions.popEnterTransition },
+        popExitTransition = { navTransitions.popExitTransition },
+    ) {
         SettingsSearchPage(navController)
     }
 
