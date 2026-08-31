@@ -174,6 +174,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.rememberSnackbarHostState
 import com.huanchengfly.tieba.post.ui.widgets.compose.scrollToItemWithHeader
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.useStickyHeaderWorkaround
+import com.huanchengfly.tieba.post.utils.DeviceUtils.vibrateLight
 import com.huanchengfly.tieba.post.utils.StringUtil.getShortNumString
 import com.huanchengfly.tieba.post.utils.TiebaUtil
 import com.huanchengfly.tieba.post.utils.trace
@@ -574,9 +575,14 @@ fun ThreadPage(
                                 lazyListState.animateScrollBy(bottomDelta)
                             }
                             navScrollActive = false
+                            // 滚动结束后才反馈, 提示导航已经到达末楼底部
+                            context.vibrateLight()
                         }
                     }
-                    else -> context.toastShort(R.string.tip_no_more_comment)
+                    else -> {
+                        context.vibrateLight()
+                        context.toastShort(R.string.tip_no_more_comment)
+                    }
                 }
             }
             CommentNavDirection.PREV -> {
