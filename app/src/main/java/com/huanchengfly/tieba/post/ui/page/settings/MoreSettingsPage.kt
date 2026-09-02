@@ -8,7 +8,9 @@ import androidx.activity.compose.BackHandler
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.Backup
+import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material3.Icon
 import androidx.compose.material3.ListItemShapes
@@ -28,12 +30,15 @@ import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.components.TiebaWebView.Companion.dumpWebViewVersion
 import com.huanchengfly.tieba.post.repository.user.Settings
+import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.models.settings.UpdateSettings
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalSnackbarHostState
+import com.huanchengfly.tieba.post.ui.widgets.compose.Switch
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.SegmentedPreference
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.preference
 import com.huanchengfly.tieba.post.utils.ImageCacheUtil
@@ -47,6 +52,7 @@ import kotlinx.coroutines.launch
 fun MoreSettingsPage(
     navigator: NavController,
     updateSettings: Settings<UpdateSettings>,
+    uiSettings: Settings<UISettings>,
 ) {
     val context = LocalContext.current
 
@@ -105,6 +111,10 @@ fun MoreSettingsPage(
         }
 
         group(title = R.string.settings_group_cache) {
+            customPreference(key = R.string.title_clear_image_cache_on_launch) {
+                ClearImageCacheOnLaunchPreference(shapes = it, uiSettings = uiSettings)
+            }
+
             customPreference {
                 ImageCachePreference(shapes = it)
             }
@@ -160,5 +170,36 @@ private fun ImageCachePreference(modifier: Modifier = Modifier, shapes: ListItem
                 }
         },
         enabled = cacheSize != null && diskCacheJob == null,
+    )
+}
+
+@Composable
+private fun ClearImageCacheOnLaunchPreference(
+    modifier: Modifier = Modifier,
+    shapes: ListItemShapes,
+    uiSettings: Settings<UISettings>,
+) {
+    val currentUiSettings by uiSettings.collectAsStateWithLifecycle(initialValue = UISettings())
+    val interactionSource = remember { MutableInteractionSource() }
+
+    SegmentedPreference(
+        modifier = modifier,
+        title = R.string.title_clear_image_cache_on_launch,
+        summary = R.string.summary_clear_image_cache_on_launch,
+        shapes = shapes,
+        leadingIcon = Icons.Outlined.CleaningServices,
+        onClick = {
+            uiSettings.save {
+                it.copy(clearImageCacheOnLaunch = !it.clearImageCacheOnLaunch)
+            }
+        },
+        trailingContent = {
+            Switch(
+                checked = currentUiSettings.clearImageCacheOnLaunch,
+                onCheckedChange = null,
+                interactionSource = interactionSource,
+            )
+        },
+        interactionSource = interactionSource,
     )
 }

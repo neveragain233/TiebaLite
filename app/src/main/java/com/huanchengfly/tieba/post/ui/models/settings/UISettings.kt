@@ -107,6 +107,7 @@ enum class NavRailPosition {
  * @param compactReplyBarPosition 回复栏紧凑模式胶囊停靠位置
  * @param compactReplyBar 回复栏使用紧凑布局
  * @param compactShowCollect 紧凑模式是否显示收藏按钮
+ * @param clearImageCacheOnLaunch 打开应用时清除图片缓存
  * */
 @Immutable
 data class UISettings(
@@ -140,4 +141,5 @@ data class UISettings(
     val compactReplyBarPosition: CompactReplyBarPosition = CompactReplyBarPosition.RIGHT,
     val compactReplyBar: Boolean = false,
     val compactShowCollect: Boolean = true,
+    val clearImageCacheOnLaunch: Boolean = false,
 )

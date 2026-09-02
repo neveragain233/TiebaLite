@@ -100,6 +100,7 @@ data class UISettingsDto(
     val compactReplyBarPosition: String,
     val compactReplyBar: Boolean,
     val compactShowCollect: Boolean,
+    val clearImageCacheOnLaunch: Boolean = false,
 )
 
 @Serializable

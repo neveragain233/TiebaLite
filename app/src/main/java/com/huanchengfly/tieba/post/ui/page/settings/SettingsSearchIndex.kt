@@ -114,6 +114,7 @@ object SettingsSearchIndex {
         entry(SettingsDestination.More, R.string.title_use_webview),
         entry(SettingsDestination.More, R.string.title_settings_worker),
         entry(SettingsDestination.More, R.string.settings_update_background_download, R.string.summary_update_background_download),
+        entry(SettingsDestination.More, R.string.title_clear_image_cache_on_launch, R.string.summary_clear_image_cache_on_launch),
 
         // 签到
         entry(SettingsDestination.OKSign, R.string.title_auto_sign),

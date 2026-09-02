@@ -155,6 +155,7 @@ fun NavGraphBuilder.settingsGraph(
         MoreSettingsPage(
             navigator = navController,
             updateSettings = settingsRepo.updateSettings,
+            uiSettings = settingsRepo.uiSettings,
         )
     }
 

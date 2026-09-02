@@ -384,6 +384,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             },
             compactReplyBar = it[booleanPreferencesKey(KEY_COMPACT_REPLY_BAR)] ?: false,
             compactShowCollect = it[booleanPreferencesKey(KEY_COMPACT_SHOW_COLLECT)] ?: true,
+            clearImageCacheOnLaunch = it[booleanPreferencesKey(KEY_CLEAR_IMAGE_CACHE_ON_LAUNCH)] == true,
         )
     }
 
@@ -417,6 +418,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[intPreferencesKey(KEY_COMPACT_REPLY_BAR_POSITION)] = ui.compactReplyBarPosition.ordinal
         it[booleanPreferencesKey(KEY_COMPACT_REPLY_BAR)] = ui.compactReplyBar
         it[booleanPreferencesKey(KEY_COMPACT_SHOW_COLLECT)] = ui.compactShowCollect
+        it[booleanPreferencesKey(KEY_CLEAR_IMAGE_CACHE_ON_LAUNCH)] = ui.clearImageCacheOnLaunch
     }
 
     private const val KEY_APP_ICON = "app_icon"
@@ -455,6 +457,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_COMPACT_REPLY_BAR_POSITION = "ui_compact_reply_bar_position"
     private const val KEY_COMPACT_REPLY_BAR = "ui_compact_reply_bar"
     private const val KEY_COMPACT_SHOW_COLLECT = "ui_compact_show_collect"
+    private const val KEY_CLEAR_IMAGE_CACHE_ON_LAUNCH = "ui_clear_image_cache_on_launch"
 }
 
 private object BlockTransformer: PreferenceTransformer<BlockSettings> {

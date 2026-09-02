@@ -105,6 +105,12 @@ class App : Application(), Configuration.Provider {
         ComposeUiFlags.isMediaQueryIntegrationEnabled = true
 
         AppBackgroundScope.launch {
+            if (settingRepository.uiSettings.snapshot().clearImageCacheOnLaunch) {
+                ImageCacheUtil.clearImageAllCache(this@App)
+            }
+        }
+
+        AppBackgroundScope.launch {
             delay(3000)
             ImageCacheUtil.clearGlideDiskCache(this@App)
         }
