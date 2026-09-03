@@ -6,12 +6,17 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.items
+import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
@@ -21,6 +26,8 @@ import androidx.compose.ui.unit.sp
 import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.LocalHabitSettings
+import android.util.Log
+import com.huanchengfly.tieba.post.BuildConfig
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.arch.CommonUiEvent
 import com.huanchengfly.tieba.post.arch.collectPartialAsState
@@ -93,6 +100,32 @@ fun ThreadStorePage(
             }
         }
 
+        val data by viewModel.uiState.collectPartialAsState(
+            prop1 = ThreadStoreUiState::data,
+            initial = emptyList()
+        )
+
+        // 列表状态不进 saveable: 进程恢复/刷新重置后一律从顶部开始,
+        // 从帖子返回时按 VM 记录的滚动位置手动恢复
+        // (LazyListState 的 saveable 恢复会把旧位置落进重置后的短列表, 且不受 key() 控制)
+        val listState = remember { LazyListState() }
+        var canSaveListPosition by remember { mutableStateOf(false) }
+        LaunchedEffect(listState) {
+            snapshotFlow {
+                listState.firstVisibleItemIndex to listState.firstVisibleItemScrollOffset
+            }.collect { (index, offset) ->
+                if (canSaveListPosition) {
+                    viewModel.saveListPosition(index, offset)
+                }
+            }
+        }
+        LaunchedEffect(data.isNotEmpty()) {
+            if (data.isNotEmpty() && viewModel.listRestoreIndex > 0) {
+                listState.scrollToItem(viewModel.listRestoreIndex, viewModel.listRestoreOffset)
+            }
+            canSaveListPosition = true
+        }
+
         StateScreen(
             isEmpty = isEmpty,
             isLoading = isRefreshing,
@@ -107,10 +140,6 @@ fun ThreadStorePage(
             val hasMore by viewModel.uiState.collectPartialAsState(
                 prop1 = ThreadStoreUiState::hasMore,
                 initial = true
-            )
-            val data by viewModel.uiState.collectPartialAsState(
-                prop1 = ThreadStoreUiState::data,
-                initial = emptyList()
             )
 
             val habit = LocalHabitSettings.current
@@ -139,11 +168,13 @@ fun ThreadStorePage(
                 modifier = Modifier.fillMaxSize(),
                 contentPadding = contentPadding,
             ) {
+                // onLoad 置空: 下拉手势让给外层 PullToRefreshBox 触发刷新,
+                // 否则 SwipeUp 连接会抢走手势触发加载更多
                 SwipeUpLazyLoadColumn(
                     modifier = Modifier.fillMaxSize(),
+                    state = listState,
                     contentPadding = contentPadding,
                     isLoading = isLoadingMore,
-                    onLoad = viewModel::onLoadMore,
                     onLazyLoad = viewModel::onLoadMore.takeIf { hasMore },
                     bottomIndicator = {
                         LoadMoreIndicator(noMore = !hasMore, onThreshold = it)

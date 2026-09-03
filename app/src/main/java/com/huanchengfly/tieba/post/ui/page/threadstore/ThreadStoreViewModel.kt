@@ -54,10 +54,30 @@ class ThreadStoreViewModel @Inject constructor(
 
     override fun createInitialState(): ThreadStoreUiState = ThreadStoreUiState()
 
+    /**
+     * 收藏列表滚动位置, 用于从帖子页返回时恢复 (不进 UiState, 仅页面重组恢复用)。
+     * 刷新重置数据时归零。
+     */
+    var listRestoreIndex: Int = 0
+        private set
+
+    var listRestoreOffset: Int = 0
+        private set
+
+    fun saveListPosition(index: Int, offset: Int) {
+        listRestoreIndex = index
+        listRestoreOffset = offset
+    }
+
     private fun refreshInternal(): Unit = launchInVM {
         _uiState.update { ThreadStoreUiState(isRefreshing = true) }
         val data = threadStoreRepo.load()
-        _uiState.update { ThreadStoreUiState(currentPage = 0, data = data, hasMore = data.hasMore) }
+        // 数据被重置, 滚动位置记忆一并作废(页面重建后从顶部开始)
+        listRestoreIndex = 0
+        listRestoreOffset = 0
+        _uiState.update {
+            ThreadStoreUiState(currentPage = 0, data = data, hasMore = data.hasMore)
+        }
     }
 
     fun onRefresh() {

@@ -99,7 +99,9 @@ fun SwipeUpLazyLoadColumn(
     val refreshState = rememberSwipeUpRefreshConnection(isLoading, onLoad)
 
     Box(
-        modifier = Modifier.clipToBounds().nestedScroll(refreshState) then modifier
+        // 手势连接仅在调用方提供 onLoad 时挂载, 避免外层 PullToRefreshBox 的下拉刷新被劫持
+        modifier = (if (onLoad != null) Modifier.nestedScroll(refreshState) else Modifier)
+            .clipToBounds() then modifier
     ) {
         LazyColumn(
             modifier = Modifier
