@@ -125,6 +125,31 @@ object DeviceUtils {
         }
     }
 
+    /**
+     * 评论导航末楼反馈. 直连 Vibrator 是为了不被系统“触感反馈”开关静音;
+     * 一加这类线性马达用较高的 primitive 强度, 避免短点按几乎不可感知.
+     */
+    fun Context.vibrateEndHaptic() {
+        if (!vibrator.hasVibrator()) return
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R &&
+            vibrator.areAllPrimitivesSupported(VibrationEffect.Composition.PRIMITIVE_CLICK)
+        ) {
+            val effect = VibrationEffect.startComposition()
+                .addPrimitive(VibrationEffect.Composition.PRIMITIVE_CLICK, 0.8f)
+                .compose()
+            vibrator.vibrate(effect)
+            return
+        }
+
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            vibrator.vibrate(VibrationEffect.createPredefined(VibrationEffect.EFFECT_CLICK))
+            return
+        }
+
+        vibrateOneShot(milliseconds = 15)
+    }
+
     fun Context.vibrateOneShot(milliseconds: Long = 100) {
         if (vibrator.hasVibrator()) {
             if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {

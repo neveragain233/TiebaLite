@@ -193,6 +193,24 @@ fun resolvedWaypointIndex(
     return lastReached
 }
 
+/**
+ * 解析本次评论导航是否应触发「末楼震动」.
+ *
+ * 只允许 NEXT 且目标就是可导航序列末楼、同时没有后续分页的情况;
+ * 返回目标楼层 id, 否则返回 null. 触发去重由 UI 层按目标 id 记录.
+ */
+internal fun resolveEndHapticTarget(
+    direction: CommentNavDirection,
+    targetPostId: Long?,
+    orderedPostIds: List<Long>,
+    hasMore: Boolean,
+): Long? {
+    val lastPostId = orderedPostIds.lastOrNull()
+    return targetPostId.takeIf {
+        direction == CommentNavDirection.NEXT && !hasMore && it != null && it == lastPostId
+    }
+}
+
 /** 由 [ThreadUiState] 构建 [ThreadListLayout]. */
 fun buildThreadListLayout(state: ThreadUiState): ThreadListLayout =
     ThreadListLayout(

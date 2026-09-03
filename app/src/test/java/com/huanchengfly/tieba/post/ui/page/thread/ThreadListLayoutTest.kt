@@ -174,6 +174,53 @@ class ThreadListLayoutTest {
         assertEquals(0, layout.itemIndexOf(1L))
     }
     @Test
+    fun endHapticTarget_onlyForNextToLastReplyWithoutMore() {
+        val layout = buildThreadListLayout(
+            state(
+                data = listOf(post(2), post(3)),
+                firstPost = post(1),
+            )
+        )
+
+        assertEquals(3L, resolveEndHapticTarget(
+            direction = CommentNavDirection.NEXT,
+            targetPostId = 3L,
+            orderedPostIds = layout.orderedPostIds,
+            hasMore = false,
+        ))
+        assertNull(resolveEndHapticTarget(
+            direction = CommentNavDirection.PREV,
+            targetPostId = 3L,
+            orderedPostIds = layout.orderedPostIds,
+            hasMore = false,
+        ))
+        assertNull(resolveEndHapticTarget(
+            direction = CommentNavDirection.NEXT,
+            targetPostId = 2L,
+            orderedPostIds = layout.orderedPostIds,
+            hasMore = false,
+        ))
+    }
+
+    @Test
+    fun endHapticTarget_skippedWhenMorePagesRemain() {
+        val layout = buildThreadListLayout(
+            state(
+                data = listOf(post(2), post(3)),
+                firstPost = post(1),
+                hasMore = true,
+            )
+        )
+
+        assertNull(resolveEndHapticTarget(
+            direction = CommentNavDirection.NEXT,
+            targetPostId = 3L,
+            orderedPostIds = layout.orderedPostIds,
+            hasMore = true,
+        ))
+    }
+
+    @Test
     fun waypointIndex_walksSitesAlreadyBehindViewport() {
         val positions = listOf(0, 100, 200, 300)
 

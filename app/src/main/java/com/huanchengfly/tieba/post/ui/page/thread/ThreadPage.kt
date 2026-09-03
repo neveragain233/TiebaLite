@@ -91,9 +91,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.res.stringResource
@@ -178,6 +176,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.rememberSnackbarHostState
 import com.huanchengfly.tieba.post.ui.widgets.compose.scrollToItemWithHeader
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.useStickyHeaderWorkaround
+import com.huanchengfly.tieba.post.utils.DeviceUtils.vibrateEndHaptic
 import com.huanchengfly.tieba.post.utils.StringUtil.getShortNumString
 import com.huanchengfly.tieba.post.utils.TiebaUtil
 import com.huanchengfly.tieba.post.utils.trace
@@ -307,12 +306,12 @@ fun ThreadPage(
 ) = trace(MacrobenchmarkConstant.TRACE_THREAD) {
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
-    val hapticFeedback = LocalHapticFeedback.current
     val uiSettings = LocalUISettings.current
     val performEndHaptic: () -> Unit = {
         if (uiSettings.commentNavEndHaptic) {
-            // 与动态页长按回顶一致, 走系统 HapticFeedback 路径而不是裸 Vibrator primitive
-            hapticFeedback.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+            // 系统 HapticFeedback 会被部分机型的“触感反馈”开关静音;
+            // 这里直连 Vibrator, 保证反馈不依赖全局触摸震动开关.
+            context.vibrateEndHaptic()
         }
     }
     val snackbarHostState = rememberSnackbarHostState()
@@ -351,9 +350,12 @@ fun ThreadPage(
     val imageNavWaypoints = remember { mutableStateMapOf<Long, List<Int>>() }
     // 单键导航模式: 当前推进方向; 到顶时在边界分支复位为 NEXT, 长按手动反向
     var commentNavDirection by rememberSaveable { mutableStateOf(CommentNavDirection.NEXT) }
+    // 单键模式专用: 「这次 NEXT 按下后, 下键应切换成回顶」的意图标记
+    var endHapticArmed by remember { mutableStateOf(false) }
     // 切换正/倒序会整体重载列表, 导航方向记忆失效
     LaunchedEffect(state.sortType) {
         commentNavDirection = CommentNavDirection.NEXT
+        endHapticArmed = false
     }
     // 导航键自身触发的滚动进行中; 期间不更新导航锚点记忆
     var navScrollActive by remember { mutableStateOf(false) }
@@ -371,7 +373,8 @@ fun ThreadPage(
     val navWaypointTolerancePx = with(density) { NavWaypointToleranceDp.roundToPx() }
     // 单键导航到底态: 列表已滚动到最底且无后续分页(正序=最后一楼, 倒序=最早已加载楼).
     // 响应式判定而非按键累积, 到达底部立即变为「回顶」, 不需要把边界状态按出来
-    val commentNavAtEnd = LocalUISettings.current.commentNavSingleKey &&
+    val commentNavSingleKey = LocalUISettings.current.commentNavSingleKey
+    val commentNavAtEnd = commentNavSingleKey &&
             !state.pageData.hasMore &&
             !lazyListState.canScrollForward
     // 程序化导航滚动开始时复位回复栏/导航坞收起位移, 保证按键后两者立即恢复可见
@@ -389,11 +392,48 @@ fun ThreadPage(
 
     val scrollToTop: () -> Unit = {
         lastNavAnchorPostId = null
+        endHapticArmed = false
         navScrollActive = true
         resetCommentNavDock()
         coroutineScope.launch {
             lazyListState.scrollToItem(0)
             navScrollActive = false
+        }
+    }
+
+    // 只反馈「NEXT 到达末楼」: 方向 NEXT 且目标就是可导航序列末楼、无后续分页.
+    // 单键/双键模式一致; 到达判定交给观察器, 避免分页回包时序或连续按键取消动画导致回调漏执行.
+    fun armCommentNavEndHaptic(
+        direction: CommentNavDirection,
+        targetPostId: Long?,
+        orderedPostIds: List<Long> = layout.orderedPostIds,
+        hasMore: Boolean = state.pageData.hasMore,
+    ) {
+        if (direction != CommentNavDirection.NEXT || commentNavAtEnd) {
+            endHapticArmed = false
+            return
+        }
+        endHapticArmed = resolveEndHapticTarget(
+            direction = direction,
+            targetPostId = targetPostId,
+            orderedPostIds = orderedPostIds,
+            hasMore = hasMore,
+        ) != null
+    }
+
+    // 按键先建立意图; 等到这次导航造成的滚动结束且 canScrollForward 变为 false, 只震动一次.
+    // 单键模式下此时 UI 的「下」键也切换成了「回顶」.
+    LaunchedEffect(Unit) {
+        snapshotFlow {
+            endHapticArmed &&
+                    !state.pageData.hasMore &&
+                    !navScrollActive &&
+                    !lazyListState.canScrollForward
+        }.collect { reachedEnd ->
+            if (reachedEnd) {
+                endHapticArmed = false
+                performEndHaptic()
+            }
         }
     }
 
@@ -563,12 +603,8 @@ fun ThreadPage(
                     viewModel.requestLoadMore()
                 }
             }
-            val arriveAtEnd = direction == CommentNavDirection.NEXT &&
-                    !state.pageData.hasMore &&
-                    target == layout.orderedPostIds.lastOrNull()
-            scrollToFloorOrPos(target, direction) {
-                if (arriveAtEnd) performEndHaptic()
-            }
+            scrollToFloorOrPos(target, direction)
+            armCommentNavEndHaptic(direction, target)
             return
         }
         // 处于边界: 决定是触发加载, 还是回跳楼主帖 / 提示已到首末楼
@@ -576,6 +612,9 @@ fun ThreadPage(
             CommentNavDirection.NEXT -> {
                 when {
                     state.pageData.hasMore -> {
+                        // 记录“用户已按 NEXT 请求继续向末楼推进”的意图;
+                        // 加载结果如果不是末楼, pending 定位阶段会清除该标记.
+                        endHapticArmed = true
                         pendingCommentNav = PendingCommentNav(direction, anchorId)
                         viewModel.requestLoadMore()
                     }
@@ -591,6 +630,7 @@ fun ThreadPage(
                             ?: 0f
                         navScrollActive = true
                         resetCommentNavDock()
+                        armCommentNavEndHaptic(CommentNavDirection.NEXT, anchorId)
                         coroutineScope.launch {
                             if (bottomDelta > 0f) {
                                 lazyListState.animateScrollBy(bottomDelta)
@@ -598,7 +638,9 @@ fun ThreadPage(
                             navScrollActive = false
                         }
                     }
-                    else -> context.toastShort(R.string.tip_no_more_comment)
+                    else -> {
+                        context.toastShort(R.string.tip_no_more_comment)
+                    }
                 }
             }
             CommentNavDirection.PREV -> {
@@ -645,6 +687,12 @@ fun ThreadPage(
             }
             navScrollActive = true
             resetCommentNavDock()
+            armCommentNavEndHaptic(
+                direction = pending.direction,
+                targetPostId = target,
+                orderedPostIds = newLayout.orderedPostIds,
+                hasMore = newLayout.hasMore,
+            )
             newLayout.itemIndexOf(target)?.let { targetIndex ->
                 if (targetPositions.size > 1 && pending.direction == CommentNavDirection.PREV) {
                     scrollToWaypoint(targetIndex, targetPositions.last())
@@ -653,12 +701,6 @@ fun ThreadPage(
                 }
             }
             navScrollActive = false
-            if (pending.direction == CommentNavDirection.NEXT &&
-                !newLayout.hasMore &&
-                target == newLayout.orderedPostIds.lastOrNull()
-            ) {
-                performEndHaptic()
-            }
             pendingCommentNav = null
         }
     }
