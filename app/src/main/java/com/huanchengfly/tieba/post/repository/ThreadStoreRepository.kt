@@ -2,6 +2,8 @@ package com.huanchengfly.tieba.post.repository
 
 import com.huanchengfly.tieba.post.api.models.ThreadStoreBean.ThreadStoreInfo
 import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaNotLoggedInException
+import com.huanchengfly.tieba.post.models.database.FavoriteThread
+import com.huanchengfly.tieba.post.models.database.dao.FavoriteThreadDao
 import com.huanchengfly.tieba.post.repository.source.network.ThreadStoreNetworkDataSource
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
 import com.huanchengfly.tieba.post.ui.models.Author
@@ -20,7 +22,8 @@ import javax.inject.Singleton
  * */
 @Singleton
 class ThreadStoreRepository @Inject constructor(
-    private val settingsRepository: SettingsRepository
+    private val settingsRepository: SettingsRepository,
+    private val favoriteThreadDao: FavoriteThreadDao,
 ) {
 
     private val networkDataSource = ThreadStoreNetworkDataSource
@@ -35,11 +38,17 @@ class ThreadStoreRepository @Inject constructor(
     suspend fun load(page: Int = 0, limit: Int = LOAD_LIMIT): List<ThreadStore> {
         val data = networkDataSource.load(page, limit)
         val showBothName = settingsRepository.habitSettings.snapshot().showBothName
-        return data.mapUiModel(showBothName)
+        val result = data.mapUiModel(showBothName)
+        // Sync the local favorites snapshot for offline image cache preservation
+        runCatching {
+            favoriteThreadDao.upsertAll(result.map { FavoriteThread(it.id, System.currentTimeMillis()) })
+        }
+        return result
     }
 
     suspend fun add(threadId: Long, postId: Long) = runCatching {
         networkDataSource.add(threadId, postId)
+        favoriteThreadDao.upsertAll(listOf(FavoriteThread(threadId, System.currentTimeMillis())))
     }
 
     /**
@@ -47,6 +56,7 @@ class ThreadStoreRepository @Inject constructor(
      * */
     suspend fun remove(thread: ThreadStore) = runCatching {
         networkDataSource.remove(threadId = thread.id, tbs = requireTBS())
+        favoriteThreadDao.deleteById(thread.id)
     }
 
     /**
@@ -54,6 +64,7 @@ class ThreadStoreRepository @Inject constructor(
      * */
     suspend fun remove(threadId: Long, forumId: Long?, tbs: String?) {
         networkDataSource.remove(threadId, forumId, tbs = tbs ?: requireTBS())
+        favoriteThreadDao.deleteById(threadId)
     }
 
     companion object {

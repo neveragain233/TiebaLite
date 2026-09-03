@@ -110,6 +110,12 @@ val LocalHabitSettings = compositionLocalOf<HabitSettings> { error("No HabitSett
 
 val LocalUISettings = compositionLocalOf { UISettings() }
 
+/**
+ * Thread ID of the thread detail page currently being rendered, `null` outside
+ * thread pages. Used to attribute cached images to threads.
+ */
+val LocalCurrentThreadId = compositionLocalOf<Long?> { null }
+
 @AndroidEntryPoint
 class MainActivityV2 : BaseComposeActivity() {
 

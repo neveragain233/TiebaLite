@@ -101,6 +101,7 @@ data class UISettingsDto(
     val compactReplyBar: Boolean,
     val compactShowCollect: Boolean,
     val clearImageCacheOnLaunch: Boolean = false,
+    val keepFavoriteThreadImages: Boolean = false,
 )
 
 @Serializable

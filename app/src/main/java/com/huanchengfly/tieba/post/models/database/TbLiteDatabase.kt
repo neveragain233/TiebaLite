@@ -11,8 +11,10 @@ import androidx.sqlite.SQLiteConnection
 import com.huanchengfly.tieba.post.models.database.dao.AccountDao
 import com.huanchengfly.tieba.post.models.database.dao.BlockDao
 import com.huanchengfly.tieba.post.models.database.dao.DraftDao
+import com.huanchengfly.tieba.post.models.database.dao.FavoriteThreadDao
 import com.huanchengfly.tieba.post.models.database.dao.ForumHistoryDao
 import com.huanchengfly.tieba.post.models.database.dao.HiddenThreadDao
+import com.huanchengfly.tieba.post.models.database.dao.ImageCacheIndexDao
 import com.huanchengfly.tieba.post.models.database.dao.LikedForumDao
 import com.huanchengfly.tieba.post.models.database.dao.SearchDao
 import com.huanchengfly.tieba.post.models.database.dao.SearchPostDao
@@ -30,8 +32,10 @@ import java.util.concurrent.TimeUnit
         BlockKeyword::class,
         BlockUser::class,
         Draft::class,
+        FavoriteThread::class,
         ForumHistory::class,
         HiddenThread::class,
+        ImageCacheIndex::class,
         LocalLikedForum::class,
         SearchHistory::class,
         SearchPostHistory::class,
@@ -40,12 +44,13 @@ import java.util.concurrent.TimeUnit
         Timestamp::class,
         UserProfile::class,
     ],
-    version = 5,
+    version = 6,
     autoMigrations = [
         AutoMigration(from = 1, to = 2, spec = Migrations.Migration_1_2::class),
         AutoMigration(from = 2, to = 3, spec = Migrations.Migration_2_3::class),
         AutoMigration(from = 3, to = 4, spec = Migrations.Migration_3_4::class),
         AutoMigration(from = 4, to = 5, spec = Migrations.Migration_4_5::class),
+        AutoMigration(from = 5, to = 6, spec = Migrations.Migration_5_6::class),
     ]
 )
 abstract class TbLiteDatabase : RoomDatabase() {
@@ -56,9 +61,13 @@ abstract class TbLiteDatabase : RoomDatabase() {
 
     abstract fun draftDao(): DraftDao
 
+    abstract fun favoriteThreadDao(): FavoriteThreadDao
+
     abstract fun forumHistoryDao(): ForumHistoryDao
 
     abstract fun hiddenThreadDao(): HiddenThreadDao
+
+    abstract fun imageCacheIndexDao(): ImageCacheIndexDao
 
     abstract fun likedForumDao(): LikedForumDao
 
@@ -131,6 +140,17 @@ abstract class TbLiteDatabase : RoomDatabase() {
              * @since 1.2.0
              */
             class Migration_4_5 : AutoMigrationSpec {
+                override fun onPostMigrate(connection: SQLiteConnection) {
+                }
+            }
+
+            /**
+             * [FavoriteThread] new Entity
+             * [ImageCacheIndex] new Entity
+             *
+             * @since 1.2.6.2
+             */
+            class Migration_5_6 : AutoMigrationSpec {
                 override fun onPostMigrate(connection: SQLiteConnection) {
                 }
             }

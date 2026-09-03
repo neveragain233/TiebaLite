@@ -357,6 +357,7 @@ object SettingsBackupUtil {
                 compactReplyBar = ui.compactReplyBar,
                 compactShowCollect = ui.compactShowCollect,
                 clearImageCacheOnLaunch = ui.clearImageCacheOnLaunch,
+                keepFavoriteThreadImages = ui.keepFavoriteThreadImages,
             ),
             updateSettings = UpdateSettingsDto(backgroundDownload = update.backgroundDownload),
             signSettings = SignSettingsDto(
@@ -415,6 +416,7 @@ object SettingsBackupUtil {
         historyLongPressDelete = historyLongPressDelete,
         subPostsInDualPane = subPostsInDualPane,
         clearImageCacheOnLaunch = clearImageCacheOnLaunch,
+        keepFavoriteThreadImages = keepFavoriteThreadImages,
         forumDetailMode = enumOrDefault(forumDetailMode, ForumDetailMode.KEEP_DETAIL),
         largeScreenDefaultSplit = largeScreenDefaultSplit,
         forumDefaultSplit = forumDefaultSplit,

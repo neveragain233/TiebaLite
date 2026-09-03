@@ -52,6 +52,8 @@ import coil3.compose.rememberConstraintsSizeResolver
 import coil3.memory.MemoryCache
 import coil3.request.CachePolicy
 import coil3.request.ImageRequest
+import com.huanchengfly.tieba.post.components.coil.THREAD_ID_EXTRA
+import com.huanchengfly.tieba.post.LocalCurrentThreadId
 import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
@@ -225,6 +227,7 @@ fun NetworkImage(
 
     val context = LocalContext.current
     val darkenImage = LocalUISettings.current.darkenImage && LocalExtendedColorScheme.current.darkTheme
+    val currentThreadId = LocalCurrentThreadId.current
     var isLongPressing by remember { mutableStateOf(false) }
 
     val sizeResolver = rememberConstraintsSizeResolver()
@@ -232,6 +235,7 @@ fun NetworkImage(
         model = ImageRequest.Builder(context)
             .data(imageUrl)
             .size(sizeResolver)
+            .apply { extras.set(THREAD_ID_EXTRA, currentThreadId) }
             .build(),
         contentScale = contentScale,
     )

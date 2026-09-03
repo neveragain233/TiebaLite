@@ -3,6 +3,7 @@ package com.huanchengfly.tieba.post.utils
 import android.content.Context
 import androidx.annotation.WorkerThread
 import coil3.imageLoader
+import com.huanchengfly.tieba.post.models.database.TbLiteDatabase
 import com.huanchengfly.tieba.post.utils.ImageUtil.FILE_PROVIDER_SHARE_DIR
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.withContext
@@ -18,10 +19,34 @@ object ImageCacheUtil {
 
     /**
      * 清除图片所有缓存
+     *
+     * @param keepFavoriteThreadImages 为 true 时不清除本地收藏快照中帖子的图片缓存。
+     * Coil 磁盘缓存不支持枚举条目, 仅能按索引中记录过的 key 删除:
+     * 功能开启前缓存且未被索引的图片不会被清除; 索引为空时退化为全清以建立基线。
+     * 内存缓存始终全清, 受保护图片会从磁盘缓存重新读入。
      */
-    suspend fun clearImageAllCache(context: Context) = withContext(Dispatchers.IO) {
+    suspend fun clearImageAllCache(context: Context, keepFavoriteThreadImages: Boolean = false) = withContext(Dispatchers.IO) {
         val coil = context.imageLoader
-        coil.diskCache?.clear()
+        val database = TbLiteDatabase.getInstance(context)
+        if (keepFavoriteThreadImages) {
+            val index = database.imageCacheIndexDao().getAll()
+            if (index.isEmpty()) {
+                coil.diskCache?.clear()
+            } else {
+                val favoriteIds = database.favoriteThreadDao().getAllIds().toHashSet()
+                val removableKeys = index
+                    .filter { it.threadId !in favoriteIds }
+                    .map { it.cacheKey }
+                coil.diskCache?.let { diskCache ->
+                    removableKeys.forEach { key ->
+                        runCatching { diskCache.remove(key) }
+                    }
+                }
+                database.imageCacheIndexDao().deleteByKeys(removableKeys)
+            }
+        } else {
+            coil.diskCache?.clear()
+        }
         withContext(Dispatchers.Main) { coil.memoryCache?.clear() }
 
         // 清除分享图片缓存

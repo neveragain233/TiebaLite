@@ -105,8 +105,12 @@ class App : Application(), Configuration.Provider {
         ComposeUiFlags.isMediaQueryIntegrationEnabled = true
 
         AppBackgroundScope.launch {
-            if (settingRepository.uiSettings.snapshot().clearImageCacheOnLaunch) {
-                ImageCacheUtil.clearImageAllCache(this@App)
+            val uiSettings = settingRepository.uiSettings.snapshot()
+            if (uiSettings.clearImageCacheOnLaunch) {
+                ImageCacheUtil.clearImageAllCache(
+                    context = this@App,
+                    keepFavoriteThreadImages = uiSettings.keepFavoriteThreadImages,
+                )
             }
         }
 

@@ -55,6 +55,7 @@ fun MoreSettingsPage(
     uiSettings: Settings<UISettings>,
 ) {
     val context = LocalContext.current
+    val currentUiSettings by uiSettings.collectAsStateWithLifecycle(initialValue = UISettings())
 
     SettingsScaffold(
         titleRes = R.string.title_settings_more,
@@ -113,6 +114,12 @@ fun MoreSettingsPage(
         group(title = R.string.settings_group_cache) {
             customPreference(key = R.string.title_clear_image_cache_on_launch) {
                 ClearImageCacheOnLaunchPreference(shapes = it, uiSettings = uiSettings)
+            }
+
+            if (currentUiSettings.clearImageCacheOnLaunch) {
+                customPreference(key = R.string.title_keep_favorite_thread_images) {
+                    KeepFavoriteThreadImagesPreference(shapes = it, uiSettings = uiSettings)
+                }
             }
 
             customPreference {
@@ -196,6 +203,37 @@ private fun ClearImageCacheOnLaunchPreference(
         trailingContent = {
             Switch(
                 checked = currentUiSettings.clearImageCacheOnLaunch,
+                onCheckedChange = null,
+                interactionSource = interactionSource,
+            )
+        },
+        interactionSource = interactionSource,
+    )
+}
+
+@Composable
+private fun KeepFavoriteThreadImagesPreference(
+    modifier: Modifier = Modifier,
+    shapes: ListItemShapes,
+    uiSettings: Settings<UISettings>,
+) {
+    val currentUiSettings by uiSettings.collectAsStateWithLifecycle(initialValue = UISettings())
+    val interactionSource = remember { MutableInteractionSource() }
+
+    SegmentedPreference(
+        modifier = modifier,
+        title = R.string.title_keep_favorite_thread_images,
+        summary = R.string.summary_keep_favorite_thread_images,
+        shapes = shapes,
+        leadingIcon = Icons.Outlined.CleaningServices,
+        onClick = {
+            uiSettings.save {
+                it.copy(keepFavoriteThreadImages = !it.keepFavoriteThreadImages)
+            }
+        },
+        trailingContent = {
+            Switch(
+                checked = currentUiSettings.keepFavoriteThreadImages,
                 onCheckedChange = null,
                 interactionSource = interactionSource,
             )

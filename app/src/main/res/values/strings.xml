@@ -117,6 +117,8 @@
     <string name="tip_cache">当前共有缓存 %1$s</string>
     <string name="title_clear_image_cache_on_launch">打开时清除图片缓存</string>
     <string name="summary_clear_image_cache_on_launch">每次启动应用时自动清除图片缓存，已下载的图片将重新加载</string>
+    <string name="title_keep_favorite_thread_images">保留收藏帖图片缓存</string>
+    <string name="summary_keep_favorite_thread_images">清除图片缓存时跳过已收藏帖子的图片，仅对开启后加载过的图片生效</string>
     <string name="tip_no_little_tail">你还没有设置小尾巴</string>
     <string name="toast_no_permission_insert_photo">未授予「存储空间」权限，无法插入图片</string>
     <string name="tip_no_permission">权限未授予，部分功能可能无法使用</string>

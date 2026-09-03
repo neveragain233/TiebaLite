@@ -70,6 +70,7 @@ import androidx.compose.material3.TooltipDefaults.rememberTooltipPositionProvide
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.SideEffect
@@ -110,6 +111,7 @@ import androidx.compose.ui.unit.sp
 import androidx.compose.ui.util.fastFirstOrNull
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import androidx.navigation.NavController
+import com.huanchengfly.tieba.post.LocalCurrentThreadId
 import com.huanchengfly.tieba.post.LocalHabitSettings
 import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.MacrobenchmarkConstant
@@ -1074,24 +1076,26 @@ fun ThreadPage(
             Box(modifier = Modifier.fillMaxSize()) {
                 Container(modifier = Modifier.clipToBounds()) {
                     ProvideNavigator(navigator = navigator) {
-                        ThreadContent(
-                            modifier = Modifier
-                                .hazeSource(hazeState?.state)
-                                .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
-                                .nestedScroll(toolbarScrollBehavior),
-                            viewModel = viewModel,
-                            lazyListState = lazyListState,
-                            contentPadding = contentPadding,
-                            topAppBarScrollBehavior = topAppBarScrollBehavior,
-                            layout = layout,
-                            useStickyHeader = useStickyHeader && !useStickyHeaderWorkaround,
-                            topBarInsetPx = stickyHeaderHeightPx,
-                            onImageNavWaypoints = { postId, waypoints ->
-                                if (imageNavWaypoints[postId] != waypoints) {
-                                    imageNavWaypoints[postId] = waypoints
-                                }
-                            },
-                        )
+                        CompositionLocalProvider(LocalCurrentThreadId provides threadId) {
+                            ThreadContent(
+                                modifier = Modifier
+                                    .hazeSource(hazeState?.state)
+                                    .nestedScroll(topAppBarScrollBehavior.nestedScrollConnection)
+                                    .nestedScroll(toolbarScrollBehavior),
+                                viewModel = viewModel,
+                                lazyListState = lazyListState,
+                                contentPadding = contentPadding,
+                                topAppBarScrollBehavior = topAppBarScrollBehavior,
+                                layout = layout,
+                                useStickyHeader = useStickyHeader && !useStickyHeaderWorkaround,
+                                topBarInsetPx = stickyHeaderHeightPx,
+                                onImageNavWaypoints = { postId, waypoints ->
+                                    if (imageNavWaypoints[postId] != waypoints) {
+                                        imageNavWaypoints[postId] = waypoints
+                                    }
+                                },
+                            )
+                        }
                     }
                 }
 

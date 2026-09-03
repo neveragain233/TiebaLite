@@ -385,6 +385,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             compactReplyBar = it[booleanPreferencesKey(KEY_COMPACT_REPLY_BAR)] ?: false,
             compactShowCollect = it[booleanPreferencesKey(KEY_COMPACT_SHOW_COLLECT)] ?: true,
             clearImageCacheOnLaunch = it[booleanPreferencesKey(KEY_CLEAR_IMAGE_CACHE_ON_LAUNCH)] == true,
+            keepFavoriteThreadImages = it[booleanPreferencesKey(KEY_KEEP_FAVORITE_THREAD_IMAGES)] == true,
         )
     }
 
@@ -419,6 +420,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_COMPACT_REPLY_BAR)] = ui.compactReplyBar
         it[booleanPreferencesKey(KEY_COMPACT_SHOW_COLLECT)] = ui.compactShowCollect
         it[booleanPreferencesKey(KEY_CLEAR_IMAGE_CACHE_ON_LAUNCH)] = ui.clearImageCacheOnLaunch
+        it[booleanPreferencesKey(KEY_KEEP_FAVORITE_THREAD_IMAGES)] = ui.keepFavoriteThreadImages
     }
 
     private const val KEY_APP_ICON = "app_icon"
@@ -458,6 +460,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_COMPACT_REPLY_BAR = "ui_compact_reply_bar"
     private const val KEY_COMPACT_SHOW_COLLECT = "ui_compact_show_collect"
     private const val KEY_CLEAR_IMAGE_CACHE_ON_LAUNCH = "ui_clear_image_cache_on_launch"
+    private const val KEY_KEEP_FAVORITE_THREAD_IMAGES = "ui_keep_favorite_thread_images"
 }
 
 private object BlockTransformer: PreferenceTransformer<BlockSettings> {

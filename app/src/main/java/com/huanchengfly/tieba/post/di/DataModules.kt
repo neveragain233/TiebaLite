@@ -8,8 +8,10 @@ import com.huanchengfly.tieba.post.models.database.TbLiteDatabase
 import com.huanchengfly.tieba.post.models.database.dao.AccountDao
 import com.huanchengfly.tieba.post.models.database.dao.BlockDao
 import com.huanchengfly.tieba.post.models.database.dao.DraftDao
+import com.huanchengfly.tieba.post.models.database.dao.FavoriteThreadDao
 import com.huanchengfly.tieba.post.models.database.dao.ForumHistoryDao
 import com.huanchengfly.tieba.post.models.database.dao.HiddenThreadDao
+import com.huanchengfly.tieba.post.models.database.dao.ImageCacheIndexDao
 import com.huanchengfly.tieba.post.models.database.dao.LikedForumDao
 import com.huanchengfly.tieba.post.models.database.dao.SearchDao
 import com.huanchengfly.tieba.post.models.database.dao.SearchPostDao
@@ -105,10 +107,16 @@ object DatabaseModule {
     fun provideDraftDao(database: TbLiteDatabase): DraftDao = database.draftDao()
 
     @Provides
+    fun provideFavoriteThreadDao(database: TbLiteDatabase): FavoriteThreadDao = database.favoriteThreadDao()
+
+    @Provides
     fun provideForumHistoryDao(database: TbLiteDatabase): ForumHistoryDao = database.forumHistoryDao()
 
     @Provides
     fun provideHiddenThreadDao(database: TbLiteDatabase): HiddenThreadDao = database.hiddenThreadDao()
+
+    @Provides
+    fun provideImageCacheIndexDao(database: TbLiteDatabase): ImageCacheIndexDao = database.imageCacheIndexDao()
 
     @Provides
     fun likedForumDao(database: TbLiteDatabase): LikedForumDao = database.likedForumDao()
