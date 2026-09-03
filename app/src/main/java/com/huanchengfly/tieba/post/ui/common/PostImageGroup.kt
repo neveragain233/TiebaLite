@@ -142,12 +142,12 @@ fun PostImageGroup(
     photoViewDataProvider: ((List<PicContentRender>, Int) -> PhotoViewData?)? = null,
     isSoleGroup: Boolean = true,
 ) {
-    if (pics.size == 1) {
+    val hasLong = pics.any { it.isLongImage() }
+    if (pics.size == 1 && !hasLong) {
         SinglePostImage(pic = pics[0], photoViewDataProvider = photoViewDataProvider)
     } else {
         val scope = rememberCoroutineScope()
         val listState = LocalLazyColumnState.current
-        val hasLong = pics.any { it.isLongImage() }
         var expanded by rememberSaveable(pics) { mutableStateOf(false) }
         val navContext = LocalLongImageNavContext.current
         // step -> item 内偏移; 最后一个 step 是收起按钮.
@@ -213,7 +213,11 @@ fun PostImageGroup(
                     )
                 }
             } else {
-                PostImageGrid(pics = pics, photoViewDataProvider = photoViewDataProvider)
+                if (pics.size == 1) {
+                    SinglePostImage(pic = pics[0], photoViewDataProvider = photoViewDataProvider)
+                } else {
+                    PostImageGrid(pics = pics, photoViewDataProvider = photoViewDataProvider)
+                }
                 if (hasLong) {
                     PostImageToggleButton(
                         expand = true,
