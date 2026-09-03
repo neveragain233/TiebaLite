@@ -24,7 +24,8 @@ data class ThreadStoreUiState(
     val isRefreshing: Boolean = false,
     val isLoadingMore: Boolean = false,
     val hasMore: Boolean = true,
-    val currentPage: Int = 1,
+    /** 下一页页码, 0 基([ThreadStoreRepository.load] 的 offset = pageSize * page), 首屏加载 page 0 */
+    val currentPage: Int = 0,
     val data: List<ThreadStore> = emptyList(),
     val error: Throwable? = null
 ) : UiState {
@@ -56,7 +57,7 @@ class ThreadStoreViewModel @Inject constructor(
     private fun refreshInternal(): Unit = launchInVM {
         _uiState.update { ThreadStoreUiState(isRefreshing = true) }
         val data = threadStoreRepo.load()
-        _uiState.update { ThreadStoreUiState(data = data, hasMore = data.hasMore) }
+        _uiState.update { ThreadStoreUiState(currentPage = 0, data = data, hasMore = data.hasMore) }
     }
 
     fun onRefresh() {
