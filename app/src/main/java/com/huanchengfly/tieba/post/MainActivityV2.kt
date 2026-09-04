@@ -8,6 +8,7 @@ import android.content.res.Configuration
 import android.net.Uri
 import android.os.Build
 import android.os.Bundle
+import android.text.format.Formatter
 import androidx.activity.viewModels
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.background
@@ -16,13 +17,21 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material3.AlertDialog as MaterialAlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MotionScheme
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.material3.adaptive.WindowAdaptiveInfo
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
@@ -37,6 +46,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.pm.ShortcutManagerCompat
@@ -80,6 +90,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.Dialog
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogNegativeButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogPositiveButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.DialogState
+import com.huanchengfly.tieba.post.ui.widgets.compose.MarkdownText
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.dialogs.AnyPopDialogProperties
@@ -140,6 +151,7 @@ class MainActivityV2 : BaseComposeActivity() {
     override fun onCreate(savedInstanceState: Bundle?) {
         installSplashScreen()
         super.onCreate(savedInstanceState)
+        viewModel.onAppLaunched()
         lastSmallestWidthDp = resources.configuration.smallestScreenWidthDp
         lifecycleScope.launch {
             ClientUtils.refreshActiveTimestamp()
@@ -222,6 +234,7 @@ class MainActivityV2 : BaseComposeActivity() {
         // val bottomSheetNavigator = rememberBottomSheetNavigator(skipPartiallyExpanded = true)
         val navController = rememberNavController(/* bottomSheetNavigator */)
         val uiState by viewModel.uiState.collectAsStateWithLifecycle()
+        val autoUpdatePrompt by viewModel.autoUpdatePrompt.collectAsStateWithLifecycle()
         val reduceMotion = uiState.uiSettings?.reduceMotion == true
 
         TiebaExtendedTheme(colorsExt = uiState.themeColor, reduceMotion) {
@@ -247,6 +260,15 @@ class MainActivityV2 : BaseComposeActivity() {
 
                         if (uiState.autoSignRestricted) {
                             BatteryOpDialog(onOpenSettings = ::requestIgnoreBatteryOptimizations)
+                        }
+
+                        autoUpdatePrompt?.let { prompt ->
+                            AutoUpdatePromptDialog(
+                                prompt = prompt,
+                                onDismiss = viewModel::dismissAutoUpdatePrompt,
+                                onDownload = viewModel::downloadAutoUpdate,
+                                onInstall = viewModel::installAutoUpdate,
+                            )
                         }
                     }
                 } else {
@@ -310,6 +332,65 @@ class MainActivityV2 : BaseComposeActivity() {
                 }
             }
         }
+    }
+
+    @Composable
+    private fun AutoUpdatePromptDialog(
+        prompt: AutoUpdatePrompt,
+        onDismiss: () -> Unit,
+        onDownload: () -> Unit,
+        onInstall: () -> Unit,
+    ) {
+        val context = LocalContext.current
+        MaterialAlertDialog(
+            onDismissRequest = onDismiss,
+            title = {
+                if (prompt.cachedFile == null) {
+                    Text(stringResource(R.string.update_available_title, prompt.info.versionName))
+                } else {
+                    Text(stringResource(R.string.update_download_finished))
+                }
+            },
+            text = {
+                if (prompt.cachedFile == null) {
+                    Column(
+                        modifier = Modifier
+                            .heightIn(max = 440.dp)
+                            .verticalScroll(rememberScrollState()),
+                    ) {
+                        prompt.info.changelog?.let { changelog ->
+                            MarkdownText(changelog)
+                            Spacer(Modifier.height(8.dp))
+                        }
+                        if (prompt.info.apkSize > 0L) {
+                            Text(
+                                stringResource(
+                                    R.string.update_size,
+                                    Formatter.formatShortFileSize(context, prompt.info.apkSize),
+                                )
+                            )
+                        }
+                    }
+                } else {
+                    Text(stringResource(R.string.update_install_prompt, prompt.info.versionName))
+                }
+            },
+            confirmButton = {
+                Button(onClick = if (prompt.cachedFile == null) onDownload else onInstall) {
+                    Text(
+                        stringResource(
+                            if (prompt.cachedFile == null) R.string.btn_download
+                            else R.string.update_install
+                        )
+                    )
+                }
+            },
+            dismissButton = {
+                TextButton(onClick = onDismiss) {
+                    Text(stringResource(R.string.update_later))
+                }
+            },
+        )
     }
 
     @Composable

@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.Analytics
 import androidx.compose.material.icons.outlined.Backup
 import androidx.compose.material.icons.outlined.CleaningServices
 import androidx.compose.material.icons.outlined.Download
+import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material3.Icon
@@ -35,6 +36,7 @@ import androidx.navigation.NavController
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.components.TiebaWebView.Companion.dumpWebViewVersion
 import com.huanchengfly.tieba.post.repository.user.Settings
+import com.huanchengfly.tieba.post.ui.models.settings.AutoUpdateCheckInterval
 import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.models.settings.UpdateSettings
 import com.huanchengfly.tieba.post.ui.widgets.compose.LocalSnackbarHostState
@@ -42,6 +44,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.Switch
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.SegmentedPreference
 import com.huanchengfly.tieba.post.ui.widgets.compose.preference.preference
 import com.huanchengfly.tieba.post.utils.ImageCacheUtil
+import kotlinx.collections.immutable.persistentMapOf
 import com.huanchengfly.tieba.post.utils.buildAppSettingsIntent
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -101,6 +104,20 @@ fun MoreSettingsPage(
                     navigator.navigate(route = SettingsDestination.WorkInfo)
                 },
                 leadingIcon = Icons.Outlined.Analytics,
+            )
+
+            listPref(
+                property = UpdateSettings::autoUpdateCheckInterval,
+                title = R.string.settings_auto_update_check_interval,
+                leadingIcon = Icons.Outlined.Refresh,
+                options = persistentMapOf(
+                    AutoUpdateCheckInterval.EVERY_LAUNCH to R.string.auto_update_interval_every_launch,
+                    AutoUpdateCheckInterval.ONE_DAY to R.string.auto_update_interval_one_day,
+                    AutoUpdateCheckInterval.THREE_DAYS to R.string.auto_update_interval_three_days,
+                    AutoUpdateCheckInterval.WEEKLY to R.string.auto_update_interval_weekly,
+                    AutoUpdateCheckInterval.TWO_WEEKS to R.string.auto_update_interval_two_weeks,
+                    AutoUpdateCheckInterval.MONTHLY to R.string.auto_update_interval_monthly,
+                ),
             )
 
             toggleablePreference(

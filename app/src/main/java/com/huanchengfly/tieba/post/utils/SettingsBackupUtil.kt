@@ -7,6 +7,7 @@ import com.huanchengfly.tieba.post.models.database.dao.BlockDao
 import com.huanchengfly.tieba.post.models.database.dao.HiddenThreadDao
 import com.huanchengfly.tieba.post.models.database.dao.TransactionRunner
 import com.huanchengfly.tieba.post.repository.user.SettingsRepository
+import com.huanchengfly.tieba.post.ui.models.settings.AutoUpdateCheckInterval
 import com.huanchengfly.tieba.post.ui.models.settings.BlockSettings
 import com.huanchengfly.tieba.post.ui.models.settings.BlockSettingsDto
 import com.huanchengfly.tieba.post.ui.models.settings.DarkPreference
@@ -277,8 +278,16 @@ object SettingsBackupUtil {
 
         }
         payload.updateSettings?.let {
+            val current = settingsRepository.updateSettings.snapshot()
+            val interval = it.autoUpdateCheckInterval
+                ?.let { name -> enumOrDefault(name, AutoUpdateCheckInterval.EVERY_LAUNCH) }
+                ?: current.autoUpdateCheckInterval
             settingsRepository.updateSettings.setNow(
-                UpdateSettings(backgroundDownload = it.backgroundDownload)
+                UpdateSettings(
+                    backgroundDownload = it.backgroundDownload,
+                    autoUpdateCheckInterval = interval,
+                    lastAutoUpdateCheckAt = current.lastAutoUpdateCheckAt,
+                )
             )
         }
         payload.signSettings?.let {
@@ -359,7 +368,10 @@ object SettingsBackupUtil {
                 clearImageCacheOnLaunch = ui.clearImageCacheOnLaunch,
                 keepFavoriteThreadImages = ui.keepFavoriteThreadImages,
             ),
-            updateSettings = UpdateSettingsDto(backgroundDownload = update.backgroundDownload),
+            updateSettings = UpdateSettingsDto(
+                backgroundDownload = update.backgroundDownload,
+                autoUpdateCheckInterval = update.autoUpdateCheckInterval.name,
+            ),
             signSettings = SignSettingsDto(
                 autoSign = sign.autoSign,
                 autoSignSlow = sign.autoSignSlow,

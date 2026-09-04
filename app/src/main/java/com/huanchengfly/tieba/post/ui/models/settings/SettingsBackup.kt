@@ -107,6 +107,7 @@ data class UISettingsDto(
 @Serializable
 data class UpdateSettingsDto(
     val backgroundDownload: Boolean,
+    val autoUpdateCheckInterval: String? = null,
 )
 
 @Serializable

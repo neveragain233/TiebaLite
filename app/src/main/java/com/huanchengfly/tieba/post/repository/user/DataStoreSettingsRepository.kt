@@ -27,6 +27,7 @@ import com.huanchengfly.tieba.post.putLong
 import com.huanchengfly.tieba.post.putString
 import com.huanchengfly.tieba.post.theme.TiebaBlue
 import com.huanchengfly.tieba.post.ui.models.settings.AutoBackupInterval
+import com.huanchengfly.tieba.post.ui.models.settings.AutoUpdateCheckInterval
 import com.huanchengfly.tieba.post.ui.models.settings.BackupSettings
 import com.huanchengfly.tieba.post.ui.models.settings.BlockSettings
 import com.huanchengfly.tieba.post.ui.models.settings.ClientConfig
@@ -156,17 +157,29 @@ class DataStoreSettingsRepository @Inject constructor(
 
 private object UpdateSettingsTransformer : PreferenceTransformer<UpdateSettings> {
     override val get: (Preferences) -> UpdateSettings = {
+        val intervalOrdinal = it[intPreferencesKey(KEY_AUTO_UPDATE_CHECK_INTERVAL)]
         UpdateSettings(
             backgroundDownload =
                 it[booleanPreferencesKey(KEY_BACKGROUND_DOWNLOAD)] ?: true,
+            autoUpdateCheckInterval = AutoUpdateCheckInterval.entries
+                .firstOrNull { entry -> entry.ordinal == intervalOrdinal }
+                ?: AutoUpdateCheckInterval.EVERY_LAUNCH,
+            lastAutoUpdateCheckAt =
+                it[longPreferencesKey(KEY_AUTO_UPDATE_LAST_CHECK_AT)] ?: 0L,
         )
     }
 
     override val set: (MutablePreferences, UpdateSettings) -> Unit = { it, update ->
         it[booleanPreferencesKey(KEY_BACKGROUND_DOWNLOAD)] = update.backgroundDownload
+        it[intPreferencesKey(KEY_AUTO_UPDATE_CHECK_INTERVAL)] =
+            update.autoUpdateCheckInterval.ordinal
+        it[longPreferencesKey(KEY_AUTO_UPDATE_LAST_CHECK_AT)] =
+            update.lastAutoUpdateCheckAt
     }
 
     private const val KEY_BACKGROUND_DOWNLOAD = "update_background_download"
+    private const val KEY_AUTO_UPDATE_CHECK_INTERVAL = "update_auto_check_interval"
+    private const val KEY_AUTO_UPDATE_LAST_CHECK_AT = "update_auto_last_check_at"
 }
 
 private object BackupSettingsTransformer : PreferenceTransformer<BackupSettings> {

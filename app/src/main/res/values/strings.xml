@@ -550,6 +550,13 @@
     <string name="update_notify_failed_title">TiebaLite %1$s 下载失败</string>
     <string name="update_notify_failed_text">下载未完成，请稍后重试</string>
     <string name="toast_update_background_start">已开始后台下载，完成后通知提醒</string>
+    <string name="settings_auto_update_check_interval">自动检查更新</string>
+    <string name="auto_update_interval_every_launch">每次打开时</string>
+    <string name="auto_update_interval_one_day">每 1 天</string>
+    <string name="auto_update_interval_three_days">每 3 天</string>
+    <string name="auto_update_interval_weekly">每 7 天</string>
+    <string name="auto_update_interval_two_weeks">每 14 天</string>
+    <string name="auto_update_interval_monthly">每 30 天</string>
     <string name="settings_update_background_download">后台下载更新</string>
     <string name="summary_update_background_download">下载在后台进行，完成后在通知栏提示安装</string>
     <string name="ban_chat">禁止TA私信</string>
