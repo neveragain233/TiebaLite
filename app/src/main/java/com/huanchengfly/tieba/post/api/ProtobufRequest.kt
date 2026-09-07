@@ -33,7 +33,10 @@ fun buildProtobufRequestBody(
     return MyMultipartBody.Builder(BOUNDARY)
         .apply {
             setType(MyMultipartBody.FORM)
-            if (clientVersion != ClientVersion.TIEBA_V12 && clientVersion != ClientVersion.TIEBA_V12_POST) {
+            if (clientVersion != ClientVersion.TIEBA_V12 &&
+                clientVersion != ClientVersion.TIEBA_V12_POST &&
+                clientVersion != ClientVersion.TIEBA_V22
+            ) {
                 addFormDataPart(Param.CLIENT_VERSION, clientVersion.version)
             }
             if (needSToken) {
@@ -144,6 +147,55 @@ fun buildCommonRequest(
             start_type = 1,
             stoken = AccountUtil.getSToken(),
             swan_game_ver = "1038000",
+            user_agent = getUserAgent("tieba/${clientVersion.version}"),
+            z_id = AccountUtil.getAccountInfo { zid }
+        )
+    }
+
+    ClientVersion.TIEBA_V22 -> {
+        CommonRequest(
+            BDUSS = AccountUtil.getBduss(),
+            _client_id = ClientUtils.clientId ?: RetrofitTiebaApi.randomClientId,
+            _client_type = 2,
+            _client_version = clientVersion.version,
+            _os_version = "${Build.VERSION.SDK_INT}",
+            _phone_imei = MobileInfoUtil.getIMEI(context),
+            _timestamp = System.currentTimeMillis(),
+            active_timestamp = ClientUtils.activeTimestamp,
+            android_id = base64Encode(UIDUtil.getAndroidId("000")),
+            brand = Build.BRAND,
+            c3_aid = UIDUtil.getAid(),
+            cmode = 1,
+            cuid = CuidUtils.getNewCuid(),
+            cuid_galaxy2 = CuidUtils.getNewCuid(),
+            cuid_gid = "",
+            event_day = SimpleDateFormat("yyyyMdd", Locale.getDefault()).format(
+                Date(
+                    System.currentTimeMillis()
+                )
+            ),
+            extra = "",
+            first_install_time = App.Config.appFirstInstallTime,
+            framework_ver = "4220001",
+            from = "1020031h",
+            is_teenager = 0,
+            last_update_time = App.Config.appLastUpdateTime,
+            lego_lib_version = "3.0.0",
+            model = Build.MODEL,
+            net_type = 1,
+            oaid = "",
+            personalized_rec_switch = 1,
+            pversion = "1.0.3",
+            q_type = 0,
+            sample_id = ClientUtils.sampleId,
+            scr_dip = App.ScreenInfo.DENSITY.toDouble(),
+            scr_h = getScreenHeight(),
+            scr_w = getScreenWidth(),
+            sdk_ver = "3.36.0",
+            start_scheme = "",
+            start_type = 1,
+            stoken = AccountUtil.getSToken(),
+            swan_game_ver = "2035000",
             user_agent = getUserAgent("tieba/${clientVersion.version}"),
             z_id = AccountUtil.getAccountInfo { zid }
         )
