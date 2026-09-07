@@ -72,7 +72,9 @@ class PhotoViewViewModel : ViewModel(), DataProvider {
 
                 val stateSnapshot = _state.first()
                 val picAmount = picPageBean.picAmount ?: throw TiebaException("加载列表失败, 远古坟贴?")
-                val fetchedItems = picPageBean.picList.toUniquePhotoViewItems(old = stateSnapshot.data)
+                val picList = picPageBean.picList.orEmpty()
+                val fetchedItems = picList.toUniquePhotoViewItems(old = stateSnapshot.data)
+                if (fetchedItems.isEmpty()) throw TiebaException("加载图片列表失败")
                 val firstItemIndex = fetchedItems.first().overallIndex
                 val localItems =
                     if (viewData.data.picIndex == 1) emptyList() else viewData.picItems.subList(
@@ -140,8 +142,13 @@ class PhotoViewViewModel : ViewModel(), DataProvider {
                     .retryWhen { cause, attempt ->  cause !is TiebaApiException && attempt < 3 }
                     .firstOrThrow()
 
-                val hasPrev = picPageBean.picList.first().overAllIndex.toInt() > 1
-                val uniqueItems = picPageBean.picList.toUniquePhotoViewItems(uiState.data)
+                val picList = picPageBean.picList.orEmpty()
+                if (picList.isEmpty()) {
+                    callback(emptyList())
+                    return@submit
+                }
+                val hasPrev = picList.first().overAllIndex.toInt() > 1
+                val uniqueItems = picList.toUniquePhotoViewItems(uiState.data)
                 val newItems = (uniqueItems + uiState.data).toImmutableList()
 
                 withContext(Dispatchers.Main.immediate) {
@@ -168,7 +175,8 @@ class PhotoViewViewModel : ViewModel(), DataProvider {
                 .retryWhen { cause, attempt ->  cause !is TiebaApiException && attempt < 3 }
                 .firstOrThrow()
 
-            val newData = picPageBean.picList
+            val newData = picPageBean.picList.orEmpty()
+            if (newData.isEmpty()) throw TiebaException("加载图片列表失败")
             val picAmount = picPageBean.picAmount ?: throw TiebaException("加载列表失败, 远古坟贴?")
             val hasNext = newData.last().overAllIndex.toInt() < picAmount
             val uniqueItems = newData.toUniquePhotoViewItems(old = uiState.data)

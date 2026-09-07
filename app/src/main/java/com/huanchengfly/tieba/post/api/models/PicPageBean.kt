@@ -13,7 +13,7 @@ data class PicPageBean(
     @SerializedName("pic_amount")
     val picAmount: Int?, // 远古坟贴: Null
     @SerializedName("pic_list")
-    val picList: List<PicBean>,
+    val picList: List<PicBean>?,
 ) : BaseBean() {
     data class ForumBean(
         val name: String,
