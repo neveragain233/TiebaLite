@@ -93,12 +93,27 @@ fun Media.getPicUrl(loadType: Int): String {
 }
 
 private fun PbContent.getPicUrl(loadType: Int): String {
-    return ImageUtil.getThumbnail(
+    val url = ImageUtil.getThumbnail(
         loadType = loadType,
         // originUrl = originSrc,   // Best quality in [PbContent]
         originUrl = bigCdnSrc,      // Medium
         smallPicUrl = cdnSrc        // Worst quality in [PbContent]
     ).tb2ImageWorkaround()
+
+    // Some sub-post responses only return one of the legacy fields.
+    // Prefer originSrc only when both cdn urls are unavailable.
+    return url.ifEmpty {
+        listOf(originSrc, cdnSrcActive, bigSrc, src)
+            .firstOrNull { it.isNotBlank() }
+            .orEmpty()
+            .tb2ImageWorkaround()
+    }
+}
+
+private fun PbContent.getOriginPicUrl(fallbackUrl: String): String {
+    return listOf(originSrc, bigCdnSrc, cdnSrcActive, bigSrc, src, cdnSrc)
+        .firstOrNull { it.isNotBlank() }
+        ?: fallbackUrl
 }
 
 // 远古坟贴图片
@@ -148,11 +163,14 @@ val List<PbContent>.plainText: String?
 
 fun PbContent.getPicSize(): IntSize? {
     try {
-        if (bsize.isEmpty()) throw IllegalArgumentException("Not a Image PbContent! type: $type")
+        if (bsize.isNotEmpty()) {
+            return bsize.split(",")
+                .map { it.toIntOrNull() ?: throw NumberFormatException("Not a number $it") }
+                .let { IntSize(width = it[0], height = it[1]) }
+        }
 
-        return bsize.split(",")
-            .map { it.toIntOrNull() ?: throw NumberFormatException("Not a number $it") }
-            .let { IntSize(width = it[0], height = it[1]) }
+        // Newer sub-post responses may omit bsize but still provide width/height.
+        return if (width > 0 && height > 0) IntSize(width = width, height = height) else null
     } catch (e: Exception) {
         e.printStackTrace()
     }
@@ -210,13 +228,15 @@ fun List<PbContent>.buildRenders(imageLoadType: Int): ImmutableList<PbContentRen
                 }
 
                 3 -> {
+                    val picUrl = it.getPicUrl(imageLoadType)
+                    val originUrl = it.getOriginPicUrl(picUrl)
                     renders.add(
                         PicContentRender(
-                            picUrl = it.getPicUrl(imageLoadType),
-                            originUrl = it.originSrc,
+                            picUrl = picUrl,
+                            originUrl = originUrl,
                             originSize = it.originSize,
                             dimensions = it.getPicSize(),
-                            picId = ImageUtil.getPicId(it.originSrc),
+                            picId = ImageUtil.getPicId(originUrl),
                         )
                     )
                 }

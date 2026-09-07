@@ -3,6 +3,7 @@ package com.huanchengfly.tieba.post.ui.widgets.compose
 import androidx.compose.foundation.gestures.awaitEachGesture
 import androidx.compose.foundation.gestures.awaitFirstDown
 import androidx.compose.foundation.gestures.waitForUpOrCancellation
+import androidx.compose.foundation.text.InlineTextContent
 import androidx.compose.foundation.text.BasicText
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalTextStyle
@@ -33,6 +34,7 @@ import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.ui.common.LocalPbInlineContentCache
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_URL
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_USER
+import com.huanchengfly.tieba.post.ui.common.PbInlineType
 import com.huanchengfly.tieba.post.ui.page.Destination
 import com.huanchengfly.tieba.post.ui.page.LocalNavController
 import com.huanchengfly.tieba.post.utils.DisplayUtil.plus
@@ -57,7 +59,8 @@ fun BasicPbContentText(
     softWrap: Boolean = true,
     maxLines: Int = Int.MAX_VALUE,
     onTextLayout: (TextLayoutResult) -> Unit = {},
-    style: TextStyle = LocalTextStyle.current
+    style: TextStyle = LocalTextStyle.current,
+    additionalInlineContent: Map<String, InlineTextContent> = emptyMap(),
 ) {
     val lineHeightSp = lineHeight.takeOrElse { style.lineHeight }.takeOrElse { 24.sp/* BodyLarge */}
     val mergedStyle = style.merge(
@@ -80,7 +83,8 @@ fun BasicPbContentText(
         overflow = overflow,
         softWrap = softWrap,
         maxLines = maxLines,
-        inlineContent = LocalPbInlineContentCache.current.getCachedInlineContent(lineHeightSp.sp2px()),
+        inlineContent = LocalPbInlineContentCache.current.getCachedInlineContent(lineHeightSp.sp2px()) +
+                additionalInlineContent,
     )
 }
 
@@ -101,12 +105,20 @@ fun PbContentText(
     overflow: TextOverflow = TextOverflow.Clip,
     maxLines: Int = Int.MAX_VALUE,
     onTextLayout: (TextLayoutResult) -> Unit = {},
+    onPhotoClick: ((index: Int) -> Unit)? = null,
     style: TextStyle = LocalTextStyle.current,
 ) {
     val context = LocalContext.current
     val navigator = LocalNavController.current
 
     var layoutResult by remember { mutableStateOf<TextLayoutResult?>(null) }
+    val photoInlineContent = if (onPhotoClick != null) {
+        rememberPhotoInlineContent(textStyle = style) { index ->
+            onPhotoClick.invoke(index)
+        }
+    } else {
+        null
+    }
     BasicPbContentText(
         text = text,
         modifier = modifier.pointerInput(Unit) {
@@ -153,6 +165,9 @@ fun PbContentText(
             layoutResult = it
             onTextLayout(it)
         },
-        style = style
+        style = style,
+        additionalInlineContent = photoInlineContent
+            ?.let { mapOf(PbInlineType.PHOTO.name to it) }
+            .orEmpty()
     )
 }

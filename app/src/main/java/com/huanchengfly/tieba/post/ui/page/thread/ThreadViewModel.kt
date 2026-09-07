@@ -22,6 +22,7 @@ import com.huanchengfly.tieba.post.arch.CommonUiEvent
 import com.huanchengfly.tieba.post.arch.TbLiteExceptionHandler
 import com.huanchengfly.tieba.post.arch.UiEvent
 import com.huanchengfly.tieba.post.components.ClipBoardLinkDetector
+import com.huanchengfly.tieba.post.models.PhotoViewData
 import com.huanchengfly.tieba.post.models.database.ThreadHistory
 import com.huanchengfly.tieba.post.repository.HistoryRepository
 import com.huanchengfly.tieba.post.repository.PageData
@@ -101,6 +102,22 @@ class ThreadViewModel @Inject constructor(
 
     private val isLoadingMore: Boolean
         get() = currentState.isLoadingMore
+
+    suspend fun loadSubPostPhotoData(
+        post: PostData,
+        subPost: SubPostItemData,
+        photoIndex: Int,
+    ): PhotoViewData? {
+        val thread = currentState.thread ?: return null
+        val photos = threadRepo.getSubPostPhotos(
+            threadId = thread.id,
+            postId = post.id,
+            forumId = thread.simpleForum.first,
+            subPostId = subPost.id,
+        ) ?: return null
+
+        return photos.getOrNull(photoIndex)?.photoViewData
+    }
 
     /**
      * Job of Add/Update/Remove thread collections, cancelable.

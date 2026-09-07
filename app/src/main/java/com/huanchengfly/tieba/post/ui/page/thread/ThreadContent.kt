@@ -70,10 +70,12 @@ import com.huanchengfly.tieba.post.MacrobenchmarkConstant.testColumn
 import com.huanchengfly.tieba.post.PaddingNone
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.api.models.protos.PollOption
+import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.navigateDebounced
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.common.PostContentRenders
 import com.huanchengfly.tieba.post.ui.common.LocalLazyColumnState
+import com.huanchengfly.tieba.post.ui.common.PicContentRender
 import com.huanchengfly.tieba.post.ui.common.LongImageNavContext
 import com.huanchengfly.tieba.post.ui.common.LocalLongImageNavContext
 import com.huanchengfly.tieba.post.ui.widgets.compose.PbContentText
@@ -86,7 +88,9 @@ import com.huanchengfly.tieba.post.ui.page.Destination.CopyText
 import com.huanchengfly.tieba.post.ui.page.Destination.Thread
 import com.huanchengfly.tieba.post.ui.page.Destination.UserProfile
 import com.huanchengfly.tieba.post.ui.page.LocalNavController
+import com.huanchengfly.tieba.post.ui.page.photoview.PhotoViewActivity
 import com.huanchengfly.tieba.post.ui.page.subposts.PostLikeButton
+import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockTip
 import com.huanchengfly.tieba.post.ui.widgets.compose.BlockableContent
 import com.huanchengfly.tieba.post.ui.widgets.compose.Card
@@ -483,6 +487,8 @@ private fun PostCardItem(
     onImageNavWaypoints: ((Long, List<Int>) -> Unit)? = null,
 ) {
     val navigator = LocalNavController.current
+    val context = LocalContext.current
+    val coroutineScope = rememberCoroutineScope()
     val loggedIn = localUid != null
     val onUserClickedListener: () -> Unit = {
         navigator.navigateDebounced(
@@ -490,6 +496,17 @@ private fun PostCardItem(
         )
     }
     val itemTopY = remember { mutableStateOf(0) }
+    val onSubPostPhotoClick: (PostData, SubPostItemData, Int) -> Unit = { post, subPost, photoIndex ->
+        coroutineScope.launch {
+            runCatching {
+                viewModel.loadSubPostPhotoData(post, subPost, photoIndex)
+            }.onSuccess { photoViewData ->
+                if (photoViewData != null) PhotoViewActivity.launch(context, photoViewData)
+            }.onFailure {
+                context.toastShort(R.string.toast_exception, it.getErrorMessage())
+            }
+        }
+    }
 
     CompositionLocalProvider(
         LocalLongImageNavContext provides onImageNavWaypoints?.let {
@@ -514,6 +531,7 @@ private fun PostCardItem(
                     onOpenSubPosts = { subPostId ->
                         viewModel.onOpenSubPost(post, subPostId)
                     },
+                    onSubPostPhotoClick = onSubPostPhotoClick,
                     onMenuCopyClick = {
                         navigator.navigate(CopyText(it))
                     },
@@ -534,6 +552,7 @@ private fun PostCardItem(
                     onUserClick = onUserClickedListener,
                     onLikeClick = viewModel::onPostLikeClicked,
                     onOpenSubPosts = { subPostId -> viewModel.onOpenSubPost(post, subPostId) },
+                    onSubPostPhotoClick = onSubPostPhotoClick,
                     onMenuCopyClick = {
                         navigator.navigate(CopyText(it))
                     }
@@ -643,6 +662,7 @@ fun PostCard(
     onReplyClick: ((PostData) -> Unit)? = null,
     onSubPostReplyClick: ((PostData, SubPostItemData) -> Unit)? = null,
     onOpenSubPosts: (subPostId: Long) -> Unit = {},
+    onSubPostPhotoClick: (PostData, SubPostItemData, Int) -> Unit = { _, _, _ -> },
     onMenuCopyClick: (String) -> Unit,
     onMenuFavoriteClick: (() -> Unit)? = null,
     onMenuDeleteClick: (() -> Unit)? = null
@@ -758,6 +778,7 @@ fun PostCard(
                                 ) {
                                     SubPostItem(
                                         subPost = item,
+                                        post = post,
                                         modifier = Modifier
                                             .padding(horizontal = 12.dp)
                                             .fillMaxWidth(),
@@ -765,6 +786,7 @@ fun PostCard(
                                             { onSubPostReplyClick(post, item) }
                                         },
                                         onOpenSubPosts = onOpenSubPosts,
+                                        onRemotePhotoClick = onSubPostPhotoClick,
                                         onMenuCopyClick = onMenuCopyClick
                                     )
                                 }
@@ -791,15 +813,20 @@ fun PostCard(
 @Composable
 private fun SubPostItem(
     subPost: SubPostItemData,
+    post: PostData,
     modifier: Modifier = Modifier,
     onReplyClick: (() -> Unit)?,
     onOpenSubPosts: (Long) -> Unit,
+    onRemotePhotoClick: (PostData, SubPostItemData, Int) -> Unit,
     onMenuCopyClick: (String) -> Unit,
 ) {
     val context = LocalContext.current
     val navigator = LocalNavController.current
     val coroutineScope = rememberCoroutineScope()
     val menuState = rememberMenuState()
+    val pictures = remember(subPost.content) {
+        subPost.content?.filterIsInstance<PicContentRender>().orEmpty()
+    }
 
     LongClickMenu(
         menuState = menuState,
@@ -826,6 +853,14 @@ private fun SubPostItem(
             maxLines = 4,
             lineSpacing = 0.4.sp,
             style = MaterialTheme.typography.bodyMedium,
+            onPhotoClick = { photoIndex ->
+                val photoViewData = pictures.getOrNull(photoIndex)?.photoViewData
+                if (photoViewData != null) {
+                    PhotoViewActivity.launch(context, photoViewData)
+                } else {
+                    onRemotePhotoClick(post, subPost, photoIndex)
+                }
+            },
         )
     }
 }

@@ -26,6 +26,7 @@ import com.huanchengfly.tieba.post.repository.user.SettingsRepository
 import com.huanchengfly.tieba.post.ui.common.PbContentRender
 import com.huanchengfly.tieba.post.ui.common.PbContentRender.Companion.TAG_USER
 import com.huanchengfly.tieba.post.ui.common.PbInlineType
+import com.huanchengfly.tieba.post.ui.common.PicContentRender
 import com.huanchengfly.tieba.post.ui.models.Like
 import com.huanchengfly.tieba.post.ui.models.LikeZero
 import com.huanchengfly.tieba.post.ui.models.PostData
@@ -35,6 +36,7 @@ import com.huanchengfly.tieba.post.ui.models.ThreadInfoData
 import com.huanchengfly.tieba.post.ui.models.ThreadItem
 import com.huanchengfly.tieba.post.ui.models.ThreadPollInfo
 import com.huanchengfly.tieba.post.ui.models.UserData
+import com.huanchengfly.tieba.post.ui.utils.getSubPostPhotoViewData
 import com.huanchengfly.tieba.post.ui.page.thread.ThreadSortType
 import com.huanchengfly.tieba.post.utils.DateTimeUtils
 import com.huanchengfly.tieba.post.utils.StringUtil
@@ -43,6 +45,7 @@ import com.huanchengfly.tieba.post.utils.ThemeUtil
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.withContext
+import kotlinx.collections.immutable.toImmutableList
 import okhttp3.internal.toLongOrDefault
 import javax.inject.Inject
 import javax.inject.Singleton
@@ -188,6 +191,29 @@ class PbPageRepository @Inject constructor(
         )
     }
 
+    /**
+     * ThreadPage 摘要里的 “[图片]” 可能只是文本占位符。
+     * 点击时通过楼中楼接口换取完整图片数据。
+     */
+    suspend fun getSubPostPhotos(
+        threadId: Long,
+        postId: Long,
+        forumId: Long,
+        subPostId: Long,
+    ): List<PicContentRender>? {
+        val response = pbFloor(
+            threadId = threadId,
+            postId = postId,
+            forumId = forumId,
+            page = 1,
+            subPostId = subPostId,
+        )
+        return response.subPosts
+            .firstOrNull { it.id == subPostId }
+            ?.content
+            ?.filterIsInstance<PicContentRender>()
+    }
+
     suspend fun deletePost(postId: Long, thread: ThreadInfoData, tbs: String?, delMyPost: Boolean) {
         val (forumId, forumName, _) = thread.simpleForum
         networkDataSource.deletePost(forumId, forumName, thread.id, postId, tbs, delMyPost)
@@ -244,10 +270,27 @@ class PbPageRepository @Inject constructor(
     }
 
     @WorkerThread
-    private suspend fun SubPostList.mapToUiModel(lzId: Long, abstract: Boolean): SubPostItemData {
+    private suspend fun SubPostList.mapToUiModel(
+        lzId: Long,
+        abstract: Boolean,
+    ): SubPostItemData {
         val habit = habitSettings.first()
         val author = author!!.mapToUiModel(lzId = lzId, showBothName = habit.showBothName)
-        val contentRenders = content.buildRenders(imageLoadType = habit.imageLoadType)
+        val renders = content.buildRenders(imageLoadType = habit.imageLoadType)
+        val pictures = renders.filterIsInstance<PicContentRender>()
+        var pictureIndex = 0
+        val contentRenders = renders.map { render ->
+            if (render !is PicContentRender) {
+                render
+            } else {
+                render.copy(
+                    photoViewData = getSubPostPhotoViewData(
+                        pics = pictures,
+                        index = pictureIndex++,
+                    )
+                )
+            }
+        }.toImmutableList()
         val plainText = content.plainText.orEmpty()
         return SubPostItemData(
             author = author,
@@ -257,7 +300,8 @@ class PbPageRepository @Inject constructor(
             like = agree?.let { Like(agree = it) } ?: LikeZero,
             plainText = plainText,
             abstractContent = if (abstract) buildAbstractContent(contentRenders, author) else null,
-            content = if (abstract) null else contentRenders
+            // ThreadPage maps clickable "[图片]" tags to these renders.
+            content = contentRenders,
         )
     }
 
@@ -267,13 +311,17 @@ class PbPageRepository @Inject constructor(
      * @param lzId user ID of LZ
      * @param abstract build abstract content instead of full PbContent, ``true`` for ThreadPage
      * */
-    private suspend fun List<SubPostList>.mapToUiModel(lzId: Long, abstract: Boolean): List<SubPostItemData> {
+    private suspend fun List<SubPostList>.mapToUiModel(
+        lzId: Long,
+        abstract: Boolean,
+    ): List<SubPostItemData> {
         if (isEmpty()) return emptyList()
 
         return withContext(Dispatchers.Default) {
             val hideBlocked = blockSettings.first().hideBlocked
             mapNotNull {
-                it.mapToUiModel(lzId, abstract).takeUnless { i -> i.blocked && hideBlocked }
+                it.mapToUiModel(lzId, abstract)
+                    .takeUnless { i -> i.blocked && hideBlocked }
             }
         }
     }
@@ -372,6 +420,41 @@ private fun buildAbstractContent(content: List<PbContentRender>, user: UserData)
             appendInlineContent(PbInlineType.LZ.name)
         }
         append(": ")
-        content.forEach { append(it.toAnnotationString()) }
+        var hasPhoto = false
+        content.forEach {
+            if (it is PicContentRender) {
+                hasPhoto = true
+            } else {
+                hasPhoto = appendWithoutPhotoTags(
+                    value = it.toAnnotationString(),
+                )
+            }
+        }
+        if (hasPhoto) {
+            appendInlineContent(
+                id = PbInlineType.PHOTO.name,
+                alternateText = "0",
+            )
+        }
+    }
+}
+
+private fun AnnotatedString.Builder.appendWithoutPhotoTags(
+    value: AnnotatedString,
+): Boolean {
+    val token = PbContentRender.MEDIA_PICTURE
+    var start = 0
+    var hasPhoto = false
+
+    while (true) {
+        val tokenStart = value.text.indexOf(token, start)
+        if (tokenStart < 0) {
+            append(value, start, value.length)
+            return hasPhoto
+        }
+
+        append(value, start, tokenStart)
+        hasPhoto = true
+        start = tokenStart + token.length
     }
 }

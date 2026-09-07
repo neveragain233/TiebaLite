@@ -36,7 +36,7 @@ import com.huanchengfly.tieba.post.utils.EmoticonUtil
 val LocalPbInlineContentCache = staticCompositionLocalOf<PbInlineContentCache> { error("No PbInlineContentCache provided!") }
 
 enum class PbInlineType {
-    EMOTICON, LINK, LINK_MALICIOUS, VIDEO, LZ,
+    EMOTICON, LINK, LINK_MALICIOUS, VIDEO, LZ, PHOTO,
 }
 
 /**

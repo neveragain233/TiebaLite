@@ -97,6 +97,34 @@ fun getPhotoViewData(
     )
 }
 
+/**
+ * 构建楼中楼图集数据。
+ *
+ * 完整上下文存在时复用帖子图片流; 缺失时退化为当前楼中楼的本地图集,
+ * 保证缩略图仍然可以打开原图。
+ */
+fun getSubPostPhotoViewData(
+    pics: List<PicContentRender>,
+    index: Int,
+): PhotoViewData? {
+    val pic = pics.getOrNull(index) ?: return null
+    if (pic.originUrl.isBlank()) return null
+
+    val validPics = pics.withIndex().filter { (_, item) -> item.originUrl.isNotBlank() }
+    val validIndex = validPics.indexOfFirst { it.index == index }.takeIf { it >= 0 } ?: return null
+    return PhotoViewData(
+        picItems = validPics.mapIndexed { picIndex, (_, item) ->
+            PicItem(
+                picId = item.picId.ifBlank { ImageUtil.getPicId(item.originUrl) },
+                picIndex = picIndex + 1,
+                originUrl = item.originUrl,
+                postId = null,
+            )
+        }.toImmutableList(),
+        index = validIndex,
+    )
+}
+
 fun getPhotoViewData(
     medias: List<Media>,
     forumId: Long,
