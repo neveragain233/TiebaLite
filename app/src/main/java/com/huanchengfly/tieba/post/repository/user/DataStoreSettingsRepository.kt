@@ -370,6 +370,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             darkPreference = DarkPreference.entries[darkPrefOrdinal],
             darkenImage = it[booleanPreferencesKey(KEY_DARKEN_IMAGE_ON_NIGHT)] ?: true,
             hideExplore = it[booleanPreferencesKey(KEY_HIDE_EXPLORE)] == true,
+            hideNotifications = it[booleanPreferencesKey(KEY_HIDE_NOTIFICATIONS)] == true,
             reduceEffect = it[booleanPreferencesKey(KEY_REDUCE_EFFECT)] ?: (DeviceUtils.PRODUCT_FIRST_API_LEVEL < Build.VERSION_CODES.S),
             reduceMotion = it[booleanPreferencesKey(KEY_REDUCE_MOTION)] ?: (DeviceUtils.PRODUCT_FIRST_API_LEVEL < Build.VERSION_CODES.S),
             setupFinished = it[booleanPreferencesKey(KEY_SETUP_FINISHED)] == true,
@@ -414,6 +415,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[intPreferencesKey(KEY_DARK_THEME_MODE)] = ui.darkPreference.ordinal
         it[booleanPreferencesKey(KEY_DARKEN_IMAGE_ON_NIGHT)] = ui.darkenImage
         it[booleanPreferencesKey(KEY_HIDE_EXPLORE)] = ui.hideExplore
+        it[booleanPreferencesKey(KEY_HIDE_NOTIFICATIONS)] = ui.hideNotifications
         it[booleanPreferencesKey(KEY_REDUCE_EFFECT)] = ui.reduceEffect
         it[booleanPreferencesKey(KEY_REDUCE_MOTION)] = ui.reduceMotion
         it[booleanPreferencesKey(KEY_SETUP_FINISHED)] = ui.setupFinished
@@ -454,6 +456,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_DARK_THEME_MODE = "dark_mode"
     private const val KEY_DARKEN_IMAGE_ON_NIGHT = "ui_dark_img"
     private const val KEY_HIDE_EXPLORE = "ui_hide_explore"
+    private const val KEY_HIDE_NOTIFICATIONS = "ui_hide_notifications"
     private const val KEY_SETUP_FINISHED = "ui_setup"
     private const val KEY_REDUCE_EFFECT = "ui_reduce_effect"
     private const val KEY_REDUCE_MOTION = "ui_reduce_motion"

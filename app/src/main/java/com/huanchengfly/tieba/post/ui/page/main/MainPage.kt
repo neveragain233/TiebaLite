@@ -243,11 +243,11 @@ fun MainPage(
     }
 
     val loggedIn = LocalAccount.current != null
-    val destinations = remember(loggedIn, uiSettings.hideExplore) {
+    val destinations = remember(loggedIn, uiSettings.hideExplore, uiSettings.hideNotifications) {
         listOfNotNull(
             MainDestination.Home,
             MainDestination.Explore.takeUnless { uiSettings.hideExplore },
-            MainDestination.Notification.takeIf { loggedIn },
+            MainDestination.Notification.takeIf { loggedIn && !uiSettings.hideNotifications },
             MainDestination.User,
         )
     }

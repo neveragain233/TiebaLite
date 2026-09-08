@@ -87,6 +87,7 @@ enum class NavRailPosition {
  * @param darkPreference 夜间模式偏好
  * @param darkenImage 夜间模式压暗缩略图
  * @param hideExplore 隐藏主页「动态」入口
+ * @param hideNotifications 隐藏主页「消息」入口
  * @param reduceEffect 减弱模糊效果
  * @param reduceMotion 减弱动态效果
  * @param setupFinished 设置向导已完成
@@ -122,6 +123,7 @@ data class UISettings(
     val darkPreference: DarkPreference = DarkPreference.FOLLOW_SYSTEM,
     val darkenImage: Boolean = true,
     val hideExplore: Boolean = false,
+    val hideNotifications: Boolean = false,
     val reduceEffect: Boolean = false,
     val reduceMotion: Boolean = false,
     val setupFinished: Boolean = false,

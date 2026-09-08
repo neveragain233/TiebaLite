@@ -41,7 +41,7 @@ fun AppLevelNavigationRail(
     val destinations = listOfNotNull(
         MainDestination.Home,
         MainDestination.Explore.takeUnless { uiSettings.hideExplore },
-        MainDestination.Notification.takeIf { loggedIn },
+        MainDestination.Notification.takeIf { loggedIn && !uiSettings.hideNotifications },
         MainDestination.User,
     )
 

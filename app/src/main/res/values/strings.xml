@@ -478,6 +478,7 @@
     <string name="btn_open_photos">查看图片 (%d)</string>
     <string name="btn_view_photos">查看图片</string>
     <string name="title_hide_explore">隐藏「动态」入口</string>
+    <string name="title_hide_notifications">隐藏「消息」入口</string>
     <string name="title_hide_media">收起贴子列表的图片和视频</string>
     <string name="settings_media_display_mode">列表媒体显示</string>
     <string name="media_display_mode_hide">隐藏</string>

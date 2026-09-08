@@ -81,6 +81,7 @@ data class UISettingsDto(
     val darkPreference: String,
     val darkenImage: Boolean,
     val hideExplore: Boolean,
+    val hideNotifications: Boolean = false,
     val reduceEffect: Boolean,
     val reduceMotion: Boolean,
     val homeForumList: Boolean,

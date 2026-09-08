@@ -27,6 +27,7 @@ import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FontDownload
 import androidx.compose.material.icons.outlined.House
 import androidx.compose.material.icons.outlined.Houseboat
+import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.NightsStay
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SwipeVertical
@@ -218,6 +219,12 @@ fun UISettingsPage(
                 property = UISettings::hideExplore,
                 title = R.string.title_hide_explore,
                 leadingIcon = toyFansIcon.imageVector,
+            )
+
+            toggleablePreference(
+                property = UISettings::hideNotifications,
+                title = R.string.title_hide_notifications,
+                leadingIcon = Icons.Outlined.NotificationsOff,
             )
         }
 
