@@ -44,6 +44,7 @@ import dev.chrisbanes.haze.HazeEffectScope
 import dev.chrisbanes.haze.HazeInputScale
 import dev.chrisbanes.haze.HazeState
 import dev.chrisbanes.haze.HazeStyle
+import dev.chrisbanes.haze.HazeTint
 import dev.chrisbanes.haze.hazeEffect
 import dev.chrisbanes.haze.hazeSource
 
@@ -55,6 +56,8 @@ class TbHazeState(colorScheme: ExtendedColorScheme) {
     val state: HazeState = HazeState()
 
     val hazeStyle: HazeStyle = colorScheme.buildDefaultHazeStyle()
+
+    val navigationHazeStyle: HazeStyle = colorScheme.buildNavigationHazeStyle()
 
     // Disable input scale on dark mode to reduce banding artifact
     val inputScale = if (colorScheme.darkTheme) HazeInputScale.None else DefaultHazeInputScale
@@ -78,6 +81,34 @@ class TbHazeState(colorScheme: ExtendedColorScheme) {
             blurRadius = 28.dp,
             noiseFactor = if (darkTheme) 0.2f else 0f // Reduce banding artifact on dark mode
         )
+
+        private fun ExtendedColorScheme.buildNavigationHazeStyle(): HazeStyle {
+            if (darkTheme) {
+                val base = colorScheme.surfaceContainer
+                return HazeStyle(
+                    backgroundColor = colorScheme.surfaceContainer,
+                    tints = listOf(
+                        HazeTint(base.copy(alpha = 0.68f)),
+                        HazeTint(Color.Black.copy(alpha = 0.14f)),
+                    ),
+                    blurRadius = 28.dp,
+                    noiseFactor = 0.08f,
+                    fallbackTint = HazeTint(base),
+                )
+            }
+
+            val base = colorScheme.surfaceContainerHighest
+            return HazeStyle(
+                backgroundColor = colorScheme.surfaceContainer,
+                tints = listOf(
+                    HazeTint(base.copy(alpha = 0.70f)),
+                    HazeTint(Color.White.copy(alpha = 0.12f)),
+                ),
+                blurRadius = 28.dp,
+                noiseFactor = 0.03f,
+                fallbackTint = HazeTint(base),
+            )
+        }
     }
 }
 

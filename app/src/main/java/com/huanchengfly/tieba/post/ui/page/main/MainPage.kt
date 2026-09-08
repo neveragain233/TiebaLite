@@ -83,6 +83,7 @@ import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
@@ -454,7 +455,7 @@ private fun MainNavigationSuite(
     content: @Composable () -> Unit,
 ) {
     val shortNavBarOverride = when (mainNavigationSuiteType) {
-        MainNavigationSuiteType.FloatingNavigationBar -> FloatingNavigationBarOverride
+        MainNavigationSuiteType.FloatingNavigationBar -> PiliFloatingNavigationBarOverride
         MainNavigationSuiteType.FloatingNavigationBarCompact -> FloatingIconNavigationBarOverride
         MainNavigationSuiteType.NavigationBar -> DefaultNavigationBarOverride
         else -> androidx.compose.material3.DefaultShortNavigationBarOverride
@@ -514,7 +515,7 @@ private fun MainNavigationSuiteScaffold(
                 navigationItemCount = navigationItemCount,
                 modifier = Modifier
                     .withNonNull(hazeState) {
-                        Modifier.defaultHazeEffect {
+                        Modifier.defaultHazeEffect(style = navigationHazeStyle) {
                             blurEnabled = animatedVisibilityScope?.transition?.isRunning != true
                         }
                     }
@@ -601,12 +602,14 @@ private fun MainNavigationItems(
                     )
                 },
             label = if (mainNavigationSuiteType != MainNavigationSuiteType.NavigationRail &&
-                (!isNavigationBar || bottomNavLabel.visible(selected))
+                (mainNavigationSuiteType == MainNavigationSuiteType.FloatingNavigationBar ||
+                        !isNavigationBar || bottomNavLabel.visible(selected))
             ) {
                 { Text(stringResource(id = destination.titleRes)) }
             } else {
                 null
             },
+            labelVisible = bottomNavLabel.visible(selected),
             modifier = modifier
                 .onCase(mainNavigationSuiteType == MainNavigationSuiteType.NavigationDrawer) {
                     padding(horizontal = 16.dp)
@@ -637,6 +640,7 @@ private fun MainNavigationSuiteItem(
     onClick: () -> Unit,
     icon: @Composable () -> Unit,
     label: @Composable (() -> Unit)?,
+    labelVisible: Boolean = true,
     modifier: Modifier = Modifier,
     mainNavigationSuiteType: MainNavigationSuiteType,
     enabled: Boolean = true,
@@ -644,7 +648,19 @@ private fun MainNavigationSuiteItem(
     colors: NavigationItemColors? = null,
     interactionSource: MutableInteractionSource? = null,
 ) {
-    if (mainNavigationSuiteType == MainNavigationSuiteType.FloatingNavigationBarCompact) {
+    if (mainNavigationSuiteType == MainNavigationSuiteType.FloatingNavigationBar) {
+        PiliFloatingNavigationItem(
+            selected = selected,
+            onClick = onClick,
+            icon = icon,
+            label = label,
+            labelVisible = labelVisible,
+            colors = colors ?: piliFloatingNavigationItemColors(),
+            enabled = enabled,
+            modifier = modifier,
+            interactionSource = interactionSource,
+        )
+    } else if (mainNavigationSuiteType == MainNavigationSuiteType.FloatingNavigationBarCompact) {
         IconNavigationItem(
             selected = selected,
             onClick = onClick,
@@ -699,6 +715,21 @@ private fun MainNavigationSuiteItem(
     }
 }
 
+@Composable
+private fun piliFloatingNavigationItemColors(): NavigationItemColors {
+    val colorScheme = MaterialTheme.colorScheme
+    val darkTheme = TiebaLiteTheme.extendedColorScheme.darkTheme
+    return ShortNavigationBarItemDefaults.colors(
+        selectedIconColor = colorScheme.onSecondaryContainer,
+        selectedTextColor = colorScheme.onSurface,
+        selectedIndicatorColor = colorScheme.onSurface.copy(
+            alpha = if (darkTheme) 0.08f else 0.06f
+        ),
+        unselectedIconColor = colorScheme.onSurfaceVariant,
+        unselectedTextColor = colorScheme.onSurfaceVariant,
+    )
+}
+
 /**
  * @return [NavigationSuiteColors] for background blurring
  *  */
@@ -707,13 +738,17 @@ private fun mainNavigationSuiteColors(floatingNavBar: Boolean, blur: Boolean): N
     return TiebaLiteTheme.extendedColorScheme.run {
         NavigationSuiteDefaults.colors(
             shortNavigationBarContainerColor = if (floatingNavBar) {
-                colorScheme.vibrantFloatingNavigationBarColor.copy(
-                    alpha = when {
-                        colorScheme.isTranslucent -> 0.65f
-                        blur -> if (darkTheme) 0.86f else 0.74f
-                        else -> 1f
-                    }
-                )
+                if (blur) {
+                    Color.Transparent
+                } else {
+                    colorScheme.vibrantFloatingNavigationBarColor.copy(
+                        alpha = when {
+                            colorScheme.isTranslucent -> 0.65f
+                            blur -> if (darkTheme) 0.86f else 0.74f
+                            else -> 1f
+                        }
+                    )
+                }
             } else {
                 navigationContainer
             },

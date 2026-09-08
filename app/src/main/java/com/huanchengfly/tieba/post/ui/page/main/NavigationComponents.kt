@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.BoxScope
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -21,12 +22,14 @@ import androidx.compose.foundation.layout.windowInsetsPadding
 import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ColorScheme
 import androidx.compose.material3.ExperimentalMaterial3ComponentOverrideApi
 import androidx.compose.material3.FloatingToolbarDefaults
 import androidx.compose.material3.Icon
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.LocalMinimumInteractiveComponentSize
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationDrawerItemColors
 import androidx.compose.material3.NavigationDrawerItemDefaults
@@ -40,6 +43,7 @@ import androidx.compose.material3.ripple
 import androidx.compose.material3.surfaceColorAtElevation
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.runtime.getValue
 import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
@@ -48,6 +52,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.Shape
+import androidx.compose.ui.graphics.compositeOver
 import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.layout.HorizontalRuler
 import androidx.compose.ui.layout.Layout
@@ -55,6 +60,7 @@ import androidx.compose.ui.layout.Measurable
 import androidx.compose.ui.layout.MeasurePolicy
 import androidx.compose.ui.layout.MeasureResult
 import androidx.compose.ui.layout.MeasureScope
+import androidx.compose.ui.layout.layoutId
 import androidx.compose.ui.layout.Placeable
 import androidx.compose.ui.layout.VerticalRuler
 import androidx.compose.ui.layout.layout
@@ -62,13 +68,19 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.unit.Constraints
+import androidx.compose.ui.unit.Density
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.constrain
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.util.lerp
+import androidx.compose.ui.util.fastFirst
+import androidx.compose.ui.util.fastFirstOrNull
 import androidx.compose.ui.util.fastForEach
 import androidx.compose.ui.util.fastMap
+import kotlin.math.roundToInt
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.models.database.Account
+import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.common.LocalAnimatedVisibilityScope
 import com.huanchengfly.tieba.post.ui.common.theme.compose.clickableNoIndication
 import com.huanchengfly.tieba.post.ui.page.main.FloatingIconNavigationBarOverride.ShortNavigationBar
@@ -92,8 +104,20 @@ private val FloatingNavigationBarElevation: Dp = 1.dp
 
 private val FloatingIconNavigationBarHeight = NavigationBarHeight
 
+private val PiliFloatingNavigationItemWidth = 76.dp
+private val PiliFloatingNavigationIndicatorShape = RoundedCornerShape(50)
+private const val PiliFloatingNavigationMaxTextScale = 1.3f
+private const val PiliFloatingNavigationIconLayoutId = "icon"
+private const val PiliFloatingNavigationLabelLayoutId = "label"
+private val PiliFloatingNavigationIconLabelSpacing = 2.dp
+
 val ColorScheme.vibrantFloatingNavigationBarColor: Color
-    get() = surfaceColorAtElevation(4.dp)
+    @Composable
+    get() = if (TiebaLiteTheme.extendedColorScheme.darkTheme) {
+        surfaceContainerHighest.copy(alpha = 0.08f).compositeOver(surfaceContainer)
+    } else {
+        surfaceContainer
+    }
 
 val ColorScheme.vibrantFloatingNavigationBarContentColor: Color
     get() = onSurface
@@ -305,6 +329,205 @@ object FloatingNavigationBarOverride : ShortNavigationBarOverride {
                 }
             }
         }
+    }
+}
+
+/**
+ * PiliPlus style floating navigation bar with a full-width active indicator behind both icon and
+ * label.
+ */
+@ExperimentalMaterial3ComponentOverrideApi
+object PiliFloatingNavigationBarOverride : ShortNavigationBarOverride {
+    @Composable
+    override fun ShortNavigationBarOverrideScope.ShortNavigationBar() {
+        val animatedVisibilityScope = LocalAnimatedVisibilityScope.current
+        CompositionLocalProvider(LocalContentColor provides contentColor) {
+            Box(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(horizontal = 16.dp),
+                contentAlignment = Alignment.Center,
+            ) {
+                Layout(
+                    modifier = Modifier
+                        .floatingNavBarContainer(
+                            height = NavigationBarHeight,
+                            screenOffset = floatingNavigationBarCompactScreenOffset,
+                            isTransitionActive = {
+                                animatedVisibilityScope?.transition?.isRunning == true
+                            }
+                        )
+                        .then(modifier),
+                    content = content,
+                    measurePolicy = PiliFloatingNavigationBarMeasurePolicy,
+                )
+            }
+        }
+    }
+}
+
+private object PiliFloatingNavigationBarMeasurePolicy : MeasurePolicy {
+    override fun MeasureScope.measure(
+        measurables: List<Measurable>,
+        constraints: Constraints,
+    ): MeasureResult {
+        val itemCount = measurables.size
+        if (itemCount < 1) {
+            return layout(width = 0, height = 0) {}
+        }
+
+        val maxItemWidth = if (constraints.hasBoundedWidth) {
+            constraints.maxWidth / itemCount
+        } else {
+            PiliFloatingNavigationItemWidth.roundToPx()
+        }
+        val itemWidth = minOf(PiliFloatingNavigationItemWidth.roundToPx(), maxItemWidth)
+
+        val desiredHeight = NavigationBarHeight.roundToPx()
+        val itemHeight = if (constraints.hasBoundedHeight) {
+            desiredHeight.coerceIn(constraints.minHeight, constraints.maxHeight)
+        } else {
+            desiredHeight.coerceAtLeast(constraints.minHeight)
+        }
+
+        val itemPlaceables = measurables.fastMap { measurable ->
+            measurable.measure(
+                constraints.constrain(
+                    Constraints.fixed(width = itemWidth, height = itemHeight)
+                )
+            )
+        }
+        return layout(width = itemWidth * itemCount, height = itemHeight) {
+            var x = 0
+            itemPlaceables.fastForEach { placeable ->
+                placeable.placeRelative(x = x, y = 0)
+                x += placeable.width
+            }
+        }
+    }
+}
+
+@Composable
+internal fun PiliFloatingNavigationItem(
+    selected: Boolean,
+    onClick: () -> Unit,
+    icon: @Composable () -> Unit,
+    label: @Composable (() -> Unit)?,
+    labelVisible: Boolean = true,
+    colors: NavigationItemColors,
+    enabled: Boolean = true,
+    modifier: Modifier = Modifier,
+    interactionSource: MutableInteractionSource? = null,
+) {
+    @Suppress("NAME_SHADOWING")
+    val interactionSource = interactionSource ?: remember { MutableInteractionSource() }
+    val indicatorAnimationProgress by animateFloatAsState(
+        targetValue = if (selected) 1f else 0f,
+        animationSpec = MaterialTheme.motionScheme.slowSpatialSpec()
+    )
+    val labelAnimationProgress by animateFloatAsState(
+        targetValue = if (labelVisible) 1f else 0f,
+        animationSpec = MaterialTheme.motionScheme.slowSpatialSpec()
+    )
+    val iconColor = colors.iconColor(selected = selected, enabled = enabled)
+    val textColor = colors.textColor(selected = selected, enabled = enabled)
+    val density = LocalDensity.current
+    val clampedTextDensity = remember(density) {
+        Density(
+            density = density.density,
+            fontScale = density.fontScale.coerceAtMost(PiliFloatingNavigationMaxTextScale)
+        )
+    }
+
+    Box(
+        modifier = modifier
+            .fillMaxSize()
+            .selectable(
+                selected = selected,
+                onClick = onClick,
+                enabled = enabled,
+                role = Role.Tab,
+                interactionSource = interactionSource,
+                indication = null,
+            ),
+    ) {
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clip(PiliFloatingNavigationIndicatorShape)
+                .indication(interactionSource, ripple())
+        )
+        Box(
+            modifier = Modifier
+                .align(Alignment.Center)
+                .matchParentSize()
+                .padding(vertical = 4.dp)
+                .graphicsLayer {
+                    scaleX = if (indicatorAnimationProgress == 0f) 0f else {
+                        0.5f + 0.5f * indicatorAnimationProgress
+                    }
+                    alpha = indicatorAnimationProgress
+                }
+                .clip(PiliFloatingNavigationIndicatorShape)
+                .background(color = colors.selectedIndicatorColor),
+        )
+
+        Layout(
+            content = {
+                Box(modifier = Modifier.layoutId(PiliFloatingNavigationIconLayoutId)) {
+                    CompositionLocalProvider(LocalContentColor provides iconColor) {
+                        icon()
+                    }
+                }
+                if (label != null) {
+                    Box(
+                        modifier = Modifier
+                            .layoutId(PiliFloatingNavigationLabelLayoutId)
+                            .graphicsLayer { alpha = labelAnimationProgress },
+                    ) {
+                        CompositionLocalProvider(
+                            LocalContentColor provides textColor,
+                            LocalTextStyle provides MaterialTheme.typography.labelMedium,
+                            LocalDensity provides clampedTextDensity,
+                        ) {
+                            label()
+                        }
+                    }
+                }
+            },
+            measurePolicy = { measurables, constraints ->
+                val iconPlaceable = measurables.fastFirst { measurable ->
+                    measurable.layoutId == PiliFloatingNavigationIconLayoutId
+                }.measure(constraints.copy(minWidth = 0, minHeight = 0))
+
+                val labelPlaceable = measurables.fastFirstOrNull { measurable ->
+                    measurable.layoutId == PiliFloatingNavigationLabelLayoutId
+                }?.measure(constraints.copy(minWidth = 0, minHeight = 0))
+
+                val labelHeight = labelPlaceable?.height ?: 0
+                val spacing = PiliFloatingNavigationIconLabelSpacing.roundToPx()
+                val offsetY = lerp(
+                    start = iconPlaceable.height / 2f,
+                    stop = iconPlaceable.height / 2f + labelHeight / 2f + spacing,
+                    fraction = labelAnimationProgress,
+                )
+                val iconY = constraints.maxHeight / 2f - offsetY
+                val iconX = (constraints.maxWidth - iconPlaceable.width) / 2
+
+                layout(width = constraints.maxWidth, height = constraints.maxHeight) {
+                    iconPlaceable.placeRelative(
+                        x = iconX,
+                        y = iconY.roundToInt(),
+                    )
+                    if (labelPlaceable != null) {
+                        labelPlaceable.placeRelative(
+                            x = (constraints.maxWidth - labelPlaceable.width) / 2,
+                            y = iconY.roundToInt() + iconPlaceable.height + spacing,
+                        )
+                    }
+                }
+            },
+        )
     }
 }
 
