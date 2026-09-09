@@ -692,10 +692,16 @@ private fun MainNavigationSuiteItem(
     colors: NavigationItemColors? = null,
     interactionSource: MutableInteractionSource? = null,
 ) {
+    val hapticFeedback = LocalHapticFeedback.current
+    val onItemClick = {
+        hapticFeedback.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+        onClick()
+    }
+
     if (mainNavigationSuiteType == MainNavigationSuiteType.FloatingNavigationBar) {
         PiliFloatingNavigationItem(
             selected = selected,
-            onClick = onClick,
+            onClick = onItemClick,
             icon = icon,
             label = label,
             labelVisible = labelVisible,
@@ -707,7 +713,7 @@ private fun MainNavigationSuiteItem(
     } else if (mainNavigationSuiteType == MainNavigationSuiteType.FloatingNavigationBarCompact) {
         IconNavigationItem(
             selected = selected,
-            onClick = onClick,
+            onClick = onItemClick,
             icon = {
                 if (badge != null) {
                     BadgedBox(badge = { badge.invoke() }, content = { icon() })
@@ -723,7 +729,7 @@ private fun MainNavigationSuiteItem(
     } else if (mainNavigationSuiteType != MainNavigationSuiteType.NavigationDrawer) {
         androidx.compose.material3.adaptive.navigationsuite.NavigationSuiteItem(
             selected = selected,
-            onClick = onClick,
+            onClick = onItemClick,
             icon = icon,
             label = label,
             modifier = modifier,
@@ -749,7 +755,7 @@ private fun MainNavigationSuiteItem(
         NavigationDrawerItem(
             modifier = modifier,
             selected = selected,
-            onClick = onClick,
+            onClick = onItemClick,
             icon = icon,
             badge = badge,
             label = { label?.invoke() ?: Text("") },
