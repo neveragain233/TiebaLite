@@ -76,6 +76,7 @@ data class UISettingsDto(
     val bottomNavFloating: Boolean,
     val bottomNavHideOnScroll: Boolean,
     val refreshExploreOnBackToTopLongPress: Boolean,
+    val exploreFabFollowsNavigationBar: Boolean = false,
     val bottomNavLabel: String,
     val darkAmoled: Boolean,
     val darkPreference: String,

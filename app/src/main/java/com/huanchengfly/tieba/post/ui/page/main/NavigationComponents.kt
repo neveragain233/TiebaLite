@@ -48,6 +48,9 @@ import androidx.compose.runtime.NonRestartableComposable
 import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.draw.drawBehind
 import androidx.compose.ui.graphics.Color
@@ -442,6 +445,23 @@ internal fun PiliFloatingNavigationItem(
     Box(
         modifier = modifier
             .fillMaxSize()
+            .drawBehind {
+                val progress = indicatorAnimationProgress.coerceIn(0f, 1f)
+                if (progress > 0f) {
+                    val left = 4.dp.roundToPx()
+                    val top = 4.dp.roundToPx()
+                    val right = size.width - 4.dp.roundToPx()
+                    val bottom = size.height - 4.dp.roundToPx()
+                    val width = (right - left) * (0.5f + 0.5f * progress)
+                    drawRoundRect(
+                        color = colors.selectedIndicatorColor,
+                        topLeft = Offset(x = left + (right - left - width) / 2f, y = top.toFloat()),
+                        size = Size(width = width, height = bottom - top),
+                        cornerRadius = CornerRadius((bottom - top) / 2f),
+                        alpha = progress,
+                    )
+                }
+            }
             .selectable(
                 selected = selected,
                 onClick = onClick,
@@ -456,20 +476,6 @@ internal fun PiliFloatingNavigationItem(
                 .matchParentSize()
                 .clip(PiliFloatingNavigationIndicatorShape)
                 .indication(interactionSource, ripple())
-        )
-        Box(
-            modifier = Modifier
-                .align(Alignment.Center)
-                .matchParentSize()
-                .padding(vertical = 4.dp)
-                .graphicsLayer {
-                    scaleX = if (indicatorAnimationProgress == 0f) 0f else {
-                        0.5f + 0.5f * indicatorAnimationProgress
-                    }
-                    alpha = indicatorAnimationProgress
-                }
-                .clip(PiliFloatingNavigationIndicatorShape)
-                .background(color = colors.selectedIndicatorColor),
         )
 
         Layout(

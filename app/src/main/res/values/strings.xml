@@ -607,6 +607,8 @@
     <string name="settings_nav_floating">悬浮底部导航栏</string>
     <string name="settings_nav_hide_on_scroll">滑动隐藏</string>
     <string name="settings_refresh_on_back_to_top_long_press">长按回顶刷新动态</string>
+    <string name="settings_explore_fab_follow_nav">动态回顶键跟随底栏</string>
+    <string name="summary_explore_fab_follow_nav">关闭后，隐藏标签底栏的动态回顶键固定在原右下角位置</string>
     <string name="settings_nav_label">底部导航栏标签</string>
     <string name="settings_sticky_header_off">跟随帖子滚动</string>
     <string name="settings_sticky_header_on">保持固定</string>

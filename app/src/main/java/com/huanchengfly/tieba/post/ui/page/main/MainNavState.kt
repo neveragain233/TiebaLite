@@ -2,6 +2,7 @@ package com.huanchengfly.tieba.post.ui.page.main
 
 import androidx.compose.runtime.Stable
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.runtime.staticCompositionLocalOf
@@ -28,6 +29,12 @@ class MainNavState {
 
     /** 请求关闭详情(回列表全屏)的计数, 侧栏点击当前 tab 且详情分屏时递增 */
     var closePaneDetailRequest by mutableStateOf(0)
+
+    /** 动态页 Pager 的当前页索引, 供主导航上的动态页主操作使用 */
+    var exploreCurrentPage by mutableIntStateOf(0)
+
+    /** 动态页当前内容在顶部/刷新态, 主导航回顶键此时显示为刷新 */
+    var exploreFabShowsRefresh by mutableStateOf(false)
 }
 
 val LocalMainNavState = staticCompositionLocalOf<MainNavState> { error("No MainNavState provided!") }

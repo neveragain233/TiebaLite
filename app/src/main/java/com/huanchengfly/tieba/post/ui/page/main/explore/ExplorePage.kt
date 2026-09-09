@@ -25,6 +25,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.snapshotFlow
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Color
@@ -62,6 +63,7 @@ import com.huanchengfly.tieba.post.ui.page.LocalDetailPaneOpen
 import com.huanchengfly.tieba.post.ui.page.LocalNavController
 import com.huanchengfly.tieba.post.ui.page.consumeResult
 import com.huanchengfly.tieba.post.ui.page.main.MainDestination
+import com.huanchengfly.tieba.post.ui.page.main.LocalMainNavState
 import com.huanchengfly.tieba.post.ui.page.main.MainNavigationSuiteType
 import com.huanchengfly.tieba.post.ui.page.main.MainNavigationSuiteType.Companion.isFloatingNavigationBar
 import com.huanchengfly.tieba.post.ui.page.main.OnMainNavigationScrollTopEvent
@@ -190,7 +192,7 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
     val navigator = LocalNavController.current
     val uiSettings = LocalUISettings.current
     val navigationSuiteType = calculateMainNavigationSuiteType()
-    // Hide FAB on FloatingNavigationBarCompact
+    // 隐藏标签时的悬浮底栏形态
     val isFloatingNavBarCompat = navigationSuiteType === MainNavigationSuiteType.FloatingNavigationBarCompact
     val hazeState = LocalHazeState.current
     val sharedTransitionScope = LocalSharedTransitionScope.current
@@ -204,12 +206,23 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
     }
     val pagerState = rememberPagerState(initialPage = if (loggedIn) 1 else 0) { pages.size }
     val listStates = rememberPagerListStates(pages.size)
+    val mainNavState = LocalMainNavState.current
 
     val scrollOrientationConnection = rememberScrollOrientationConnection()
     val scrollBehavior = TopAppBarDefaults.enterAlwaysScrollBehavior()
 
     // FAB visibility of each page
     var fabHideStates by remember(pages) { mutableStateOf(BooleanBitSet()) }
+
+    // 主导航 compact 模式下的回顶键没有 Pager 作用域, 同步当前索引和顶部状态
+    LaunchedEffect(pagerState, fabHideStates) {
+        snapshotFlow {
+            pagerState.currentPage to fabHideStates[pagerState.currentPage]
+        }.collect { (page, showsRefresh) ->
+            mainNavState.exploreCurrentPage = page
+            mainNavState.exploreFabShowsRefresh = showsRefresh
+        }
+    }
 
     // Like event from explorePages
     onGlobalEvent<ThreadLikeUiEvent>(coroutineScope) {
@@ -257,7 +270,8 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
             bottomBar = bottomNavigationPlaceholder, // MainPage BottomNavBar placeholder
             bottomBarAtop = navigationSuiteType.isFloatingNavigationBar,
             floatingActionButton = {
-                if (isFloatingNavBarCompat) return@MyScaffold
+                // 跟随底栏的回顶键由主导航 primary action 承担
+                if (isFloatingNavBarCompat && uiSettings.exploreFabFollowsNavigationBar) return@MyScaffold
                 val hapticFeedback = LocalHapticFeedback.current
                 // 未在顶部时回顶 FAB 常驻，不随滚动方向或底栏隐藏状态消失
                 val visible by remember {
@@ -282,7 +296,7 @@ fun AnimatedVisibilityScope.ExplorePage(loggedIn: Boolean) {
                     },
                 )
             },
-            floatingActionButtonPosition = if (isFloatingNavBarCompat) FabPosition.EndOverlay else backToTopFabPosition(),
+            floatingActionButtonPosition = backToTopFabPosition(),
         ) { contentPadding ->
             Container(
                 modifier = Modifier.onNotNull(hazeState) { hazeSource(state = it.state) }

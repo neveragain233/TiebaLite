@@ -82,6 +82,7 @@ enum class NavRailPosition {
  * @param bottomNavFloating 主页底部导航栏悬浮模式
  * @param bottomNavHideOnScroll 主页底部导航栏滑动隐藏
  * @param refreshExploreOnBackToTopLongPress 动态页长按回顶键同时刷新当前列表
+ * @param exploreFabFollowsNavigationBar 隐藏标签底栏下动态回顶键跟随底栏移动
  * @param bottomNavLabel 主页底部导航栏标签显示模式
  * @param darkAmoled 纯黑背景颜色
  * @param darkPreference 夜间模式偏好
@@ -118,6 +119,7 @@ data class UISettings(
     val bottomNavFloating: Boolean = false,
     val bottomNavHideOnScroll: Boolean = false,
     val refreshExploreOnBackToTopLongPress: Boolean = true,
+    val exploreFabFollowsNavigationBar: Boolean = true,
     val bottomNavLabel: NavigationLabel = NavigationLabel.ALWAYS,
     val darkAmoled: Boolean = false,
     val darkPreference: DarkPreference = DarkPreference.FOLLOW_SYSTEM,

@@ -24,6 +24,7 @@ import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
@@ -85,10 +86,12 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.graphics.graphicsLayer
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.input.nestedscroll.NestedScrollConnection
 import androidx.compose.ui.input.nestedscroll.NestedScrollSource
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.tooling.preview.Devices
@@ -174,6 +177,18 @@ val MainDestination.iconRes: Int
         MainDestination.Notification -> R.drawable.ic_animated_rounded_notifications
         MainDestination.User -> R.drawable.ic_animated_rounded_person
     }
+
+/**
+ * Optical compensation for nav icons whose visible paths do not occupy the same portion of their
+ * vector viewports. Keep the icon container at [Sizes.Tiny]; only inset the drawn glyph.
+ */
+@Stable
+private fun MainDestination.iconOpticalPadding(): PaddingValues = when (this) {
+    MainDestination.Home -> PaddingValues(horizontal = 3.dp, vertical = 2.dp)
+    MainDestination.Explore -> PaddingValues(1.dp)
+    MainDestination.Notification -> PaddingValues(horizontal = 2.dp)
+    MainDestination.User -> PaddingValues(0.dp)
+}
 
 val bottomNavigationPlaceholder: @Composable () -> Unit = {
     // 使用真实窗口信息: 面板内 LocalWindowAdaptiveInfo 被覆盖为紧凑宽度,
@@ -396,9 +411,31 @@ fun MainPage(
                 MainNavigationSuiteType.NavigationDrawer -> TbDrawerNavigationAction(onLoginClicked)
 
                 MainNavigationSuiteType.FloatingNavigationBarCompact -> {
-                    if (uiSettings.hideExplore) return@MainNavigationSuiteScaffold
-                    ExplorePrimaryAction(visible = MainDestination.Explore === currentDestination) {
-                        coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
+                    if (uiSettings.hideExplore || !uiSettings.exploreFabFollowsNavigationBar) {
+                        return@MainNavigationSuiteScaffold
+                    }
+                    val hapticFeedback = LocalHapticFeedback.current
+                    ExplorePrimaryAction(
+                        visible = MainDestination.Explore === currentDestination,
+                        showRefresh = mainNavState.exploreFabShowsRefresh,
+                        onLongClick = if (uiSettings.refreshExploreOnBackToTopLongPress) {
+                            {
+                                // 与动态页自身回顶 FAB 保持同一语义: 回顶 + 刷新当前页
+                                hapticFeedback.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+                                if (!mainNavState.exploreFabShowsRefresh) {
+                                    coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
+                                }
+                                coroutineScope.emitGlobalEvent(GlobalEvent.RefreshExplore(mainNavState.exploreCurrentPage))
+                            }
+                        } else {
+                            null
+                        },
+                    ) {
+                        if (mainNavState.exploreFabShowsRefresh) {
+                            coroutineScope.emitGlobalEvent(GlobalEvent.RefreshExplore(mainNavState.exploreCurrentPage))
+                        } else {
+                            coroutineScope.emitGlobalEvent(GlobalEvent.ScrollToTop(MainDestination.Explore))
+                        }
                     }
                 }
 
@@ -592,14 +629,21 @@ private fun MainNavigationItems(
                     if (selected) onReSelect(destination) else onSelect(destination)
                 },
                 icon = {
-                    Icon(
-                        painter = rememberAnimatedVectorPainter(
-                            animatedImageVector = AnimatedImageVector.animatedVectorResource(destination.iconRes),
-                            atEnd = selected
-                        ),
+                    Box(
                         modifier = Modifier.size(Sizes.Tiny),
-                        contentDescription = stringResource(destination.titleRes),
-                    )
+                        contentAlignment = Alignment.Center,
+                    ) {
+                        Icon(
+                            painter = rememberAnimatedVectorPainter(
+                                animatedImageVector = AnimatedImageVector.animatedVectorResource(destination.iconRes),
+                                atEnd = selected
+                            ),
+                            modifier = Modifier
+                                .matchParentSize()
+                                .padding(destination.iconOpticalPadding()),
+                            contentDescription = stringResource(destination.titleRes),
+                        )
+                    }
                 },
             label = if (mainNavigationSuiteType != MainNavigationSuiteType.NavigationRail &&
                 (mainNavigationSuiteType == MainNavigationSuiteType.FloatingNavigationBar ||
@@ -722,8 +766,8 @@ private fun piliFloatingNavigationItemColors(): NavigationItemColors {
     return ShortNavigationBarItemDefaults.colors(
         selectedIconColor = colorScheme.onSecondaryContainer,
         selectedTextColor = colorScheme.onSurface,
-        selectedIndicatorColor = colorScheme.onSurface.copy(
-            alpha = if (darkTheme) 0.08f else 0.06f
+        selectedIndicatorColor = colorScheme.secondaryContainer.copy(
+            alpha = if (darkTheme) 0.76f else 0.88f
         ),
         unselectedIconColor = colorScheme.onSurfaceVariant,
         unselectedTextColor = colorScheme.onSurfaceVariant,
@@ -783,7 +827,13 @@ private fun AnimatedVisibilityScope.navigationSuiteTransitionColors(
 }
 
 @Composable
-private fun ExplorePrimaryAction(modifier: Modifier = Modifier, visible: Boolean, onClick: () -> Unit) {
+private fun ExplorePrimaryAction(
+    modifier: Modifier = Modifier,
+    visible: Boolean,
+    showRefresh: Boolean,
+    onLongClick: (() -> Unit)? = null,
+    onClick: () -> Unit,
+) {
     val isTransitionActive = LocalAnimatedVisibilityScope.current?.transition?.isRunning == true
     val screenOffset = floatingNavigationBarCompactScreenOffset
     val visibilityAnimation by animateFloatAsState(
@@ -797,6 +847,8 @@ private fun ExplorePrimaryAction(modifier: Modifier = Modifier, visible: Boolean
             },
         visible = visible,
         size = NavigationBarHeight,
+        showRefresh = showRefresh,
+        onLongClick = onLongClick,
         onClick = onClick,
     )
 }

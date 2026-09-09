@@ -31,6 +31,7 @@ import androidx.compose.material.icons.outlined.NotificationsOff
 import androidx.compose.material.icons.outlined.NightsStay
 import androidx.compose.material.icons.outlined.Refresh
 import androidx.compose.material.icons.outlined.SwipeVertical
+import androidx.compose.material.icons.outlined.VerticalAlignTop
 import androidx.compose.material.icons.outlined.ViewAgenda
 import androidx.compose.material.icons.outlined.ViewColumn
 import androidx.compose.material.icons.outlined.WatchLater
@@ -198,6 +199,15 @@ fun UISettingsPage(
                     NavigationLabel.SELECTED to R.string.title_nav_label_selected,
                     NavigationLabel.NONE to R.string.title_nav_label_none
                 ),
+            )
+
+            toggleablePreference(
+                property = UISettings::exploreFabFollowsNavigationBar,
+                title = R.string.settings_explore_fab_follow_nav,
+                summary = R.string.summary_explore_fab_follow_nav,
+                enabled = currentPreference.bottomNavFloating &&
+                        currentPreference.bottomNavLabel == NavigationLabel.NONE,
+                leadingIcon = Icons.Outlined.VerticalAlignTop,
             )
 
             forumListPreference()

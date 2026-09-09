@@ -1,6 +1,7 @@
 package com.huanchengfly.tieba.post.ui.widgets.compose
 
 import androidx.annotation.StringRes
+import androidx.compose.animation.Crossfade
 import androidx.compose.animation.animateColorAsState
 import androidx.compose.foundation.BorderStroke
 import androidx.compose.foundation.clickable
@@ -22,6 +23,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.rounded.DeleteForever
 import androidx.compose.material.icons.rounded.Favorite
 import androidx.compose.material.icons.rounded.FavoriteBorder
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.material3.Button
 import androidx.compose.material3.ButtonColors
@@ -250,16 +252,19 @@ fun DefaultBackToTopFAB(
     modifier: Modifier = Modifier,
     visible: Boolean,
     size: Dp = ExtendedFabHeight,
+    showRefresh: Boolean = false,
     onLongClick: (() -> Unit)? = null,
     onClick: () -> Unit,
 ) {
+    val icon = if (showRefresh) Icons.Rounded.Refresh else Icons.Rounded.VerticalAlignTop
+    val contentDescription = stringResource(if (showRefresh) R.string.btn_refresh else R.string.btn_back_to_top)
     TooltipBox(
         positionProvider = rememberTooltipPositionProvider(
             positioning = TooltipAnchorPosition.Above,
             spacingBetweenTooltipAndAnchor = 8.dp
         ),
         tooltip = {
-            PlainTooltip { Text(text = stringResource(R.string.btn_back_to_top)) }
+            PlainTooltip { Text(text = contentDescription) }
         },
         state = rememberTooltipState(),
         modifier = modifier,
@@ -281,16 +286,14 @@ fun DefaultBackToTopFAB(
                         .combinedClickable(onClick = onClick, onLongClick = onLongClick),
                     contentAlignment = Alignment.Center,
                 ) {
-                    Icon(
-                        imageVector = Icons.Rounded.VerticalAlignTop,
-                        contentDescription = stringResource(R.string.btn_back_to_top)
-                    )
+                    Crossfade(targetState = icon, label = "BackToTopFabIcon") { targetIcon ->
+                        Icon(imageVector = targetIcon, contentDescription = contentDescription)
+                    }
                 }
             } else {
-                Icon(
-                    imageVector = Icons.Rounded.VerticalAlignTop,
-                    contentDescription = stringResource(R.string.btn_back_to_top)
-                )
+                Crossfade(targetState = icon, label = "BackToTopFabIcon") { targetIcon ->
+                    Icon(imageVector = targetIcon, contentDescription = contentDescription)
+                }
             }
         }
     }
