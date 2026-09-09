@@ -295,7 +295,9 @@ fun MainPage(
     }
 
     val scrollHideEnabled = navigationSuiteType.isFloatingNavigationBar && uiSettings.bottomNavHideOnScroll
-    val scrollHideThreshold = with(LocalDensity.current) { 24.dp.toPx() }
+    // 与紧凑回复栏的 FloatingToolbar settle 阈值同源( collapsedFraction <= 1% ),
+    // 保持现有 NavigationSuiteScaffold 的 hide/show 动画, 只降低触发位移.
+    val scrollHideThreshold = with(LocalDensity.current) { NavigationBarHeight.toPx() * 0.01f }
     val bottomNavScrollConnection = remember(scrollHideEnabled, scrollHideThreshold) {
         if (!scrollHideEnabled) null
         else object : NestedScrollConnection {
