@@ -12,6 +12,13 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.rounded.Clear
 import androidx.activity.compose.BackHandler
+import androidx.compose.material3.CircularProgressIndicator
+import androidx.compose.runtime.produceState
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.lifecycle.compose.LocalLifecycleOwner
+import androidx.lifecycle.withResumed
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
@@ -62,13 +69,22 @@ fun SettingsSearchPage(navigator: NavController) {
     }
 
     val query = keyword.trim()
-    val searchIndex = remember(context) { SettingsSearchIndex.index(context) }
-    val searchResult = remember(query, searchIndex) {
-        SettingsSearchIndex.search(query, searchIndex)
+    val configuration = LocalConfiguration.current
+    val searchIndex by produceState<List<SettingsSearchIndexedEntry>?>(null, context, configuration) {
+        value = null
+        value = SettingsSearchIndex.index(context)
     }
+    var searchResult by remember(query, searchIndex) { mutableStateOf<List<SettingsSearchEntry>?>(null) }
+    LaunchedEffect(query, searchIndex) {
+        val index = searchIndex ?: return@LaunchedEffect
+        searchResult = withContext(Dispatchers.Default) { SettingsSearchIndex.search(query, index) }
+    }
+    val result = searchResult
 
-    LaunchedEffect(Unit) {
-        focusRequester.requestFocus()
+    val lifecycleOwner = LocalLifecycleOwner.current
+    LaunchedEffect(lifecycleOwner) {
+        // Navigation marks the entry RESUMED after its enter transition finishes.
+        lifecycleOwner.lifecycle.withResumed { focusRequester.requestFocus() }
     }
 
     MyScaffold(
@@ -107,7 +123,13 @@ fun SettingsSearchPage(navigator: NavController) {
                 )
             }
 
-            searchResult.isEmpty() -> {
+            result == null -> {
+                Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
+                    CircularProgressIndicator()
+                }
+            }
+
+            result.isEmpty() -> {
                 SearchStatusScreen(
                     modifier = Modifier.padding(padding),
                     title = stringResource(R.string.tip_search_settings_no_result),
@@ -124,7 +146,7 @@ fun SettingsSearchPage(navigator: NavController) {
                     verticalArrangement = Arrangement.spacedBy(2.dp),
                 ) {
                     settingsSearchResultsList(
-                        result = searchResult,
+                        result = result,
                         onOpenResult = { entry ->
                             SettingsSearchTarget.set(entry.destination, entry.itemKey)
                             navigator.navigateDebounced(entry.destination)

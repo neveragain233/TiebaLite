@@ -1,6 +1,11 @@
 package com.huanchengfly.tieba.post.ui.page.settings
 
 import android.content.Context
+import android.content.res.Configuration
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.withContext
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import android.icu.text.Transliterator
 import androidx.annotation.StringRes
 import com.huanchengfly.tieba.post.R
@@ -131,12 +136,30 @@ object SettingsSearchIndex {
         entry(SettingsDestination.AccountManage, R.string.title_copy_bduss),
     )
 
-    fun index(context: Context): List<SettingsSearchIndexedEntry> {
+    private val indexMutex = Mutex()
+    private var cachedConfiguration: Configuration? = null
+    private var cachedIndex: List<SettingsSearchIndexedEntry>? = null
+
+    suspend fun index(context: Context): List<SettingsSearchIndexedEntry> = withContext(Dispatchers.Default) {
+        indexMutex.withLock {
+            val configuration = Configuration(context.resources.configuration)
+            cachedIndex?.takeIf { cachedConfiguration == configuration } ?: buildIndex(context).also {
+                cachedConfiguration = configuration
+                cachedIndex = it
+            }
+        }
+    }
+
+    private fun buildIndex(context: Context): List<SettingsSearchIndexedEntry> {
+        // One converter per build; never share this mutable ICU object across threads.
+        val transliterator = runCatching {
+            Transliterator.getInstance("Han-Latin; Latin-ASCII; Lower")
+        }.getOrNull()
         return all.map { entry ->
             val title = context.getString(entry.titleRes)
             val summary = entry.summaryRes?.let(context::getString)
-            val titlePinyin = toPinyin(title)
-            val summaryPinyin = summary?.let(::toPinyin)
+            val titlePinyin = toPinyin(title, transliterator)
+            val summaryPinyin = summary?.let { toPinyin(it, transliterator) }
 
             SettingsSearchIndexedEntry(
                 entry = entry,
@@ -255,10 +278,10 @@ object SettingsSearchIndex {
         return false
     }
 
-    private fun toPinyin(value: String): PinyinText {
+    private fun toPinyin(value: String, transliterator: Transliterator?): PinyinText {
+        if (transliterator == null) return PinyinText()
         return try {
-            val transliterated = Transliterator
-                .getInstance("Han-Latin; Latin-ASCII; Lower")
+            val transliterated = transliterator
                 .transliterate(value)
                 .lowercase()
             val spaced = transliterated
