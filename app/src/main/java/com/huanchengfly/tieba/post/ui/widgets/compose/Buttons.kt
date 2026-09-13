@@ -306,7 +306,8 @@ fun DefaultToggleFloatingActionButton(
     checked: Boolean,
     onCheckedChange: (Boolean) -> Unit,
     modifier: Modifier = Modifier,
-    focusRequester: FocusRequester = remember { FocusRequester() }
+    focusRequester: FocusRequester = remember { FocusRequester() },
+    contentAlignment: Alignment = Alignment.TopEnd,
 ) {
     ToggleFloatingActionButton(
         modifier = modifier
@@ -315,6 +316,7 @@ fun DefaultToggleFloatingActionButton(
             }
             .focusRequester(focusRequester)
             .focusable(),
+        contentAlignment = contentAlignment,
         checked = checked,
         onCheckedChange = onCheckedChange,
     ) {

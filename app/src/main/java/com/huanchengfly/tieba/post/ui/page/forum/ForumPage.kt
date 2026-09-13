@@ -41,6 +41,7 @@ import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FabPosition
 import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
@@ -195,6 +196,7 @@ fun ForumPage(
     onOpenThread: ((Destination.Thread) -> Unit)? = null,
 ) {
     val context = LocalContext.current
+    val fabPosition = backToTopFabPosition()
     val loggedIn = LocalAccount.current != null
     val coroutineScope = rememberCoroutineScope()
     val snackbarHostState = rememberSnackbarHostState()
@@ -429,7 +431,7 @@ fun ForumPage(
         },
         snackbarHostState = snackbarHostState,
         snackbarHost = { SwipeToDismissSnackbarHost(snackbarHostState) },
-        floatingActionButtonPosition = backToTopFabPosition(),
+        floatingActionButtonPosition = fabPosition,
         floatingActionButton = {
             if (forumData == null) return@BlurScaffold
             // FAB visibility: no error, scrolling forward, pager is not scrolling
@@ -440,6 +442,7 @@ fun ForumPage(
             }
 
             ForumFAB(
+                position = fabPosition,
                 expanded = fabMenuExpanded,
                 onExpandChanged = onFabExpandChanged,
                 visible = fabVisible,
@@ -595,6 +598,7 @@ private fun ForumSubtitle(modifier: Modifier = Modifier, forum: ForumData) {
 private fun ForumFAB(
     modifier: Modifier = Modifier,
     expanded: Boolean,
+    position: FabPosition,
     onExpandChanged: (Boolean) -> Unit,
     visible: Boolean,
     quickRefresh: Boolean,
@@ -611,6 +615,10 @@ private fun ForumFAB(
         )
     }
 
+    // Anchor both the menu and the toggle animation to the same edge as the scaffold.
+    val horizontalAlignment = if (position == FabPosition.Start) Alignment.Start else Alignment.End
+    val buttonAlignment = if (position == FabPosition.Start) Alignment.TopStart else Alignment.TopEnd
+
     BackHandler(enabled = expanded) { onExpandChanged(false) }
 
     AnimatedVisibility(
@@ -621,6 +629,7 @@ private fun ForumFAB(
     ) {
         FloatingActionButtonMenu(
             expanded = expanded,
+            horizontalAlignment = horizontalAlignment,
             button = {
                 if (quickRefresh) {
                     val click = { if (expanded) onExpandChanged(false) else onQuickRefresh() }
@@ -646,7 +655,11 @@ private fun ForumFAB(
                         }
                     }
                 } else {
-                    DefaultToggleFloatingActionButton(expanded, onExpandChanged)
+                    DefaultToggleFloatingActionButton(
+                        checked = expanded,
+                        onCheckedChange = onExpandChanged,
+                        contentAlignment = buttonAlignment,
+                    )
                 }
             },
         ) {
