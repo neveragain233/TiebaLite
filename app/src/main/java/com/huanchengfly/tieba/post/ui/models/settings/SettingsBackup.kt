@@ -38,6 +38,7 @@ data class BlockSettingsDto(
 
 @Serializable
 data class HabitSettingsDto(
+    val forumFabQuickRefresh: Boolean = false,
     val collectedDesc: Boolean,
     val favoriteDesc: Boolean,
     val favoriteSeeLz: Boolean,

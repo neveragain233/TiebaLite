@@ -16,6 +16,8 @@ import androidx.compose.foundation.lazy.rememberLazyListState
 import androidx.compose.material3.DividerDefaults
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Alignment
@@ -106,10 +108,16 @@ fun ForumThreadList(
 
     viewModel.uiEvent.collectCommonUiEventWithLifecycle()
 
+    val refreshHaptics = LocalHapticFeedback.current
     onGlobalEvent<ForumThreadListUiEvent.Refresh>(
         filter = { it.type == type },
     ) {
-        viewModel.onRefresh()
+        if (!viewModel.uiState.value.isRefreshing) {
+            viewModel.onRefresh()
+            if (it.hapticFeedback) {
+                refreshHaptics.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+            }
+        }
     }
 
     if (type == ForumType.Good) {

@@ -16,6 +16,7 @@ import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.animation.slideInHorizontally
 import androidx.compose.animation.slideOutHorizontally
+import androidx.compose.foundation.combinedClickable
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
@@ -24,6 +25,7 @@ import androidx.compose.foundation.layout.PaddingValues
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyRow
@@ -33,11 +35,13 @@ import androidx.compose.foundation.pager.PagerDefaults
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.rounded.Close
 import androidx.compose.material.icons.rounded.PostAdd
 import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
@@ -62,6 +66,7 @@ import androidx.compose.ui.graphics.graphicsLayer
 import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.input.nestedscroll.nestedScroll
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.semantics.Role
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.res.vectorResource
 import androidx.compose.ui.text.style.TextOverflow
@@ -434,7 +439,17 @@ fun ForumPage(
                 }
             }
 
-            ForumFAB(expanded = fabMenuExpanded, onExpandChanged = onFabExpandChanged, visible = fabVisible) { fab ->
+            ForumFAB(
+                expanded = fabMenuExpanded,
+                onExpandChanged = onFabExpandChanged,
+                visible = fabVisible,
+                quickRefresh = LocalHabitSettings.current.forumFabQuickRefresh,
+                onQuickRefresh = {
+                    forumTabs.getOrNull(pagerState.currentPage)?.tabId?.let { tabId ->
+                        viewModel.onRefreshClicked(tabId, hapticFeedback = true)
+                    }
+                },
+            ) { fab ->
                 val currentPage = pagerState.currentPage
                 val currentTabId = forumTabs.getOrNull(currentPage)?.tabId ?: return@ForumFAB
                 viewModel.onFabClicked(fab, currentTabId)
@@ -582,6 +597,8 @@ private fun ForumFAB(
     expanded: Boolean,
     onExpandChanged: (Boolean) -> Unit,
     visible: Boolean,
+    quickRefresh: Boolean,
+    onQuickRefresh: () -> Unit,
     onClick: (Int) -> Unit
 ) {
     val context = LocalContext.current
@@ -604,7 +621,34 @@ private fun ForumFAB(
     ) {
         FloatingActionButtonMenu(
             expanded = expanded,
-            button = { DefaultToggleFloatingActionButton(expanded, onExpandChanged) },
+            button = {
+                if (quickRefresh) {
+                    val click = { if (expanded) onExpandChanged(false) else onQuickRefresh() }
+                    FloatingActionButton(onClick = click, modifier = Modifier.size(56.dp)) {
+                        // Handle gestures inside the FAB so its Surface does not consume long presses.
+                        Box(
+                            modifier = Modifier
+                                .fillMaxSize()
+                                .combinedClickable(
+                                    role = Role.Button,
+                                    onClickLabel = stringResource(if (expanded) R.string.btn_close else R.string.btn_refresh),
+                                    onLongClickLabel = stringResource(R.string.forum_fab_open_menu),
+                                    hapticFeedbackEnabled = false,
+                                    onLongClick = { onExpandChanged(true) },
+                                    onClick = click,
+                                ),
+                            contentAlignment = Alignment.Center,
+                        ) {
+                            Icon(
+                                imageVector = if (expanded) Icons.Rounded.Close else Icons.Rounded.Refresh,
+                                contentDescription = stringResource(if (expanded) R.string.btn_close else R.string.btn_refresh),
+                            )
+                        }
+                    }
+                } else {
+                    DefaultToggleFloatingActionButton(expanded, onExpandChanged)
+                }
+            },
         ) {
             items.fastForEach { (forumFab, icon, menuText) ->
                 FloatingActionButtonMenuItem(

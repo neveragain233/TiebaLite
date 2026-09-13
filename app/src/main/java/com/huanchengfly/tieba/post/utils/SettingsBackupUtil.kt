@@ -311,6 +311,7 @@ object SettingsBackupUtil {
             ),
             fontScale = settingsRepository.fontScale.snapshot(),
             habitSettings = HabitSettingsDto(
+                forumFabQuickRefresh = habit.forumFabQuickRefresh,
                 collectedDesc = habit.collectedDesc,
                 favoriteDesc = habit.favoriteDesc,
                 favoriteSeeLz = habit.favoriteSeeLz,
@@ -386,6 +387,7 @@ object SettingsBackupUtil {
     }
 
     private fun HabitSettingsDto.toModel(): HabitSettings = HabitSettings(
+        forumFabQuickRefresh = forumFabQuickRefresh,
         collectedDesc = collectedDesc,
         favoriteDesc = favoriteDesc,
         favoriteSeeLz = favoriteSeeLz,

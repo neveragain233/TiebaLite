@@ -748,4 +748,7 @@
     <string name="settings_auto_backup_last_failed">失败</string>
     <string name="settings_auto_backup_last_unknown">未知</string>
 
+    <string name="settings_forum_fab_quick_refresh">悬浮按钮快捷刷新</string>
+    <string name="summary_forum_fab_quick_refresh">点击刷新当前列表并轻震动，长按展开操作菜单</string>
+    <string name="forum_fab_open_menu">展开操作菜单</string>
 </resources>

@@ -105,6 +105,7 @@ class ForumThreadListViewModel @AssistedInject constructor(
 
     fun onRefresh() {
         if (currentState.isRefreshing) return
+        _uiState.update { it.copy(isRefreshing = true) }
         launchInVM {
             if (type == ForumType.Latest) {
                 loadInternal(sortType = currentState.sortType, classifyId = null, forceNew = true)
@@ -241,8 +242,10 @@ sealed interface ForumThreadListUiEvent : UiEvent {
 
     data class Refresh(
         val type: ForumType,
+        val hapticFeedback: Boolean = false,
     ) : ForumThreadListUiEvent {
 
-        constructor(isGood: Boolean) : this(if (isGood) ForumType.Good else ForumType.Latest)
+        constructor(isGood: Boolean, hapticFeedback: Boolean = false) :
+            this(if (isGood) ForumType.Good else ForumType.Latest, hapticFeedback)
     }
 }

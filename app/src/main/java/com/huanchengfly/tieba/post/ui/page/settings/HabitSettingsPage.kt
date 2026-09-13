@@ -10,6 +10,7 @@ import androidx.compose.material.icons.outlined.SecurityUpdateWarning
 import androidx.compose.material.icons.outlined.SpeakerNotesOff
 import androidx.compose.material.icons.outlined.StarOutline
 import androidx.compose.material.icons.outlined.Verified
+import androidx.compose.material.icons.rounded.Refresh
 import androidx.compose.material.icons.rounded.LiveTv
 import androidx.compose.material.icons.rounded.UnfoldLess
 import androidx.compose.runtime.Composable
@@ -83,6 +84,12 @@ fun HabitSettingsPage(
 
         group(title = R.string.settings_group_forum) {
             forumSortPreference()
+            toggleablePreference(
+                property = HabitSettings::forumFabQuickRefresh,
+                title = R.string.settings_forum_fab_quick_refresh,
+                summary = R.string.summary_forum_fab_quick_refresh,
+                leadingIcon = Icons.Rounded.Refresh,
+            )
         }
 
         group(title = R.string.settings_group_thread) {

@@ -225,6 +225,7 @@ private object BackupSettingsTransformer : PreferenceTransformer<BackupSettings>
 private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
     override val get: (Preferences) -> HabitSettings = {
         HabitSettings(
+            forumFabQuickRefresh = it[booleanPreferencesKey(KEY_FORUM_FAB_QUICK_REFRESH)] ?: false,
             collectedDesc = it[booleanPreferencesKey(KEY_COLLECTED_DESC)] == true,
             favoriteDesc = it[booleanPreferencesKey(KEY_FAVORITE_DESC)] == true,
             favoriteSeeLz = it[booleanPreferencesKey(KEY_FAVORITE_SEE_LZ)] ?: true,
@@ -251,6 +252,7 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
     }
 
     override val set: (MutablePreferences, HabitSettings) -> Unit = { it, habit ->
+        it[booleanPreferencesKey(KEY_FORUM_FAB_QUICK_REFRESH)] = habit.forumFabQuickRefresh
         it[booleanPreferencesKey(KEY_COLLECTED_DESC)] = habit.collectedDesc
         it[booleanPreferencesKey(KEY_FAVORITE_DESC)] = habit.favoriteDesc
         it[booleanPreferencesKey(KEY_FAVORITE_SEE_LZ)] = habit.favoriteSeeLz
@@ -279,6 +281,7 @@ private object HabitSettingsTransformer : PreferenceTransformer<HabitSettings> {
      * */
     private const val KEY_FORUM_FAB_FUNCTION = "forum_fab"
 
+    private const val KEY_FORUM_FAB_QUICK_REFRESH = "forum_fab_quick_refresh"
     private const val KEY_FORUM_SORT_DEFAULT = "forum_sort_type"
     private const val KEY_IMAGE_LOAD_TYPE = "img_load_type"
     private const val KEY_IMAGE_WATERMARK_TYPE = "img_watermark"

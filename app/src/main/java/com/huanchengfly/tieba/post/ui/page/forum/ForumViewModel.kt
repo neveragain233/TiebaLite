@@ -93,13 +93,13 @@ class ForumViewModel @Inject constructor(
         emitGlobalEventSuspend(event)
     }
 
-    fun onRefreshClicked(tabId: Int) = launchInVM {
+    fun onRefreshClicked(tabId: Int, hapticFeedback: Boolean = false) = launchInVM {
         sendUiEvent(ForumUiEvent.ScrollToTop(tabId))
         delay(200) // wait ScrollToTop animation
         val event = if (tabId == TAB_FORUM_LATEST || tabId == TAB_FORUM_GOOD) {
-            ForumThreadListUiEvent.Refresh(tabId == TAB_FORUM_GOOD) // DefaultTabs
+            ForumThreadListUiEvent.Refresh(tabId == TAB_FORUM_GOOD, hapticFeedback) // DefaultTabs
         } else {
-            GeneralTabListUiEvent.Refresh(tabId)                              // GeneralTabs
+            GeneralTabListUiEvent.Refresh(tabId, hapticFeedback) // GeneralTabs
         }
         emitGlobalEventSuspend(event)
     }

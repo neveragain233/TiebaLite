@@ -60,6 +60,7 @@ enum class MediaDisplayMode {
  * @param collectedDesc 收藏贴倒序浏览
  * @param favoriteDesc 收藏贴自动开启倒序浏览
  * @param favoriteSeeLz 从收藏进入的贴子将自动切换至只看楼主
+ * @param forumFabQuickRefresh 吧页面悬浮按钮点击刷新、长按菜单
  * @param forumSortType 吧页面默认排序方式
  * @param mediaDisplayMode 列表媒体显示方式
  * @param compactSingleAsGridCell 紧凑档单图显示为网格格
@@ -73,6 +74,7 @@ enum class MediaDisplayMode {
  * */
 @Immutable
 data class HabitSettings(
+    val forumFabQuickRefresh: Boolean = false,
     val collectedDesc: Boolean = false,
     val favoriteDesc: Boolean = false,
     val favoriteSeeLz: Boolean = true,

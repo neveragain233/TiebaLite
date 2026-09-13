@@ -8,6 +8,8 @@ import androidx.compose.foundation.lazy.LazyListState
 import androidx.compose.foundation.lazy.LazyRow
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.lazy.rememberLazyListState
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.Modifier
@@ -67,8 +69,14 @@ fun GeneralTabListPage(
         viewModel.onSortTypeChanged(sortType = it.sortType)
     }
 
+    val refreshHaptics = LocalHapticFeedback.current
     onGlobalEvent<GeneralTabListUiEvent.Refresh>(filter = { it.tabId == navTabInfo.tabId }) {
-        viewModel.onRefresh()
+        if (!viewModel.uiState.value.isRefreshing) {
+            viewModel.onRefresh()
+            if (it.hapticFeedback) {
+                refreshHaptics.performHapticFeedback(HapticFeedbackType.KeyboardTap)
+            }
+        }
     }
 
     ConsumeThreadPageResult<Destination.Forum>(navigator, viewModel::onThreadResult)

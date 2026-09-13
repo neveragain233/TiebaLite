@@ -202,5 +202,5 @@ sealed interface GeneralTabListUiEvent : UiEvent {
         @ForumSortType val sortType: Int
     ): GeneralTabListUiEvent
 
-    data class Refresh(val tabId: Int) : GeneralTabListUiEvent
+    data class Refresh(val tabId: Int, val hapticFeedback: Boolean = false) : GeneralTabListUiEvent
 }

@@ -85,6 +85,7 @@ object SettingsSearchIndex {
         entry(SettingsDestination.Habit, R.string.title_hide_reply_warning),
         entry(SettingsDestination.Habit, R.string.title_settings_image_load_type),
         entry(SettingsDestination.Habit, R.string.title_settings_default_sort_type),
+        entry(SettingsDestination.Habit, R.string.settings_forum_fab_quick_refresh, R.string.summary_forum_fab_quick_refresh),
         entry(SettingsDestination.Habit, R.string.settings_collect_thread_see_lz),
         entry(SettingsDestination.Habit, R.string.title_hide_reply),
 
