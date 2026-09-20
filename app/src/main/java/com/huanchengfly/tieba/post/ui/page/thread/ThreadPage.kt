@@ -69,6 +69,7 @@ import androidx.compose.material3.TooltipAnchorPosition
 import androidx.compose.material3.TooltipDefaults.rememberTooltipPositionProvider
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.rememberUpdatedState
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.DisposableEffect
@@ -307,7 +308,7 @@ fun ThreadPage(
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
     val uiSettings = LocalUISettings.current
-    val performEndHaptic: () -> Unit = {
+    val performEndHaptic by rememberUpdatedState<() -> Unit> {
         if (uiSettings.commentNavEndHaptic) {
             // 系统 HapticFeedback 会被部分机型的“触感反馈”开关静音;
             // 这里直连 Vibrator, 保证反馈不依赖全局触摸震动开关.
@@ -350,15 +351,16 @@ fun ThreadPage(
     val imageNavWaypoints = remember { mutableStateMapOf<Long, List<Int>>() }
     // 单键导航模式: 当前推进方向; 到顶时在边界分支复位为 NEXT, 长按手动反向
     var commentNavDirection by rememberSaveable { mutableStateOf(CommentNavDirection.NEXT) }
-    // 单键模式专用: 「这次 NEXT 按下后, 下键应切换成回顶」的意图标记
-    var endHapticArmed by remember { mutableStateOf(false) }
+    val endFeedback = remember(threadId) { CommentNavigationEndFeedback() }
+    val navScroll = remember(threadId) { CommentNavigationScrollState() }
     // 切换正/倒序会整体重载列表, 导航方向记忆失效
     LaunchedEffect(state.sortType) {
         commentNavDirection = CommentNavDirection.NEXT
-        endHapticArmed = false
+        navScroll.cancel()
+        pendingCommentNav = null
+        endFeedback.reset()
     }
     // 导航键自身触发的滚动进行中; 期间不更新导航锚点记忆
-    var navScrollActive by remember { mutableStateOf(false) }
     // 置顶排序栏(StickyHeaderOverlay)高度: 上下楼导航时让出, 避免目标楼层用户名/头像被裁
     // 先给一个基于密度的兜底值(首次导航时排序栏尚未显示/测量), 显示后被 onGloballyPositioned 校准
     val density = LocalDensity.current
@@ -390,51 +392,39 @@ fun ThreadPage(
         null
     }
 
-    val scrollToTop: () -> Unit = {
-        lastNavAnchorPostId = null
-        endHapticArmed = false
-        navScrollActive = true
+    fun launchNavScroll(onArrived: () -> Unit = {}, scroll: suspend () -> Unit) {
         resetCommentNavDock()
-        coroutineScope.launch {
-            lazyListState.scrollToItem(0)
-            navScrollActive = false
+        navScroll.launch(
+            scope = coroutineScope,
+            onCancelled = {
+                lastNavAnchorPostId = null
+                lastNavWaypointIndex = -1
+            },
+            onArrived = onArrived,
+            scroll = scroll,
+        )
+    }
+
+    fun onNavArrived(direction: CommentNavDirection, targetId: Long) {
+        val currentLayout = buildThreadListLayout(state)
+        val lastIndex = currentLayout.orderedPostIds.lastOrNull()?.let(currentLayout::itemIndexOf)
+        if (endFeedback.onArrived(
+                direction = direction,
+                targetId = targetId,
+                orderedPostIds = currentLayout.orderedPostIds,
+                hasMore = state.pageData.hasMore,
+                atListBottom = !lazyListState.canScrollForward,
+                lastPostVisible = lazyListState.layoutInfo.visibleItemsInfo.any { it.index == lastIndex },
+            )) {
+            performEndHaptic()
         }
     }
 
-    // 只反馈「NEXT 到达末楼」: 方向 NEXT 且目标就是可导航序列末楼、无后续分页.
-    // 单键/双键模式一致; 到达判定交给观察器, 避免分页回包时序或连续按键取消动画导致回调漏执行.
-    fun armCommentNavEndHaptic(
-        direction: CommentNavDirection,
-        targetPostId: Long?,
-        orderedPostIds: List<Long> = layout.orderedPostIds,
-        hasMore: Boolean = state.pageData.hasMore,
-    ) {
-        if (direction != CommentNavDirection.NEXT || commentNavAtEnd) {
-            endHapticArmed = false
-            return
-        }
-        endHapticArmed = resolveEndHapticTarget(
-            direction = direction,
-            targetPostId = targetPostId,
-            orderedPostIds = orderedPostIds,
-            hasMore = hasMore,
-        ) != null
-    }
-
-    // 按键先建立意图; 等到这次导航造成的滚动结束且 canScrollForward 变为 false, 只震动一次.
-    // 单键模式下此时 UI 的「下」键也切换成了「回顶」.
-    LaunchedEffect(Unit) {
-        snapshotFlow {
-            endHapticArmed &&
-                    !state.pageData.hasMore &&
-                    !navScrollActive &&
-                    !lazyListState.canScrollForward
-        }.collect { reachedEnd ->
-            if (reachedEnd) {
-                endHapticArmed = false
-                performEndHaptic()
-            }
-        }
+    val scrollToTop: () -> Unit = {
+        pendingCommentNav = null
+        lastNavAnchorPostId = null
+        endFeedback.reset()
+        launchNavScroll { lazyListState.scrollToItem(0) }
     }
 
     // 收藏/取消收藏当前楼 (与「更多」菜单一致, 供紧凑回复栏收藏按钮复用)
@@ -456,7 +446,7 @@ fun ThreadPage(
         snapshotFlow {
             lazyListState.firstVisibleItemIndex to lazyListState.firstVisibleItemScrollOffset
         }.collect {
-            if (!navScrollActive) {
+            if (!navScroll.isScrolling) {
                 // 仍在同一楼(即使滚得很深, 如楼主帖长图尾部)时不要重置站点进度,
                 // 否则会把下一楼误当成锚点, 导致回退多按一次
                 val lastItemIndex = lastNavAnchorPostId?.let { layout.itemIndexOf(it) }
@@ -507,7 +497,7 @@ fun ThreadPage(
     // 当前站点进度: 导航滚动动画期间沿用上次的目标站(避免动画未完时重复对齐同一站),
     // 其余情况按实测视口反查, 使展开长图/手动滚动后的第一按就落在下一个真实站点
     fun waypointStep(anchorId: Long, itemIndex: Int, positions: List<Int>): Int {
-        if (navScrollActive && lastNavAnchorPostId == anchorId) return lastNavWaypointIndex
+        if (navScroll.isScrolling && lastNavAnchorPostId == anchorId) return lastNavWaypointIndex
         val scrolledPast = lazyListState.scrolledPastOffsetInItem(itemIndex)
             ?: return if (lastNavAnchorPostId == anchorId) lastNavWaypointIndex else -1
         // 站点滚动时对齐到「置顶排序栏下沿」, 反查进度必须用同一条基准线:
@@ -524,7 +514,6 @@ fun ThreadPage(
     fun scrollToFloorOrPos(
         target: Long,
         direction: CommentNavDirection,
-        onArrive: (() -> Unit)? = null,
     ) {
         val targetIndex = layout.itemIndexOf(target) ?: return
         val targetPositions = imageNavPositions(target)
@@ -534,20 +523,17 @@ fun ThreadPage(
                 if (direction == CommentNavDirection.NEXT) 0 else targetPositions.size - 1
             else -> -1
         }
-        navScrollActive = true
-        resetCommentNavDock()
-        coroutineScope.launch {
+        launchNavScroll(onArrived = { onNavArrived(direction, target) }) {
             if (targetPositions.size > 1 && direction == CommentNavDirection.PREV) {
                 scrollToWaypoint(targetIndex, targetPositions.last())
             } else {
                 scrollToPost(targetIndex)
             }
-            navScrollActive = false
-            onArrive?.invoke()
         }
     }
 
     fun requestNavigateComment(direction: CommentNavDirection) {
+        pendingCommentNav = null
         val anchorId = lastNavAnchorPostId?.takeIf { it in layout.orderedPostIds }
             ?: lazyListState.navigationAnchorPost(state)?.id
             ?: return
@@ -560,9 +546,7 @@ fun ThreadPage(
                 CommentNavDirection.NEXT -> {
                     if (curStep < positions.size - 1) {
                         val next = curStep + 1
-                        navScrollActive = true
-                        resetCommentNavDock()
-                        coroutineScope.launch {
+                        launchNavScroll(onArrived = { onNavArrived(direction, anchorId) }) {
                             // next == 0 仅在取不到该楼几何时出现(旧逻辑此处什么都不做, 会白按一下):
                             // 按楼头对齐兜底, 保证每次按键都有可见结果
                             if (next == 0) {
@@ -570,7 +554,6 @@ fun ThreadPage(
                             } else {
                                 scrollToWaypoint(itemIndex, positions[next])
                             }
-                            navScrollActive = false
                         }
                         lastNavAnchorPostId = anchorId
                         lastNavWaypointIndex = next
@@ -580,11 +563,8 @@ fun ThreadPage(
                 CommentNavDirection.PREV -> {
                     if (curStep > 0) {
                         val prev = curStep - 1
-                        navScrollActive = true
-                        resetCommentNavDock()
-                        coroutineScope.launch {
+                        launchNavScroll(onArrived = { onNavArrived(direction, anchorId) }) {
                             scrollToWaypoint(itemIndex, positions[prev])
-                            navScrollActive = false
                         }
                         lastNavAnchorPostId = anchorId
                         lastNavWaypointIndex = prev
@@ -604,7 +584,6 @@ fun ThreadPage(
                 }
             }
             scrollToFloorOrPos(target, direction)
-            armCommentNavEndHaptic(direction, target)
             return
         }
         // 处于边界: 决定是触发加载, 还是回跳楼主帖 / 提示已到首末楼
@@ -612,9 +591,6 @@ fun ThreadPage(
             CommentNavDirection.NEXT -> {
                 when {
                     state.pageData.hasMore -> {
-                        // 记录“用户已按 NEXT 请求继续向末楼推进”的意图;
-                        // 加载结果如果不是末楼, pending 定位阶段会清除该标记.
-                        endHapticArmed = true
                         pendingCommentNav = PendingCommentNav(direction, anchorId)
                         viewModel.requestLoadMore()
                     }
@@ -628,14 +604,10 @@ fun ThreadPage(
                         val bottomDelta = lastItem
                             ?.let { it.offset + it.size - info.viewportEndOffset + contentBottomPaddingPx }
                             ?: 0f
-                        navScrollActive = true
-                        resetCommentNavDock()
-                        armCommentNavEndHaptic(CommentNavDirection.NEXT, anchorId)
-                        coroutineScope.launch {
+                        launchNavScroll(onArrived = { onNavArrived(direction, anchorId) }) {
                             if (bottomDelta > 0f) {
                                 lazyListState.animateScrollBy(bottomDelta)
                             }
-                            navScrollActive = false
                         }
                     }
                     else -> {
@@ -659,11 +631,8 @@ fun ThreadPage(
                         layout.itemIndexOf(layout.firstPostId ?: return)?.let { firstPostIndex ->
                             lastNavAnchorPostId = layout.firstPostId
                             lastNavWaypointIndex = -1
-                            navScrollActive = true
-                            resetCommentNavDock()
-                            coroutineScope.launch {
+                            launchNavScroll(onArrived = { onNavArrived(direction, layout.firstPostId!!) }) {
                                 scrollToPost(firstPostIndex)
-                                navScrollActive = false
                             }
                         }
                     }
@@ -672,36 +641,19 @@ fun ThreadPage(
         }
     }
 
-    LaunchedEffect(state) {
+    LaunchedEffect(state, pendingCommentNav) {
         val pending = pendingCommentNav ?: return@LaunchedEffect
         if (state.isLoadingMore) return@LaunchedEffect
         val newLayout = buildThreadListLayout(state)
         val target = newLayout.targetPostId(pending.anchorPostId, pending.direction)
         if (target != null) {
-            val targetPositions = listOf(0) + imageNavWaypoints[target].orEmpty()
-            lastNavAnchorPostId = target
-            lastNavWaypointIndex = when {
-                targetPositions.size > 1 ->
-                    if (pending.direction == CommentNavDirection.NEXT) 0 else targetPositions.size - 1
-                else -> -1
-            }
-            navScrollActive = true
-            resetCommentNavDock()
-            armCommentNavEndHaptic(
-                direction = pending.direction,
-                targetPostId = target,
-                orderedPostIds = newLayout.orderedPostIds,
-                hasMore = newLayout.hasMore,
-            )
-            newLayout.itemIndexOf(target)?.let { targetIndex ->
-                if (targetPositions.size > 1 && pending.direction == CommentNavDirection.PREV) {
-                    scrollToWaypoint(targetIndex, targetPositions.last())
-                } else {
-                    scrollToPost(targetIndex)
-                }
-            }
-            navScrollActive = false
             pendingCommentNav = null
+            // The scroll owns its own job; unrelated state updates must not cancel arrival feedback.
+            scrollToFloorOrPos(target, pending.direction)
+        } else if (pending.direction == CommentNavDirection.NEXT && !newLayout.hasMore) {
+            pendingCommentNav = null
+            // An empty last page still confirms the existing final floor as the navigation end.
+            newLayout.orderedPostIds.lastOrNull()?.let { scrollToFloorOrPos(it, pending.direction) }
         }
     }
 

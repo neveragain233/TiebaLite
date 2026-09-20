@@ -42,11 +42,11 @@ import androidx.compose.material.icons.rounded.Search
 import androidx.compose.material.icons.rounded.VerticalAlignTop
 import androidx.compose.material3.ButtonDefaults
 import androidx.compose.material3.FabPosition
-import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.FloatingActionButtonMenu
 import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
+import androidx.compose.material3.ToggleFloatingActionButton
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -633,8 +633,13 @@ private fun ForumFAB(
             button = {
                 if (quickRefresh) {
                     val click = { if (expanded) onExpandChanged(false) else onQuickRefresh() }
-                    FloatingActionButton(onClick = click, modifier = Modifier.size(56.dp)) {
-                        // Handle gestures inside the FAB so its Surface does not consume long presses.
+                    ToggleFloatingActionButton(
+                        checked = expanded,
+                        onCheckedChange = { click() },
+                        contentAlignment = buttonAlignment,
+                    ) {
+                        // Keep gestures on the content while the container animates like the
+                        // original toggle FAB when the menu opens and closes.
                         Box(
                             modifier = Modifier
                                 .fillMaxSize()

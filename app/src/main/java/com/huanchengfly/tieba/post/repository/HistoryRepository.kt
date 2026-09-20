@@ -45,10 +45,18 @@ class HistoryRepository @Inject constructor(
 
     fun getForumHistoryTop10(): Flow<List<ForumHistory>> = forumHistoryDao.observeTop(limit = 10)
 
-    fun getForumHistory(config: PagingConfig = defaultConfig): Flow<PagingData<ForumHistory>> {
+    fun getForumHistory(
+        followedForumUid: Long? = null,
+        config: PagingConfig = defaultConfig,
+    ): Flow<PagingData<ForumHistory>> {
         return Pager(
             config = config,
-            pagingSourceFactory = { forumHistoryDao.pagingSource() }
+            pagingSourceFactory = {
+                followedForumUid
+                    ?.takeIf { it > 0 }
+                    ?.let(forumHistoryDao::pagingSourceNotFollowed)
+                    ?: forumHistoryDao.pagingSource()
+            }
         ).flow
     }
 

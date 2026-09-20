@@ -228,6 +228,9 @@ private open class SegmentedPrefsScopeImpl(
     /** For ListItemShapes type tracking, see [segmentedShapes] */
     protected val itemTypes: MutableList<ItemType> = mutableListOf()
 
+    /** Number of items actually emitted to LazyColumn; group boundary markers are not items. */
+    private var lazyItemsCount: Int = 0
+
     val itemsCount: Int
         get() = itemTypes.size
 
@@ -236,14 +239,16 @@ private open class SegmentedPrefsScopeImpl(
         contentType: ItemType,
         crossinline content: @Composable LazyItemScope.(shapes: ListItemShapes) -> Unit
     ) {
-        val index = itemsCount
+        val shapeIndex = itemsCount
+        val lazyIndex = lazyItemsCount
         // scrollToItemKey 为 null 表示没有搜索定位请求; 不能让默认 key=null 的 item 匹配 null。
         if (scrollToItemKey != null && key == scrollToItemKey) {
-            onScrollItemIndex(index)
+            onScrollItemIndex(lazyIndex)
         }
         item(key, contentType) {
-            content(this@SegmentedPrefsScopeImpl.segmentedShapes(index))
+            content(this@SegmentedPrefsScopeImpl.segmentedShapes(shapeIndex))
         }
+        lazyItemsCount++
         itemTypes.add(contentType)
     }
 
@@ -379,10 +384,12 @@ private open class SegmentedPrefsScopeImpl(
                     style = MaterialTheme.typography.titleSmall,
                 )
             }
+            lazyItemsCount++
         } else if (verticalPadding > Dp.Hairline) {
             item {
                 Spacer(modifier = Modifier.height(verticalPadding))
             }
+            lazyItemsCount++
         }
         content()
         itemTypes.add(ItemType.GroupEnd)
@@ -390,6 +397,7 @@ private open class SegmentedPrefsScopeImpl(
             item(contentType = ItemType.GroupEnd) {
                 Spacer(modifier = Modifier.height(verticalPadding))
             }
+            lazyItemsCount++
         }
     }
 

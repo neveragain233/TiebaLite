@@ -94,6 +94,7 @@ enum class NavRailPosition {
  * @param setupFinished 设置向导已完成
  * @param homeForumList 吧列表单列显示
  * @param showHistoryInHome 首页显示最近逛的吧
+ * @param hideFollowedForumsInHistory 「经过贴吧」中过滤当前账号已关注的贴吧
  * @param historyLongPressDelete 首页「经过贴吧」长按删除(含震动)
  * @param subPostsInDualPane 双栏进楼中楼时保持双栏(不自动全屏)
  * @param forumDetailMode 吧内详情显示方式
@@ -131,6 +132,7 @@ data class UISettings(
     val setupFinished: Boolean = false,
     val homeForumList: Boolean = false,
     val showHistoryInHome: Boolean = true,
+    val hideFollowedForumsInHistory: Boolean = false,
     val historyLongPressDelete: Boolean = true,
     val subPostsInDualPane: Boolean = true,
     val forumDetailMode: ForumDetailMode = ForumDetailMode.KEEP_DETAIL,

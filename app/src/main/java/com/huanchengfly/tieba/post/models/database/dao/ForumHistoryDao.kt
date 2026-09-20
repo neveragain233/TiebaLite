@@ -38,4 +38,16 @@ interface ForumHistoryDao {
      * */
     @Query("SELECT * FROM forum_history ORDER BY timestamp DESC")
     fun pagingSource(): PagingSource<Int, ForumHistory>
+
+    /**
+     * Get forum history excluding forums followed by the current account.
+     */
+    @Query(
+        "SELECT * FROM forum_history history " +
+            "WHERE NOT EXISTS (" +
+            "SELECT 1 FROM liked_forum liked " +
+            "WHERE liked.uid = :uid AND liked.id = history.id" +
+            ") ORDER BY history.timestamp DESC"
+    )
+    fun pagingSourceNotFollowed(uid: Long): PagingSource<Int, ForumHistory>
 }

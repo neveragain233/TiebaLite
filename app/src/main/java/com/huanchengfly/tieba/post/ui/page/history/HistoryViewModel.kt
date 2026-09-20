@@ -10,15 +10,19 @@ import androidx.paging.map
 import com.huanchengfly.tieba.post.di.DefaultDispatcher
 import com.huanchengfly.tieba.post.models.database.History
 import com.huanchengfly.tieba.post.repository.HistoryRepository
+import com.huanchengfly.tieba.post.repository.user.SettingsRepository
 import com.huanchengfly.tieba.post.utils.DateTimeUtils
 import dagger.hilt.android.lifecycle.HiltViewModel
 import dagger.hilt.android.qualifiers.ApplicationContext
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.flatMapLatest
 import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.flow.update
@@ -29,10 +33,19 @@ import javax.inject.Inject
 class HistoryViewModel @Inject constructor(
     @ApplicationContext val context: Context,
     @DefaultDispatcher val dispatcher: CoroutineDispatcher,
-    private val historyRepo: HistoryRepository
+    private val historyRepo: HistoryRepository,
+    private val settingsRepo: SettingsRepository,
 ) : ViewModel() {
 
-    val forumHistory: Flow<PagingData<HistoryUiModel>> = historyRepo.getForumHistory()
+    @OptIn(ExperimentalCoroutinesApi::class)
+    val forumHistory: Flow<PagingData<HistoryUiModel>> = settingsRepo.uiSettings
+        .map { it.hideFollowedForumsInHistory }
+        .distinctUntilChanged()
+        .flatMapLatest { hideFollowed ->
+            settingsRepo.accountUid.flatMapLatest { uid ->
+                historyRepo.getForumHistory(followedForumUid = uid.takeIf { hideFollowed })
+            }
+        }
         .mapUiModel()
         .flowOn(dispatcher)
         .cachedIn(viewModelScope)

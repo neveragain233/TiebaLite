@@ -88,6 +88,7 @@ data class UISettingsDto(
     val reduceMotion: Boolean,
     val homeForumList: Boolean,
     val showHistoryInHome: Boolean,
+    val hideFollowedForumsInHistory: Boolean = false,
     val historyLongPressDelete: Boolean,
     val subPostsInDualPane: Boolean,
     val forumDetailMode: String,

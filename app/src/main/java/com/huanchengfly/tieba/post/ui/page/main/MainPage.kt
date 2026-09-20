@@ -295,9 +295,8 @@ fun MainPage(
     }
 
     val scrollHideEnabled = navigationSuiteType.isFloatingNavigationBar && uiSettings.bottomNavHideOnScroll
-    // 与紧凑回复栏的 FloatingToolbar settle 阈值同源( collapsedFraction <= 1% ),
-    // 保持现有 NavigationSuiteScaffold 的 hide/show 动画, 只降低触发位移.
-    val scrollHideThreshold = with(LocalDensity.current) { NavigationBarHeight.toPx() * 0.01f }
+    // 忽略手指抖动和列表回弹产生的微小位移，避免底栏隐藏/显示动画被频繁重启。
+    val scrollHideThreshold = with(LocalDensity.current) { 8.dp.toPx() }
     val bottomNavScrollConnection = remember(scrollHideEnabled, scrollHideThreshold) {
         if (!scrollHideEnabled) null
         else object : NestedScrollConnection {
@@ -555,7 +554,10 @@ private fun MainNavigationSuiteScaffold(
                 modifier = Modifier
                     .withNonNull(hazeState) {
                         Modifier.defaultHazeEffect(style = navigationHazeStyle) {
-                            blurEnabled = animatedVisibilityScope?.transition?.isRunning != true
+                            // 底栏位移动画期间暂停实时模糊，使用 HazeStyle 的 fallbackTint，
+                            // 避免每次随滚动隐藏/显示时持续重算模糊纹理。
+                            blurEnabled = !state.isAnimating &&
+                                animatedVisibilityScope?.transition?.isRunning != true
                         }
                     }
                     .onNotNull(colorsOnTransition) {

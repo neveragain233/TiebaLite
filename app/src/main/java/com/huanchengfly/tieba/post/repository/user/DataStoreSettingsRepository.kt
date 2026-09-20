@@ -381,6 +381,10 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             setupFinished = it[booleanPreferencesKey(KEY_SETUP_FINISHED)] == true,
             homeForumList = it[booleanPreferencesKey(KEY_HOME_SINGLE_FORUM_LIST)] == true,
             showHistoryInHome = it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] ?: true,
+            hideFollowedForumsInHistory =
+                it[booleanPreferencesKey(KEY_HISTORY_HIDE_FOLLOWED_FORUMS)] ?: false,
+            historyLongPressDelete =
+                it[booleanPreferencesKey(KEY_HISTORY_LONG_PRESS_DELETE)] ?: true,
             forumDetailMode = ForumDetailMode.entries.getOrElse(forumDetailModeOrdinal) {
                 ForumDetailMode.KEEP_DETAIL
             },
@@ -427,6 +431,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_SETUP_FINISHED)] = ui.setupFinished
         it[booleanPreferencesKey(KEY_HOME_SINGLE_FORUM_LIST)] = ui.homeForumList
         it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] = ui.showHistoryInHome
+        it[booleanPreferencesKey(KEY_HISTORY_HIDE_FOLLOWED_FORUMS)] = ui.hideFollowedForumsInHistory
+        it[booleanPreferencesKey(KEY_HISTORY_LONG_PRESS_DELETE)] = ui.historyLongPressDelete
         it[intPreferencesKey(KEY_FORUM_DETAIL_MODE)] = ui.forumDetailMode.ordinal
         it[booleanPreferencesKey(KEY_LARGE_SCREEN_DEFAULT_SPLIT)] = ui.largeScreenDefaultSplit
         it[booleanPreferencesKey(KEY_FORUM_DEFAULT_SPLIT)] = ui.forumDefaultSplit
@@ -469,6 +475,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_REDUCE_MOTION = "ui_reduce_motion"
     private const val KEY_HOME_SINGLE_FORUM_LIST = "ui_forum_list_in_home"
     private const val KEY_HOME_PAGE_SHOW_HISTORY = "ui_history_in_home"
+    private const val KEY_HISTORY_HIDE_FOLLOWED_FORUMS = "ui_history_hide_followed_forums"
+    private const val KEY_HISTORY_LONG_PRESS_DELETE = "ui_history_long_press_delete"
     private const val KEY_FORUM_DETAIL_MODE = "ui_forum_detail_mode"
     private const val KEY_LARGE_SCREEN_DEFAULT_SPLIT = "ui_large_screen_default_split"
     private const val KEY_FORUM_DEFAULT_SPLIT = "ui_forum_default_split"

@@ -67,6 +67,7 @@ object SettingsSearchIndex {
         entry(SettingsDestination.UI, R.string.settings_nav_label),
         entry(SettingsDestination.UI, R.string.settings_forum_single),
         entry(SettingsDestination.UI, R.string.settings_home_page_show_history_forum),
+        entry(SettingsDestination.UI, R.string.history_hide_followed_forums),
         entry(SettingsDestination.UI, R.string.title_hide_explore),
         entry(SettingsDestination.UI, R.string.settings_fullscreen_button_style),
         entry(SettingsDestination.UI, R.string.settings_comment_nav_enabled, R.string.summary_comment_nav_enabled),

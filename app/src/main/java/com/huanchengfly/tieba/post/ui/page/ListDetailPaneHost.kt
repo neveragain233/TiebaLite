@@ -103,10 +103,16 @@ fun ListDetailPaneHost(
     val mainNavState = LocalMainNavState.current
     LaunchedEffect(isDetailShowing) {
         mainNavState.paneDetailOpen = isDetailShowing
+        // A detail closed while the window is compact must not leave an expanded flag behind.
+        // Otherwise, after unfolding, the app-level rail consumes its first click trying to
+        // collapse a detail that no longer exists.
+        if (!isDetailShowing) {
+            detailExpanded = false
+        }
     }
     // 镜像详情全屏状态, 供侧栏判断「先收起再跳转」
-    LaunchedEffect(detailExpanded) {
-        mainNavState.paneDetailExpanded = detailExpanded
+    LaunchedEffect(detailExpanded, isDetailShowing) {
+        mainNavState.paneDetailExpanded = isDetailShowing && detailExpanded
     }
     // 侧栏点击当前 tab 时请求收起全屏, 回到双栏
     LaunchedEffect(mainNavState.collapsePaneDetailRequest) {
@@ -118,7 +124,12 @@ fun ListDetailPaneHost(
     LaunchedEffect(mainNavState.closePaneDetailRequest) {
         if (mainNavState.closePaneDetailRequest > 0 && isDetailShowing) {
             detailExpanded = false
-            detailNavController.popBackStack()
+            // Close the whole nested detail stack. When SubPosts is on top, a single pop would
+            // only reveal Thread again even though the rail action means "back to the list".
+            detailNavController.popBackStack(
+                route = ListDetailPanePlaceholder,
+                inclusive = false,
+            )
         }
     }
     DisposableEffect(Unit) {

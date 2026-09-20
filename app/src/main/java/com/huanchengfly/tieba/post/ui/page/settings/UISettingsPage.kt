@@ -25,6 +25,7 @@ import androidx.compose.material.icons.outlined.Contrast
 import androidx.compose.material.icons.outlined.DarkMode
 import androidx.compose.material.icons.outlined.Delete
 import androidx.compose.material.icons.outlined.FontDownload
+import androidx.compose.material.icons.outlined.FilterAlt
 import androidx.compose.material.icons.outlined.House
 import androidx.compose.material.icons.outlined.Houseboat
 import androidx.compose.material.icons.outlined.NotificationsOff
@@ -216,6 +217,12 @@ fun UISettingsPage(
                 property = UISettings::showHistoryInHome,
                 title = R.string.settings_home_page_show_history_forum,
                 leadingIcon = Icons.Outlined.WatchLater
+            )
+
+            toggleablePreference(
+                property = UISettings::hideFollowedForumsInHistory,
+                title = R.string.history_hide_followed_forums,
+                leadingIcon = Icons.Outlined.FilterAlt,
             )
 
             toggleablePreference(
