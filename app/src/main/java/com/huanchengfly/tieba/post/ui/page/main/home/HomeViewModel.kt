@@ -86,10 +86,16 @@ class HomeViewModel @Inject constructor(
      * */
     @OptIn(ExperimentalCoroutinesApi::class)
     val historyFlow: StateFlow<List<ForumHistory>?> = settingsRepo.uiSettings
-        .map { it.showHistoryInHome }
+        .map { it.showHistoryInHome to it.hideFollowedForumsInHistory }
         .distinctUntilChanged()
-        .flatMapLatest { showHistory ->
-            if (showHistory) historyRepo.getForumHistoryTop10() else flowOf(emptyList())
+        .flatMapLatest { (showHistory, hideFollowed) ->
+            when {
+                !showHistory -> flowOf(emptyList())
+                !hideFollowed -> historyRepo.getForumHistoryTop10()
+                else -> settingsRepo.accountUid.flatMapLatest { uid ->
+                    historyRepo.getForumHistoryTop10(followedForumUid = uid)
+                }
+            }
         }
         .stateInViewModel(started = SharingStarted.Lazily, initialValue = null)
 

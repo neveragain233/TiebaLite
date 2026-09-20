@@ -13,6 +13,7 @@ class SettingsSearchIndexTest {
         val requiredTitles = setOf(
             R.string.title_reduce_effect,
             R.string.settings_explore_fab_follow_nav,
+            R.string.history_hide_followed_forums,
             R.string.settings_home_page_long_press_history_forum_delete,
             R.string.title_hide_notifications,
             R.string.settings_comment_nav_single_key,

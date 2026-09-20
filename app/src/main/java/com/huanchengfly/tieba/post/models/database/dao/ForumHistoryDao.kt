@@ -34,6 +34,18 @@ interface ForumHistoryDao {
     fun observeTop(limit: Int = 10): Flow<List<ForumHistory>>
 
     /**
+     * Observe recent forum history excluding forums followed by the current account.
+     */
+    @Query(
+        "SELECT * FROM forum_history history " +
+            "WHERE NOT EXISTS (" +
+            "SELECT 1 FROM liked_forum liked " +
+            "WHERE liked.uid = :uid AND liked.id = history.id" +
+            ") ORDER BY history.timestamp DESC LIMIT :limit"
+    )
+    fun observeTopNotFollowed(uid: Long, limit: Int = 10): Flow<List<ForumHistory>>
+
+    /**
      * Get forum history paging source.
      * */
     @Query("SELECT * FROM forum_history ORDER BY timestamp DESC")

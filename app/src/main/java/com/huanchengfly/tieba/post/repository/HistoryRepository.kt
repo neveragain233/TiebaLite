@@ -43,7 +43,11 @@ class HistoryRepository @Inject constructor(
         PagingConfig(pageSize = 20, prefetchDistance = 4, maxSize = 80)
     }
 
-    fun getForumHistoryTop10(): Flow<List<ForumHistory>> = forumHistoryDao.observeTop(limit = 10)
+    fun getForumHistoryTop10(followedForumUid: Long? = null): Flow<List<ForumHistory>> =
+        followedForumUid
+            ?.takeIf { it > 0 }
+            ?.let { forumHistoryDao.observeTopNotFollowed(uid = it, limit = 10) }
+            ?: forumHistoryDao.observeTop(limit = 10)
 
     fun getForumHistory(
         followedForumUid: Long? = null,
