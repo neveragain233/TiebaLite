@@ -110,6 +110,7 @@ interface SegmentedPrefsScope{
         useSelectedAsSummary: Boolean = summary == null,
         optionsIconSupplier: (@Composable (T) -> Unit)? = null,
         leadingIcon: ImageVector? = null,
+        key: Any? = title,
     )
 
     /**
@@ -311,8 +312,9 @@ private open class SegmentedPrefsScopeImpl(
         useSelectedAsSummary: Boolean,
         optionsIconSupplier: (@Composable (T) -> Unit)?,
         leadingIcon: ImageVector?,
+        key: Any?,
     ) {
-        prefsItem(key = title, contentType = ItemType.Clickable) { shapes ->
+        prefsItem(key = key, contentType = ItemType.Clickable) { shapes ->
             SegmentedListPreference(
                 value = value,
                 title = title,

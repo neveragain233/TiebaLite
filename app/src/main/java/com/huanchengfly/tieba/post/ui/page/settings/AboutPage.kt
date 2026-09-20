@@ -210,12 +210,14 @@ fun AboutPage(
                 icon = Icons.Rounded.SystemUpdate,
                 enabled = checkUpdateEnabled,
                 onClick = onCheckUpdateClicked,
+                key = R.string.settings_check_update,
             )
 
             preference(
                 title = context.getString(R.string.title_disclaimer),
                 icon = Icons.Rounded.Info,
-                onClick = onDisclaimerClicked
+                onClick = onDisclaimerClicked,
+                key = R.string.title_disclaimer,
             )
 
             preference(
@@ -223,6 +225,7 @@ fun AboutPage(
                 summary = URL_PROJECT_FORK_GITHUB,
                 icon = GitHubInvertocat,
                 onClick = onHomePageClicked,
+                key = R.string.about_source_code,
             )
 
             preference(
@@ -230,6 +233,7 @@ fun AboutPage(
                 summary = URL_PROJECT_GITHUB,
                 icon = Icons.AutoMirrored.Rounded.CallSplit,
                 onClick = onUpstreamClicked,
+                key = R.string.about_upstream,
             )
 
             preference(
@@ -237,6 +241,7 @@ fun AboutPage(
                 summary = "GNU GENERAL PUBLIC LICENSE Version 3",
                 icon = Icons.Rounded.License,
                 onClick = onLicenseClicked,
+                key = R.string.about_license,
             )
         }
     }

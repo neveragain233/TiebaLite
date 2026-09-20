@@ -46,7 +46,7 @@ private fun batteryOptimizeState(): State<Boolean> {
 }
 
 private fun SegmentedPrefsScope.batteryOpPreference(modifier: Modifier = Modifier, enabled: Boolean) {
-    customPreference { shapes ->
+    customPreference(key = R.string.title_ignore_battery_optimization) { shapes ->
         val context = LocalContext.current
         val coroutineScope = rememberCoroutineScope()
         val snackbarHostState = LocalSnackbarHostState.current
@@ -130,7 +130,8 @@ fun OKSignSettingsPage(settings: Settings<SignConfig>, onBack: () -> Unit) {
                     Text(text = stringResource(id = R.string.title_auto_sign_time))
                 },
                 leadingIcon = Icons.Outlined.WatchLater,
-                enabled = okSignAvailable
+                enabled = okSignAvailable,
+                key = R.string.title_auto_sign_time,
             )
 
             toggleablePreference(

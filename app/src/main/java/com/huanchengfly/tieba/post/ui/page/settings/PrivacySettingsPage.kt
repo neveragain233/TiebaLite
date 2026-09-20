@@ -32,34 +32,35 @@ fun PrivacySettingsPage(settings: Settings<PrivacySettings>, onBack: () -> Unit)
     }
 }
 
-fun SettingsSegmentedPrefsScope<PrivacySettings>.appLinkPreference() = customPreference { shapes ->
-    val context = LocalContext.current
-    val coroutineScope = rememberCoroutineScope()
-    val snackbarHostState = LocalSnackbarHostState.current
+fun SettingsSegmentedPrefsScope<PrivacySettings>.appLinkPreference() =
+    customPreference(key = R.string.title_settings_app_link) { shapes ->
+        val context = LocalContext.current
+        val coroutineScope = rememberCoroutineScope()
+        val snackbarHostState = LocalSnackbarHostState.current
 
-    SegmentedPreference(
-        title = R.string.title_settings_app_link,
-        shapes = shapes,
-        summary = R.string.summary_app_link,
-        leadingIcon = Icons.AutoMirrored.Outlined.OpenInNew,
-        onClick = {
-            runCatching {
-                context.startActivity(
-                    buildAppSettingsIntent(BuildConfig.APPLICATION_ID).apply {
-                        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
-                            action = android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS
+        SegmentedPreference(
+            title = R.string.title_settings_app_link,
+            shapes = shapes,
+            summary = R.string.summary_app_link,
+            leadingIcon = Icons.AutoMirrored.Outlined.OpenInNew,
+            onClick = {
+                runCatching {
+                    context.startActivity(
+                        buildAppSettingsIntent(BuildConfig.APPLICATION_ID).apply {
+                            if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.S) {
+                                action = android.provider.Settings.ACTION_APP_OPEN_BY_DEFAULT_SETTINGS
+                            }
                         }
+                    )
+                }
+                .onFailure {
+                    coroutineScope.launch {
+                        snackbarHostState.showSnackbar(context.getString(R.string.error_open_settings))
                     }
-                )
-            }
-            .onFailure {
-                coroutineScope.launch {
-                    snackbarHostState.showSnackbar(context.getString(R.string.error_open_settings))
                 }
             }
-        }
-    )
-}
+        )
+    }
 
 fun SettingsSegmentedPrefsScope<PrivacySettings>.clipboardPreference() {
     toggleablePreference(

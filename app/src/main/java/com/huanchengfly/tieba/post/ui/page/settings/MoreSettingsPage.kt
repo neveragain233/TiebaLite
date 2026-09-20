@@ -84,6 +84,7 @@ fun MoreSettingsPage(
                     icon = {
                         Icon(ImageVector.vectorResource(id = R.drawable.ic_chrome), contentDescription = null)
                     },
+                    key = R.string.title_use_webview,
                 )
             }
 
@@ -139,7 +140,7 @@ fun MoreSettingsPage(
                 }
             }
 
-            customPreference {
+            customPreference(key = R.string.title_clear_picture_cache) {
                 ImageCachePreference(shapes = it)
             }
         }

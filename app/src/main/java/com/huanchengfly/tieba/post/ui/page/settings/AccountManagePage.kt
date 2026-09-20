@@ -76,6 +76,7 @@ fun AccountManagePage(
                     leadingIcon = Icons.Outlined.AccountCircle,
                     onValueChange = accountUtil::switchAccount,
                     options = accounts,
+                    key = R.string.title_switch_account,
                 )
             } else {
                 preference(
@@ -90,7 +91,7 @@ fun AccountManagePage(
                 leadingIcon = Icons.Outlined.AddCircleOutline,
             )
 
-            customPreference { shapes ->
+            customPreference(key = R.string.title_exit_account) { shapes ->
                 val logoutDialogState = rememberDialogState()
                 SegmentedPreference(
                     title = R.string.title_exit_account,

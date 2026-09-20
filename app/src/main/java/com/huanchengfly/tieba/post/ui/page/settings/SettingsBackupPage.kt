@@ -222,6 +222,7 @@ fun SettingsBackupPage(
                 summary = { Text(text = directorySummary) },
                 icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
                 enabled = currentPreference.autoBackupEnabled,
+                key = R.string.settings_auto_backup_directory,
             )
 
             preference(
@@ -229,12 +230,14 @@ fun SettingsBackupPage(
                 title = { Text(text = stringResource(R.string.settings_auto_backup_use_private_directory)) },
                 icon = { Icon(Icons.Outlined.Folder, contentDescription = null) },
                 enabled = currentPreference.autoBackupEnabled,
+                key = R.string.settings_auto_backup_use_private_directory,
             )
 
             preference(
                 onClick = viewModel::onRunBackupNow,
                 title = { Text(text = stringResource(R.string.settings_auto_backup_run_now)) },
                 icon = { Icon(Icons.Outlined.PlayCircle, contentDescription = null) },
+                key = R.string.settings_auto_backup_run_now,
             )
 
             preference(
@@ -245,6 +248,7 @@ fun SettingsBackupPage(
                 title = { Text(text = stringResource(R.string.settings_auto_backup_history)) },
                 icon = { Icon(Icons.Outlined.History, contentDescription = null) },
                 enabled = currentPreference.autoBackupEnabled,
+                key = R.string.settings_auto_backup_history,
             )
 
             val lastBackupAt = currentPreference.lastAutoBackupAt
@@ -268,6 +272,7 @@ fun SettingsBackupPage(
                 },
                 icon = { Icon(Icons.Outlined.Schedule, contentDescription = null) },
                 onClick = {},
+                key = R.string.settings_auto_backup_last_run,
             )
         }
     }

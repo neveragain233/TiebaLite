@@ -131,6 +131,7 @@ fun UISettingsPage(
                     }
                     Image(painter = painterResource(icon), null, Modifier.size(Sizes.Medium))
                 },
+                key = R.string.settings_app_icon,
                 onValueChange = { newIcon ->
                     settings.save { old -> old.copy(appIcon = newIcon) }
                     AppIconUtil.setIcon(newIcon, context)
