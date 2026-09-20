@@ -47,6 +47,7 @@ import androidx.compose.material3.FloatingActionButtonMenuItem
 import androidx.compose.material3.Icon
 import androidx.compose.material3.Text
 import androidx.compose.material3.ToggleFloatingActionButton
+import androidx.compose.material3.ToggleFloatingActionButtonDefaults.animateIcon
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
@@ -656,6 +657,7 @@ private fun ForumFAB(
                             Icon(
                                 imageVector = if (expanded) Icons.Rounded.Close else Icons.Rounded.Refresh,
                                 contentDescription = stringResource(if (expanded) R.string.btn_close else R.string.btn_refresh),
+                                modifier = Modifier.animateIcon({ checkedProgress }),
                             )
                         }
                     }
