@@ -223,6 +223,7 @@ fun UISettingsPage(
                 property = UISettings::hideFollowedForumsInHistory,
                 title = R.string.history_hide_followed_forums,
                 leadingIcon = Icons.Outlined.FilterAlt,
+                enabled = currentPreference.showHistoryInHome,
             )
 
             toggleablePreference(
