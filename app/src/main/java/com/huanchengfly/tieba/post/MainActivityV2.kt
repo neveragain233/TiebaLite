@@ -94,6 +94,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.MarkdownText
 import com.huanchengfly.tieba.post.ui.widgets.compose.Sizes
 import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
 import com.huanchengfly.tieba.post.ui.widgets.compose.dialogs.AnyPopDialogProperties
+import com.huanchengfly.tieba.post.ui.widgets.compose.dialogs.ApplyDialogNavigationBarAppearance
 import com.huanchengfly.tieba.post.ui.widgets.compose.dialogs.DirectionState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.ui.widgets.compose.video.LocalVideoPreviewState
@@ -345,6 +346,7 @@ class MainActivityV2 : BaseComposeActivity() {
         MaterialAlertDialog(
             onDismissRequest = onDismiss,
             title = {
+                ApplyDialogNavigationBarAppearance()
                 if (prompt.cachedFile == null) {
                     Text(stringResource(R.string.update_available_title, prompt.info.versionName))
                 } else {

@@ -61,6 +61,11 @@ object SettingsSearchIndex {
         entry(SettingsDestination.UI, R.string.title_reduce_motion),
         entry(
             SettingsDestination.UI,
+            R.string.title_immersive_white_navigation_bar,
+            R.string.summary_immersive_white_navigation_bar,
+        ),
+        entry(
+            SettingsDestination.UI,
             R.string.title_settings_night_mode,
             keywords = intArrayOf(
                 R.string.summary_night_mode_always,

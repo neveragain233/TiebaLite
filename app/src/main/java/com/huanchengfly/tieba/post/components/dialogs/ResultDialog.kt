@@ -37,6 +37,7 @@ import com.huanchengfly.tieba.post.findActivity
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.widgets.compose.DefaultDialogMargin
 import com.huanchengfly.tieba.post.utils.ThemeUtil
+import com.huanchengfly.tieba.post.utils.ThemeUtil.applyNavigationBarAppearance
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.channels.Channel
 import kotlinx.coroutines.channels.ChannelResult
@@ -97,7 +98,13 @@ abstract class ResultDialog<T>() : DialogFragment() {
         dialog?.window?.let { window ->
             val uiSettings = (requireContext().applicationContext as App).settingRepository.uiSettings
             lifecycleScope.launch {
-                onSetupWindow(window, backgroundBlur = !uiSettings.snapshot().reduceEffect)
+                val currentUiSettings = uiSettings.snapshot()
+                onSetupWindow(window, backgroundBlur = !currentUiSettings.reduceEffect)
+                window.applyNavigationBarAppearance(
+                    controller = WindowCompat.getInsetsController(window, window.decorView),
+                    colorScheme = ThemeUtil.currentColorScheme(),
+                    immersiveWhiteNavigationBar = currentUiSettings.immersiveWhiteNavigationBar,
+                )
             }
         }
     }

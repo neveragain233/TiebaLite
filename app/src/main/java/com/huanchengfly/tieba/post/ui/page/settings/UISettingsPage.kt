@@ -96,6 +96,13 @@ fun UISettingsPage(
                 title = R.string.title_reduce_motion,
                 leadingIcon = Icons.Outlined.AutoAwesomeMotion,
             )
+
+            toggleablePreference(
+                property = UISettings::immersiveWhiteNavigationBar,
+                title = R.string.title_immersive_white_navigation_bar,
+                summary = R.string.summary_immersive_white_navigation_bar,
+                leadingIcon = Icons.Outlined.SwipeVertical,
+            )
         }
 
         group(title = R.string.settings_group_dark_mode) {

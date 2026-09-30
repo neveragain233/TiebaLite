@@ -43,9 +43,12 @@ import androidx.compose.ui.window.Dialog
 import androidx.compose.ui.window.DialogProperties
 import androidx.compose.ui.window.DialogWindowProvider
 import androidx.compose.ui.window.SecureFlagPolicy
+import androidx.compose.material3.MaterialTheme
 import androidx.core.view.WindowCompat
 import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.enableBackgroundBlur
+import com.huanchengfly.tieba.post.utils.ThemeUtil
+import com.huanchengfly.tieba.post.utils.ThemeUtil.applyNavigationBarAppearance
 import kotlinx.coroutines.delay
 
 
@@ -54,6 +57,23 @@ fun getDialogWindow(): Window? = (LocalView.current.parent as? DialogWindowProvi
 
 @Composable
 fun getActivityWindow(): Window? = LocalView.current.context.getActivityWindow()
+
+/** Applies the app navigation-bar setting to a platform Compose dialog window. */
+@Composable
+fun ApplyDialogNavigationBarAppearance() {
+    val dialogWindow = getDialogWindow() ?: return
+    val view = LocalView.current
+    val colorScheme = MaterialTheme.colorScheme
+    val uiSettings = LocalUISettings.current
+    SideEffect {
+        WindowCompat.setDecorFitsSystemWindows(dialogWindow, false)
+        dialogWindow.applyNavigationBarAppearance(
+            controller = WindowCompat.getInsetsController(dialogWindow, view),
+            colorScheme = colorScheme,
+            immersiveWhiteNavigationBar = uiSettings.immersiveWhiteNavigationBar,
+        )
+    }
+}
 
 tailrec fun Context.getActivityWindow(): Window? = when (this) {
     is Activity -> window
@@ -118,7 +138,8 @@ private fun DialogFullScreen(
             val activityWindow = getActivityWindow()
             val dialogWindow = getDialogWindow()
             val parentView = LocalView.current.parent as View
-            val enableBackgroundBlur = !LocalUISettings.current.reduceEffect
+            val uiSettings = LocalUISettings.current
+            val enableBackgroundBlur = !uiSettings.reduceEffect
 
             SideEffect {
                 if (activityWindow != null && dialogWindow != null && !isBackPress && !isAnimateLayout) {
@@ -132,9 +153,16 @@ private fun DialogFullScreen(
                     }
                     dialogWindow.attributes = attributes
 
-                    WindowCompat.getInsetsController(dialogWindow, parentView)
-                        .isAppearanceLightNavigationBars =
-                        properties.isAppearanceLightNavigationBars
+                    val insetsController = WindowCompat.getInsetsController(dialogWindow, parentView)
+                    dialogWindow.applyNavigationBarAppearance(
+                        controller = insetsController,
+                        colorScheme = ThemeUtil.currentColorScheme(),
+                        immersiveWhiteNavigationBar = uiSettings.immersiveWhiteNavigationBar,
+                    )
+                    if (!uiSettings.immersiveWhiteNavigationBar) {
+                        insetsController.isAppearanceLightNavigationBars =
+                            properties.isAppearanceLightNavigationBars
+                    }
                     isAnimateLayout = true
                 }
             }

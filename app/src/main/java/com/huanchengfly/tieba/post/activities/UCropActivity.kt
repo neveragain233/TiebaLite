@@ -10,11 +10,18 @@ import androidx.activity.result.ActivityResultCallback
 import androidx.activity.result.ActivityResultLauncher
 import androidx.activity.result.contract.ActivityResultContract
 import androidx.compose.ui.graphics.toArgb
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
+import com.huanchengfly.tieba.post.App
 import com.huanchengfly.tieba.post.activities.UCropActivity.Companion.registerUCropResult
 import com.huanchengfly.tieba.post.api.retrofit.exception.TiebaUnknownException
 import com.huanchengfly.tieba.post.theme.TiebaBlue
 import com.huanchengfly.tieba.post.utils.ColorUtils
+import com.huanchengfly.tieba.post.utils.ThemeUtil
+import com.huanchengfly.tieba.post.utils.ThemeUtil.applyNavigationBarAppearance
 import com.yalantis.ucrop.UCrop
+import kotlinx.coroutines.flow.collectLatest
+import kotlinx.coroutines.launch
 
 private typealias UCropRequest = UCrop
 
@@ -33,7 +40,18 @@ class UCropActivity: com.yalantis.ucrop.UCropActivity() {
         intent.putExtra(UCrop.Options.EXTRA_TOOL_BAR_COLOR, toolbarColor)
         intent.putExtra(UCrop.Options.EXTRA_UCROP_WIDGET_COLOR_TOOLBAR, if (isLightColor) Color.BLACK else Color.WHITE)
 
+        WindowCompat.setDecorFitsSystemWindows(window, false)
         super.onCreate(savedInstanceState)
+
+        lifecycleScope.launch {
+            App.INSTANCE.settingRepository.uiSettings.collectLatest { uiSettings ->
+                window.applyNavigationBarAppearance(
+                    controller = WindowCompat.getInsetsController(window, window.decorView),
+                    colorScheme = ThemeUtil.currentColorScheme(),
+                    immersiveWhiteNavigationBar = uiSettings.immersiveWhiteNavigationBar,
+                )
+            }
+        }
     }
 
     companion object {

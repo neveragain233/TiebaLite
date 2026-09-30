@@ -68,6 +68,7 @@ import com.huanchengfly.tieba.post.ui.page.welcome.UaWebView
 import com.huanchengfly.tieba.post.update.UpdateDownloadWorker
 import com.huanchengfly.tieba.post.update.UpdateManager
 import com.huanchengfly.tieba.post.ui.widgets.compose.AlertDialog
+import com.huanchengfly.tieba.post.ui.widgets.compose.dialogs.ApplyDialogNavigationBarAppearance
 import com.huanchengfly.tieba.post.ui.widgets.compose.MarkdownText
 import com.huanchengfly.tieba.post.ui.widgets.compose.NegativeButton
 import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
@@ -362,7 +363,10 @@ fun AboutPage(
         UpdateUiState.Checking -> MaterialAlertDialog(
             onDismissRequest = {},
             confirmButton = {},
-            title = { Text(stringResource(R.string.update_checking)) },
+            title = {
+                ApplyDialogNavigationBarAppearance()
+                Text(stringResource(R.string.update_checking))
+            },
             text = {
                 Box(modifier = Modifier.fillMaxWidth(), contentAlignment = Alignment.Center) {
                     CircularProgressIndicator()
@@ -372,7 +376,10 @@ fun AboutPage(
 
         is UpdateUiState.Available -> MaterialAlertDialog(
             onDismissRequest = { updateState = UpdateUiState.Idle },
-            title = { Text(stringResource(R.string.update_available_title, state.info.versionName)) },
+            title = {
+                ApplyDialogNavigationBarAppearance()
+                Text(stringResource(R.string.update_available_title, state.info.versionName))
+            },
             text = {
                 Column(
                     modifier = Modifier
@@ -408,7 +415,10 @@ fun AboutPage(
 
         is UpdateUiState.Downloading -> MaterialAlertDialog(
             onDismissRequest = ::cancelDownload,
-            title = { Text(stringResource(R.string.update_downloading)) },
+            title = {
+                ApplyDialogNavigationBarAppearance()
+                Text(stringResource(R.string.update_downloading))
+            },
             text = {
                 Column {
                     LinearProgressIndicator(
@@ -429,7 +439,10 @@ fun AboutPage(
 
         is UpdateUiState.Downloaded -> MaterialAlertDialog(
             onDismissRequest = { updateState = UpdateUiState.Idle },
-            title = { Text(stringResource(R.string.update_download_finished)) },
+            title = {
+                ApplyDialogNavigationBarAppearance()
+                Text(stringResource(R.string.update_download_finished))
+            },
             text = { Text(stringResource(R.string.update_install_prompt, state.info.versionName)) },
             confirmButton = {
                 Button(onClick = { installUpdate(state.file) }) {

@@ -36,6 +36,8 @@ import com.huanchengfly.tieba.post.models.PicItem
 import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.utils.DisplayUtil.doOnApplyWindowInsets
 import com.huanchengfly.tieba.post.utils.ImageUtil
+import com.huanchengfly.tieba.post.utils.ThemeUtil
+import com.huanchengfly.tieba.post.utils.ThemeUtil.applyNavigationBarAppearance
 import com.huanchengfly.tieba.post.utils.extension.getParcelableExtraCompat
 import com.huanchengfly.tieba.post.utils.extension.toShareIntent
 import kotlinx.coroutines.launch
@@ -59,6 +61,11 @@ class PhotoViewActivity : AppCompatActivity(), OverlayCustomizer, ViewerCallback
         super.onCreate(savedInstanceState)
         setContentView(R.layout.activity_photo_view)
         WindowCompat.setDecorFitsSystemWindows(window, false)
+        window.applyNavigationBarAppearance(
+            controller = windowInsetsController,
+            colorScheme = ThemeUtil.currentColorScheme(),
+            immersiveWhiteNavigationBar = true,
+        )
 
         val data: PhotoViewData = intent.getParcelableExtraCompat(EXTRA_PHOTO_VIEW_DATA)!!
 

@@ -86,6 +86,7 @@ data class UISettingsDto(
     val hideNotifications: Boolean = false,
     val reduceEffect: Boolean,
     val reduceMotion: Boolean,
+    val immersiveWhiteNavigationBar: Boolean = false,
     val homeForumList: Boolean,
     val showHistoryInHome: Boolean,
     val hideFollowedForumsInHistory: Boolean = false,

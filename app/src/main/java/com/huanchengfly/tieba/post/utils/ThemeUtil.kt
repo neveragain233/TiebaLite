@@ -118,6 +118,29 @@ object ThemeUtil {
     }
 
     /**
+     * Applies the app-wide edge-to-edge navigation-bar policy to a window.
+     *
+     * When [immersiveWhiteNavigationBar] is enabled, the navigation bar stays transparent and
+     * uses light foreground elements (the white gesture handle). Otherwise its foreground follows
+     * the active color scheme.
+     */
+    fun Window.applyNavigationBarAppearance(
+        controller: WindowInsetsControllerCompat,
+        colorScheme: ColorScheme,
+        immersiveWhiteNavigationBar: Boolean,
+    ) {
+        navigationBarColor = android.graphics.Color.TRANSPARENT
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
+            isNavigationBarContrastEnforced = false
+        }
+        if (immersiveWhiteNavigationBar) {
+            controller.isAppearanceLightNavigationBars = false
+        } else {
+            controller.setAppearanceLightNavigationBars(this, colorScheme)
+        }
+    }
+
+    /**
      * Returns application night mode state
      */
     val Context.isAppDark: Boolean

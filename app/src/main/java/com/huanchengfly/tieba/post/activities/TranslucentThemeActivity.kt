@@ -25,6 +25,7 @@ import androidx.compose.material3.BottomSheetDefaults
 import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.ReadOnlyComposable
 import androidx.compose.runtime.getValue
@@ -48,7 +49,9 @@ import coil3.request.SuccessResult
 import coil3.request.crossfade
 import coil3.request.transformations
 import com.huanchengfly.tieba.post.LocalWindowAdaptiveInfo
+import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.App
 import com.huanchengfly.tieba.post.activities.TranslucentThemeViewModel.Companion.CROP_FILE_PREFIX
 import com.huanchengfly.tieba.post.activities.UCropActivity.Companion.registerUCropResult
 import com.huanchengfly.tieba.post.arch.unsafeLazy
@@ -57,6 +60,7 @@ import com.huanchengfly.tieba.post.theme.DefaultDarkColors
 import com.huanchengfly.tieba.post.theme.ExtendedColorScheme
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.theme.isTranslucent
+import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.toastShort
 import com.huanchengfly.tieba.post.ui.common.FadedVisibility
 import com.huanchengfly.tieba.post.ui.common.windowsizeclass.isLooseWindowWidth
@@ -71,7 +75,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.dialogs.DirectionState
 import com.huanchengfly.tieba.post.ui.widgets.compose.rememberDialogState
 import com.huanchengfly.tieba.post.utils.DisplayUtil
 import com.huanchengfly.tieba.post.utils.ThemeUtil
-import com.huanchengfly.tieba.post.utils.ThemeUtil.setAppearanceLightNavigationBars
+import com.huanchengfly.tieba.post.utils.ThemeUtil.applyNavigationBarAppearance
 import com.yalantis.ucrop.UCrop
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.coroutines.delay
@@ -125,17 +129,24 @@ class TranslucentThemeActivity : AppCompatActivity() {
         setContent {
             val colorSchemeExt = currentThemeNoTrans()
             val savingDialogState = rememberDialogState()
+            val uiSettings by App.INSTANCE.settingRepository.uiSettings
+                .collectAsStateWithLifecycle(initialValue = UISettings())
 
-            LaunchedEffect(colorSchemeExt) {
+            LaunchedEffect(colorSchemeExt, uiSettings.immersiveWhiteNavigationBar) {
                 windowInsetsController.run {
                     val colorScheme = colorSchemeExt.colorScheme
                     windowInsetsController.setAppearanceLightStatusBars(ThemeUtil.isStatusBarFontDark(colorScheme))
-                    windowInsetsController.setAppearanceLightNavigationBars(window, colorScheme)
+                    window.applyNavigationBarAppearance(
+                        controller = windowInsetsController,
+                        colorScheme = colorScheme,
+                        immersiveWhiteNavigationBar = uiSettings.immersiveWhiteNavigationBar,
+                    )
                 }
             }
 
             TiebaLiteTheme(colorSchemeExt = colorSchemeExt) {
-                Scaffold(
+                CompositionLocalProvider(LocalUISettings provides uiSettings) {
+                    Scaffold(
                     topBar = {
                         TitleCentredToolbar(
                             title = stringResource(id = R.string.activity_translucent),
@@ -225,7 +236,8 @@ class TranslucentThemeActivity : AppCompatActivity() {
                     }
                 }
 
-                SavingDialog(dialogState = savingDialogState)
+                    SavingDialog(dialogState = savingDialogState)
+                }
             }
         }
     }

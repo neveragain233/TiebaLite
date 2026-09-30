@@ -25,11 +25,18 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.ComposeView
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
+import androidx.core.view.WindowCompat
+import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.LifecycleOwner
+import com.huanchengfly.tieba.post.App
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.findActivity
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
 import com.huanchengfly.tieba.post.ui.widgets.compose.DefaultDialogMargin
 import com.huanchengfly.tieba.post.ui.widgets.compose.dialogAdaptiveFraction
 import com.huanchengfly.tieba.post.utils.ThemeUtil
+import com.huanchengfly.tieba.post.utils.ThemeUtil.applyNavigationBarAppearance
+import kotlinx.coroutines.launch
 
 class LoadingDialog(context: Context, @StyleRes themeResId: Int): AlertDialog(context, themeResId) {
 
@@ -54,6 +61,22 @@ class LoadingDialog(context: Context, @StyleRes themeResId: Int): AlertDialog(co
             }
         })
         setCancelable(false)
+    }
+
+    override fun onStart() {
+        super.onStart()
+        val lifecycleOwner = context.findActivity() as? LifecycleOwner ?: return
+        lifecycleOwner.lifecycleScope.launch {
+            val uiSettings = App.INSTANCE.settingRepository.uiSettings.snapshot()
+            window?.let { dialogWindow ->
+                WindowCompat.setDecorFitsSystemWindows(dialogWindow, false)
+                dialogWindow.applyNavigationBarAppearance(
+                    controller = WindowCompat.getInsetsController(dialogWindow, dialogWindow.decorView),
+                    colorScheme = ThemeUtil.currentColorScheme(),
+                    immersiveWhiteNavigationBar = uiSettings.immersiveWhiteNavigationBar,
+                )
+            }
+        }
     }
 }
 

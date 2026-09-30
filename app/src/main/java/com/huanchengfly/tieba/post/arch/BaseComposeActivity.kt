@@ -1,23 +1,27 @@
 package com.huanchengfly.tieba.post.arch
 
 import android.content.res.Configuration
-import android.os.Build
 import android.os.Bundle
 import android.widget.Toast
 import androidx.activity.compose.setContent
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.view.WindowCompat
 import androidx.core.view.WindowInsetsControllerCompat
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import com.huanchengfly.tieba.post.App
+import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.activities.BaseActivity
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorCode
 import com.huanchengfly.tieba.post.api.retrofit.exception.getErrorMessage
 import com.huanchengfly.tieba.post.ui.widgets.compose.StrongBox
+import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.utils.ThemeUtil
-import com.huanchengfly.tieba.post.utils.ThemeUtil.setAppearanceLightNavigationBars
+import com.huanchengfly.tieba.post.utils.ThemeUtil.applyNavigationBarAppearance
 
 abstract class BaseComposeActivity : BaseActivity() {
 
@@ -38,21 +42,24 @@ abstract class BaseComposeActivity : BaseActivity() {
         ThemeUtil.onUpdateSystemUiMode(this)
 
         setContent {
+            val uiSettings by App.INSTANCE.settingRepository.uiSettings
+                .collectAsStateWithLifecycle(initialValue = UISettings())
             StrongBox {
                 val colorState by ThemeUtil.colorState
                 val colorScheme = colorState.colorScheme
 
-                LaunchedEffect(colorScheme) {
+                LaunchedEffect(colorScheme, uiSettings.immersiveWhiteNavigationBar) {
                     windowInsetsController.setAppearanceLightStatusBars(ThemeUtil.isStatusBarFontDark(colorScheme))
-                    windowInsetsController.setAppearanceLightNavigationBars(window, colorScheme)
-                    // 关闭导航条对比度遮罩, 让内容真正沉浸到手势条区域,
-                    // 避免浅色主题下出现白色半透明条
-                    if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
-                        window.isNavigationBarContrastEnforced = false
-                    }
+                    window.applyNavigationBarAppearance(
+                        controller = windowInsetsController,
+                        colorScheme = colorScheme,
+                        immersiveWhiteNavigationBar = uiSettings.immersiveWhiteNavigationBar,
+                    )
                 }
             }
-            Content()
+            CompositionLocalProvider(LocalUISettings provides uiSettings) {
+                Content()
+            }
         }
     }
 

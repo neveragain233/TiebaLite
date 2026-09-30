@@ -378,6 +378,8 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
             hideNotifications = it[booleanPreferencesKey(KEY_HIDE_NOTIFICATIONS)] == true,
             reduceEffect = it[booleanPreferencesKey(KEY_REDUCE_EFFECT)] ?: (DeviceUtils.PRODUCT_FIRST_API_LEVEL < Build.VERSION_CODES.S),
             reduceMotion = it[booleanPreferencesKey(KEY_REDUCE_MOTION)] ?: (DeviceUtils.PRODUCT_FIRST_API_LEVEL < Build.VERSION_CODES.S),
+            immersiveWhiteNavigationBar =
+                it[booleanPreferencesKey(KEY_IMMERSIVE_WHITE_NAVIGATION_BAR)] ?: false,
             setupFinished = it[booleanPreferencesKey(KEY_SETUP_FINISHED)] == true,
             homeForumList = it[booleanPreferencesKey(KEY_HOME_SINGLE_FORUM_LIST)] == true,
             showHistoryInHome = it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] ?: true,
@@ -428,6 +430,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
         it[booleanPreferencesKey(KEY_HIDE_NOTIFICATIONS)] = ui.hideNotifications
         it[booleanPreferencesKey(KEY_REDUCE_EFFECT)] = ui.reduceEffect
         it[booleanPreferencesKey(KEY_REDUCE_MOTION)] = ui.reduceMotion
+        it[booleanPreferencesKey(KEY_IMMERSIVE_WHITE_NAVIGATION_BAR)] = ui.immersiveWhiteNavigationBar
         it[booleanPreferencesKey(KEY_SETUP_FINISHED)] = ui.setupFinished
         it[booleanPreferencesKey(KEY_HOME_SINGLE_FORUM_LIST)] = ui.homeForumList
         it[booleanPreferencesKey(KEY_HOME_PAGE_SHOW_HISTORY)] = ui.showHistoryInHome
@@ -473,6 +476,7 @@ private object UISettingsTransformer: PreferenceTransformer<UISettings> {
     private const val KEY_SETUP_FINISHED = "ui_setup"
     private const val KEY_REDUCE_EFFECT = "ui_reduce_effect"
     private const val KEY_REDUCE_MOTION = "ui_reduce_motion"
+    private const val KEY_IMMERSIVE_WHITE_NAVIGATION_BAR = "ui_immersive_white_navigation_bar"
     private const val KEY_HOME_SINGLE_FORUM_LIST = "ui_forum_list_in_home"
     private const val KEY_HOME_PAGE_SHOW_HISTORY = "ui_history_in_home"
     private const val KEY_HISTORY_HIDE_FOLLOWED_FORUMS = "ui_history_hide_followed_forums"

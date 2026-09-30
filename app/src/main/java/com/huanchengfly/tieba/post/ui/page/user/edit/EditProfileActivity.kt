@@ -54,6 +54,7 @@ import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.lifecycleScope
 import com.huanchengfly.tieba.post.R
+import com.huanchengfly.tieba.post.LocalUISettings
 import com.huanchengfly.tieba.post.activities.TranslucentThemeActivity.Companion.currentThemeNoTrans
 import com.huanchengfly.tieba.post.activities.UCropActivity
 import com.huanchengfly.tieba.post.activities.UCropActivity.Companion.registerUCropResult
@@ -73,6 +74,7 @@ import com.huanchengfly.tieba.post.ui.widgets.compose.NetworkImage
 import com.huanchengfly.tieba.post.ui.widgets.compose.OutlineCounterTextField
 import com.huanchengfly.tieba.post.ui.widgets.compose.states.StateScreen
 import com.huanchengfly.tieba.post.utils.ThemeUtil
+import com.huanchengfly.tieba.post.utils.ThemeUtil.applyNavigationBarAppearance
 import com.yalantis.ucrop.UCrop
 import dagger.hilt.android.AndroidEntryPoint
 import kotlinx.collections.immutable.persistentMapOf
@@ -131,9 +133,14 @@ class EditProfileActivity : BaseComposeActivity() {
             EditProfileScaffold(viewModel, onBackPressed = ::finish)
 
             val colorScheme = MaterialTheme.colorScheme
-            LaunchedEffect(colorScheme) {
+            val uiSettings = LocalUISettings.current
+            LaunchedEffect(colorScheme, uiSettings.immersiveWhiteNavigationBar) {
                 windowInsetsController.isAppearanceLightStatusBars = ThemeUtil.isStatusBarFontDark(colorScheme)
-                windowInsetsController.isAppearanceLightNavigationBars = ThemeUtil.isNavigationBarFontDark(colorScheme)
+                window.applyNavigationBarAppearance(
+                    controller = windowInsetsController,
+                    colorScheme = colorScheme,
+                    immersiveWhiteNavigationBar = uiSettings.immersiveWhiteNavigationBar,
+                )
             }
         }
     }

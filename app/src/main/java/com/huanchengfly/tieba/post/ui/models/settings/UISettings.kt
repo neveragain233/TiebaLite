@@ -91,6 +91,7 @@ enum class NavRailPosition {
  * @param hideNotifications 隐藏主页「消息」入口
  * @param reduceEffect 减弱模糊效果
  * @param reduceMotion 减弱动态效果
+ * @param immersiveWhiteNavigationBar 透明导航栏并始终使用白色手势条
  * @param setupFinished 设置向导已完成
  * @param homeForumList 吧列表单列显示
  * @param showHistoryInHome 首页显示最近逛的吧
@@ -129,6 +130,7 @@ data class UISettings(
     val hideNotifications: Boolean = false,
     val reduceEffect: Boolean = false,
     val reduceMotion: Boolean = false,
+    val immersiveWhiteNavigationBar: Boolean = false,
     val setupFinished: Boolean = false,
     val homeForumList: Boolean = false,
     val showHistoryInHome: Boolean = true,

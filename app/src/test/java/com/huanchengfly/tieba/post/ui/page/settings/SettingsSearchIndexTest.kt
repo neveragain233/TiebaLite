@@ -12,6 +12,7 @@ class SettingsSearchIndexTest {
         val indexedTitles = SettingsSearchIndex.all.map { it.titleRes }.toSet()
         val requiredTitles = setOf(
             R.string.title_reduce_effect,
+            R.string.title_immersive_white_navigation_bar,
             R.string.settings_explore_fab_follow_nav,
             R.string.history_hide_followed_forums,
             R.string.settings_home_page_long_press_history_forum_delete,

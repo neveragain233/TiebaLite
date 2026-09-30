@@ -15,17 +15,24 @@ import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.lifecycleScope
+import androidx.lifecycle.compose.collectAsStateWithLifecycle
+import androidx.core.view.WindowCompat
+import com.huanchengfly.tieba.post.App
 import com.huanchengfly.tieba.post.MainActivityV2
 import com.huanchengfly.tieba.post.R
 import com.huanchengfly.tieba.post.theme.TiebaLiteTheme
+import com.huanchengfly.tieba.post.ui.models.settings.UISettings
 import com.huanchengfly.tieba.post.ui.widgets.compose.ErrorStackTraceScreen
 import com.huanchengfly.tieba.post.ui.widgets.compose.PositiveButton
 import com.huanchengfly.tieba.post.utils.CrashLogUtil
+import com.huanchengfly.tieba.post.utils.ThemeUtil
+import com.huanchengfly.tieba.post.utils.ThemeUtil.applyNavigationBarAppearance
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.launch
 
@@ -39,6 +46,18 @@ class CrashActivity : ComponentActivity() {
 
         setContent {
             TiebaLiteTheme {
+                val colorScheme = MaterialTheme.colorScheme
+                val uiSettings by App.INSTANCE.settingRepository.uiSettings
+                    .collectAsStateWithLifecycle(initialValue = UISettings())
+                LaunchedEffect(colorScheme, uiSettings.immersiveWhiteNavigationBar) {
+                    val controller = WindowCompat.getInsetsController(window, window.decorView)
+                    controller.isAppearanceLightStatusBars = ThemeUtil.isStatusBarFontDark(colorScheme)
+                    window.applyNavigationBarAppearance(
+                        controller = controller,
+                        colorScheme = colorScheme,
+                        immersiveWhiteNavigationBar = uiSettings.immersiveWhiteNavigationBar,
+                    )
+                }
                 ErrorStackTraceScreen(
                     modifier = Modifier
                         .fillMaxSize()
